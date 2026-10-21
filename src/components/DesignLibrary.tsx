@@ -72,6 +72,26 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
         </svg>
       );
     }
+    if (optId === 'corset') {
+      return (
+        <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>
+          {/* Square-neck boned bodice with straps and a pointed hem */}
+          <path
+            d="M 12 7 L 15 7 L 15 13 L 25 13 L 25 7 L 28 7 L 28.5 14 L 27 23 L 27.5 27 Q 24 29 20 33 Q 16 29 12.5 27 L 13 23 L 11.5 14 Z"
+            fill="currentColor"
+            fillOpacity="0.18"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinejoin="round"
+          />
+          {/* Topstitched boning seams */}
+          <path d="M 18 13.5 Q 18 24 19 31.5" stroke="#b68235" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
+          <path d="M 22 13.5 Q 22 24 21 31.5" stroke="#b68235" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
+          <path d="M 15 14 Q 15.5 23 16.5 29" stroke="#b68235" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
+          <path d="M 25 14 Q 24.5 23 23.5 29" stroke="#b68235" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
+        </svg>
+      );
+    }
     return (
       <span className={`font-serif ${isBig ? 'text-[16px]' : 'text-[14px]'} font-bold text-[#174d33]`}>
         {name.charAt(0)}

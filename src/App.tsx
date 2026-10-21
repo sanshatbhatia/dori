@@ -16,7 +16,7 @@ import {
   BeltLatkanMode,
   LatkanBoxOrientation,
 } from './types';
-import { GARMENTS, getDefaults, checkCompatibilityReason } from './data/garments';
+import { GARMENTS, getDefaults, checkCompatibilityReason, PREFERRED_WITH } from './data/garments';
 import { PhoneFrame } from './components/PhoneFrame';
 import { StudioHeader } from './components/StudioHeader';
 import { MannequinStage } from './components/MannequinStage';
@@ -110,9 +110,11 @@ export default function App() {
       garmentConfig.cats.forEach((otherCat) => {
         if (otherCat.id === cat.id) return;
         if (checkCompatibilityReason(currentGarment, otherCat, next[otherCat.id], next)) {
-          const validAlt = otherCat.opts.find(
-            (o) => !checkCompatibilityReason(currentGarment, otherCat, o.id, next)
-          );
+          const preferredId = PREFERRED_WITH[`${cat.id}:${optId}`]?.[otherCat.id];
+          const isValid = (id: string) => !checkCompatibilityReason(currentGarment, otherCat, id, next);
+          const validAlt =
+            (preferredId && isValid(preferredId) ? otherCat.opts.find((o) => o.id === preferredId) : undefined) ||
+            otherCat.opts.find((o) => isValid(o.id));
           if (validAlt) {
             if (!cascadeNote) {
               cascadeNote = `${otherCat.label} switched to ${validAlt.name} so the seams align.`;

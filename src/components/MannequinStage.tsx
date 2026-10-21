@@ -962,6 +962,13 @@ interface BlouseDetailsResult {
   peplumDarts?: string[];
   peplumHemStitch?: string;
   peplumShade?: string;
+  isCorset?: boolean;
+  corsetSeams?: string[];
+  corsetPanels?: { d: string; light: boolean }[];
+  corsetHem?: string;
+  corsetNeckStitch?: string;
+  corsetLacing?: string[];
+  corsetLaceTop?: number;
   hemRuffleLine?: string;
   hemRuffleAccent?: string;
   spine?: string;
@@ -999,7 +1006,66 @@ interface BlouseDetailsResult {
     const n = (isBack ? BACK_CUTS[geo('back', 'roundBack')] : NECK[neckId]) || NECK.round;
     const neckLowestY = Math.max(...n.pts.map((p) => p[1]));
 
-    // PEPLUM TOP: Smocked / Shirred Bodice with Flared Fluted Ruffled Peplum
+    // CORSET TOP: boned panels with double topstitched seams curving in to the waist,
+    // finished in a pointed V hem below the waist
+    if (topStyleId === 'corset') {
+      const hemC = b.hemC || [];
+      const hemAt = (x: number) => {
+        let best = hemC[0];
+        for (const q of hemC) if (Math.abs(q[0] - x) < Math.abs(best[0] - x)) best = q;
+        // the back has a straight hem at the waist
+        return isBack ? 266 : best ? best[1] : 268;
+      };
+      const neckAt = (x: number) => {
+        let best = n.pts[0];
+        for (const q of n.pts) if (Math.abs(q[0] - x) < Math.abs(best[0] - x)) best = q;
+        return best ? best[1] : 180;
+      };
+      // seam paths from the neckline to the hem, curving in toward the waist (offsets from centre)
+      const seamDefs = [
+        { top: 16, waist: 10, hemX: 9 },
+        { top: 34, waist: 22, hemX: 22 },
+        { top: 50, waist: 33, hemX: 34 },
+      ];
+      const seamPath = (sd: number, sdef: { top: number; waist: number; hemX: number }, inset = 0) => {
+        const xt = STAGE_CX + sd * (sdef.top + inset) * fitK;
+        const xw = STAGE_CX + sd * (sdef.waist + inset) * fitK;
+        const xh = STAGE_CX + sd * (sdef.hemX + inset) * fitK;
+        const yt = Math.max(neckAt(xt) + 1.5, 160);
+        return `M ${xt.toFixed(1)} ${yt.toFixed(1)} C ${xt.toFixed(1)} ${(yt + 40).toFixed(1)} ${xw.toFixed(1)} 236 ${xw.toFixed(1)} 256 L ${xh.toFixed(1)} ${(hemAt(xh) - 0.5).toFixed(1)}`;
+      };
+      const seams: string[] = [];
+      const panels: { d: string; light: boolean }[] = [];
+      [-1, 1].forEach((sd) =>
+        seamDefs.forEach((sdef, i) => {
+          if (isBack && i === 0) return;
+          seams.push(seamPath(sd, sdef, -1.3), seamPath(sd, sdef, 1.3));
+          // panel shading strip just outside each seam (alternating light and shade reads as boned panels)
+          panels.push({ d: `${seamPath(sd, sdef, 1.6)}`, light: i % 2 === 0 });
+        })
+      );
+      const hemPts = [[STAGE_CX + 40.8 * fitK, 268], ...hemC, [STAGE_CX - 40.8 * fitK, 268]];
+      const corsetHem = 'M ' + hemPts.map((q) => `${(STAGE_CX + (q[0] - STAGE_CX) * 0.97).toFixed(1)} ${(q[1] - 3.2).toFixed(1)}`).join(' L ');
+      const necks = n.pts.map((q) => [STAGE_CX + (q[0] - STAGE_CX) * fitK, q[1] + 3.5]);
+      const corsetNeckStitch = 'M ' + necks.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ');
+      const lacing: string[] = [];
+      if (isBack) {
+        for (let y = neckLowestY + 5; y < 254; y += 11) {
+          lacing.push(`M ${STAGE_CX - 6} ${y} L ${STAGE_CX + 6} ${y + 9}`, `M ${STAGE_CX + 6} ${y} L ${STAGE_CX - 6} ${y + 9}`);
+        }
+      }
+      return {
+        isBack,
+        isCorset: true,
+        corsetSeams: seams,
+        corsetPanels: panels,
+        corsetHem,
+        corsetNeckStitch: isBack ? undefined : corsetNeckStitch,
+        corsetLacing: lacing,
+        corsetLaceTop: neckLowestY + 3,
+      };
+    }
+
     // PEPLUM TOP: fitted bodice with princess darts to a natural-waist seam, then
     // inverted box pleats opening into a flared peplum with a stitched hem
     if (topStyleId === 'peplum') {
@@ -2128,6 +2194,47 @@ interface BlouseDetailsResult {
             {(() => {
               const bDet = blouseDetails();
               if (!bDet) return null;
+              if (bDet.isCorset) {
+                return (
+                  <g id="blouse-corset-details">
+                    {/* Boned panels: soft light and shade either side of each seam */}
+                    {bDet.corsetPanels?.map((pl, idx) => (
+                      <path
+                        key={`corset-panel-${idx}`}
+                        d={pl.d}
+                        fill="none"
+                        stroke={pl.light ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)'}
+                        strokeWidth="6"
+                        strokeLinecap="round"
+                      />
+                    ))}
+                    {/* Double topstitched boning seams */}
+                    {bDet.corsetSeams?.map((d, idx) => (
+                      <path key={`corset-seam-${idx}`} d={d} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.75" strokeDasharray="2 1.4" opacity="0.95" strokeLinecap="round" />
+                    ))}
+                    {bDet.corsetSeams?.filter((_, idx) => idx % 2 === 0).map((d, idx) => (
+                      <path key={`corset-seam-line-${idx}`} d={d} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.6" opacity="0.4" transform="translate(0.9 0)" strokeLinecap="round" />
+                    ))}
+                    {/* Topstitching along the neckline and the pointed hem */}
+                    {bDet.corsetNeckStitch && (
+                      <path d={bDet.corsetNeckStitch} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.75" strokeDasharray="2 1.4" opacity="0.95" strokeLinecap="round" />
+                    )}
+                    {bDet.corsetHem && (
+                      <path d={bDet.corsetHem} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.75" strokeDasharray="2 1.4" opacity="0.95" strokeLinecap="round" />
+                    )}
+                    {/* Back view: centre-back lacing */}
+                    {bDet.corsetLacing && bDet.corsetLacing.length > 0 && (
+                      <g id="corset-back-lacing">
+                        <path d={`M ${STAGE_CX - 6} ${bDet.corsetLaceTop} L ${STAGE_CX - 6} 264 M ${STAGE_CX + 6} ${bDet.corsetLaceTop} L ${STAGE_CX + 6} 264`} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.9" opacity="0.55" />
+                        {bDet.corsetLacing.map((d, idx) => (
+                          <path key={`lace-${idx}`} d={d} fill="none" stroke={fabTheme.accentColor} strokeWidth="1" strokeLinecap="round" />
+                        ))}
+                      </g>
+                    )}
+                  </g>
+                );
+              }
+
               if (bDet.isPeplum) {
                 return (
                   <g id="blouse-peplum-details">
@@ -2537,8 +2644,8 @@ interface BlouseDetailsResult {
           ))}
         </svg>
 
-        {/* Back View Seams & Closures */}
-        {isBack && (
+        {/* Back View Seams & Closures (a corset laces up instead) */}
+        {isBack && topStyleId !== 'corset' && (
           <>
             {/* Center back seam */}
             <div
