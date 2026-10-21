@@ -509,12 +509,17 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
 
     // 1. Sleeveless: standard sleeveless bodice silhouette with armhole scoop
     if (!s) {
-      const leftSleevePath = buildLeftSleevePath(sleeveId, armPose, tipL, underarmL);
+      // On the painted figure the armhole curves up to a strap that starts inside the
+      // shoulder tip, so no fabric juts out over the arm
+      const strapL = [[180.5, 157]];
+      const leftSleevePath = painted
+        ? [underarmL, [175.5, 206], [173.5, 192], [174.5, 176], [177, 165]]
+        : buildLeftSleevePath(sleeveId, armPose, tipL, underarmL);
       const rightSleevePath = mir(leftSleevePath).reverse();
       const combined = [
-        ...shL_pts,
+        ...(painted ? strapL : shL_pts),
         ...n.pts,
-        ...shR_pts,
+        ...(painted ? mir(strapL) : shR_pts),
         ...rightSleevePath,
         ...right.slice(1),
         ...hemC,
@@ -1014,7 +1019,7 @@ interface BlouseDetailsResult {
         let best = hemC[0];
         for (const q of hemC) if (Math.abs(q[0] - x) < Math.abs(best[0] - x)) best = q;
         // the back has a straight hem at the waist
-        return isBack ? 266 : best ? best[1] : 268;
+        return isBack ? 274 : best ? best[1] : 276;
       };
       const neckAt = (x: number) => {
         let best = n.pts[0];
@@ -1023,9 +1028,9 @@ interface BlouseDetailsResult {
       };
       // seam paths from the neckline to the hem, curving in toward the waist (offsets from centre)
       const seamDefs = [
-        { top: 16, waist: 10, hemX: 9 },
-        { top: 34, waist: 22, hemX: 22 },
-        { top: 50, waist: 33, hemX: 34 },
+        { top: 16, waist: 9, hemX: 8 },
+        { top: 32, waist: 20, hemX: 21 },
+        { top: 46, waist: 31, hemX: 33 },
       ];
       const seamPath = (sd: number, sdef: { top: number; waist: number; hemX: number }, inset = 0) => {
         const xt = STAGE_CX + sd * (sdef.top + inset) * fitK;
@@ -1044,13 +1049,13 @@ interface BlouseDetailsResult {
           panels.push({ d: `${seamPath(sd, sdef, 1.6)}`, light: i % 2 === 0 });
         })
       );
-      const hemPts = [[STAGE_CX + 40.8 * fitK, 268], ...hemC, [STAGE_CX - 40.8 * fitK, 268]];
+      const hemPts = [[STAGE_CX + 41.6 * fitK, 276], ...hemC, [STAGE_CX - 41.6 * fitK, 276]];
       const corsetHem = 'M ' + hemPts.map((q) => `${(STAGE_CX + (q[0] - STAGE_CX) * 0.97).toFixed(1)} ${(q[1] - 3.2).toFixed(1)}`).join(' L ');
       const necks = n.pts.map((q) => [STAGE_CX + (q[0] - STAGE_CX) * fitK, q[1] + 3.5]);
       const corsetNeckStitch = 'M ' + necks.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ');
       const lacing: string[] = [];
       if (isBack) {
-        for (let y = neckLowestY + 5; y < 254; y += 11) {
+        for (let y = neckLowestY + 5; y < 262; y += 11) {
           lacing.push(`M ${STAGE_CX - 6} ${y} L ${STAGE_CX + 6} ${y + 9}`, `M ${STAGE_CX + 6} ${y} L ${STAGE_CX - 6} ${y + 9}`);
         }
       }
@@ -2225,7 +2230,7 @@ interface BlouseDetailsResult {
                     {/* Back view: centre-back lacing */}
                     {bDet.corsetLacing && bDet.corsetLacing.length > 0 && (
                       <g id="corset-back-lacing">
-                        <path d={`M ${STAGE_CX - 6} ${bDet.corsetLaceTop} L ${STAGE_CX - 6} 264 M ${STAGE_CX + 6} ${bDet.corsetLaceTop} L ${STAGE_CX + 6} 264`} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.9" opacity="0.55" />
+                        <path d={`M ${STAGE_CX - 6} ${bDet.corsetLaceTop} L ${STAGE_CX - 6} 272 M ${STAGE_CX + 6} ${bDet.corsetLaceTop} L ${STAGE_CX + 6} 272`} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.9" opacity="0.55" />
                         {bDet.corsetLacing.map((d, idx) => (
                           <path key={`lace-${idx}`} d={d} fill="none" stroke={fabTheme.accentColor} strokeWidth="1" strokeLinecap="round" />
                         ))}

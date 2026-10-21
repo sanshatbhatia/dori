@@ -106,6 +106,8 @@ bt=fill[y0:y1]
 save('blouse-texture',bt,np.ones(bt.shape[:2]),-140,y0)
 # --- skin (torso + neck) texture
 sk_known=skin&(X>175)&(X<345)&(Y>110)&(Y<305)
+# keep clear of the painted neckline edge, whose pale shading would show inside lower necklines
+sk_known=erode(sk_known,4)
 big,kb=extend(a,sk_known,(0,0,0,0))
 fill=pullpush(big,kb)
 y0,y1,x0,x1=110,520,150,370

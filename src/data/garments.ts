@@ -103,7 +103,7 @@ export const GARMENTS: Record<GarmentKey, GarmentConfig> = {
 
 // When an option forces another category to change, switch it to the look that goes with it
 export const PREFERRED_WITH: Record<string, Record<string, string>> = {
-  'blouseFront:corset': { neckline: 'square', sleeves: 'cap' },
+  'blouseFront:corset': { neckline: 'square', sleeves: 'sleeveless' },
 };
 
 export function getDefaults(gk: GarmentKey = 'lehenga'): SelectionState {
