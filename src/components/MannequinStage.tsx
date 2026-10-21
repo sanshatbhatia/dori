@@ -32,6 +32,8 @@ import {
   NECK,
   PAINTED,
   PAINTED_LATKAN_ANCHOR,
+  PAINTED_BACK,
+  PAINTED_HEM_BACK_L,
   PAINTED_ARM_L,
   PAINTED_SLEEVES,
   ARM_UPPER_LEN,
@@ -108,6 +110,8 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   const g = GARMENTS[currentGarment];
   // Lehenga uses the painted fabric, skin and trims from the reference artwork
   const painted = currentGarment === 'lehenga';
+  // Painted artwork for the side being viewed
+  const PV = viewMode === 'back' ? PAINTED_BACK : PAINTED;
 
   const optOf = (c: Category) => c.opts.find((o) => o.id === selection[c.id]) || c.opts[0];
   const bySlot = (s: string) => {
@@ -800,10 +804,11 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
       // Scalloped hem traced from the painting, fitted to this skirt's width and length
       const [lastT, hw] = scaledProfile[scaledProfile.length - 1];
       const cornerY = top + lastT * hh;
-      const [x0, y0] = PAINTED_HEM_L[0];
+      const hemL = isBack ? PAINTED_HEM_BACK_L : PAINTED_HEM_L;
+      const [x0, y0] = hemL[0];
       const span = STAGE_CX - x0;
       const lenK = hh / LENV.floor;
-      const half = PAINTED_HEM_L.map(([x, y]) => [(STAGE_CX - x) / span, (y - y0) * lenK]);
+      const half = hemL.map(([x, y]) => [(STAGE_CX - x) / span, (y - y0) * lenK]);
       half.forEach(([u, dy]) => hem.push([STAGE_CX + u * hw, cornerY + dy]));
       [...half].reverse().forEach(([u, dy]) => hem.push([STAGE_CX - u * hw, cornerY + dy]));
     } else if (currentGarment !== 'shirt') {
@@ -1135,7 +1140,9 @@ interface BlouseDetailsResult {
     if (isBack) {
       const backStyle = geo('back', 'roundBack');
       const tieY = Math.min(neckLowestY + 12, 185);
-      const hasLowerTie = backStyle === 'tieBack' || backStyle === 'deepBack' || backStyle === 'cutOut';
+      // The painted deep V back is clean, with no ties
+      const plainV = painted && backStyle === 'deepBack';
+      const hasLowerTie = !plainV && (backStyle === 'tieBack' || backStyle === 'deepBack' || backStyle === 'cutOut');
       const showPotli = !hasLowerTie && (backStyle === 'roundBack' || backStyle === 'squareBack' || backStyle === 'keyholeBack');
       const potliYs = [182, 202, 222, 242, 262].filter((y) => y > neckLowestY + 4 && y < hem - 8);
 
@@ -1145,14 +1152,14 @@ interface BlouseDetailsResult {
         isBack: true,
         spine: `M ${STAGE_CX} ${neckLowestY + 1} L ${STAGE_CX} ${hem}`,
         // Upper Nape Tie Dori
-        tieBow: `M ${STAGE_CX - 12} ${tieY - 4} Q ${STAGE_CX - 5} ${tieY - 8} ${STAGE_CX} ${tieY} Q ${STAGE_CX + 5} ${tieY - 8} ${STAGE_CX + 12} ${tieY - 4}`,
-        doriLeft: `M ${STAGE_CX - 3} ${tieY} C ${STAGE_CX - 12} ${tieY + 20} ${STAGE_CX - 24} ${tieY + 44} ${STAGE_CX - 18} ${tieY + 68}`,
-        doriRight: `M ${STAGE_CX + 3} ${tieY} C ${STAGE_CX + 12} ${tieY + 20} ${STAGE_CX + 24} ${tieY + 44} ${STAGE_CX + 18} ${tieY + 68}`,
-        latkanL: { x: STAGE_CX - 18, y: tieY + 68 },
-        latkanR: { x: STAGE_CX + 18, y: tieY + 68 },
+        tieBow: plainV ? null : `M ${STAGE_CX - 12} ${tieY - 4} Q ${STAGE_CX - 5} ${tieY - 8} ${STAGE_CX} ${tieY} Q ${STAGE_CX + 5} ${tieY - 8} ${STAGE_CX + 12} ${tieY - 4}`,
+        doriLeft: plainV ? null : `M ${STAGE_CX - 3} ${tieY} C ${STAGE_CX - 12} ${tieY + 20} ${STAGE_CX - 24} ${tieY + 44} ${STAGE_CX - 18} ${tieY + 68}`,
+        doriRight: plainV ? null : `M ${STAGE_CX + 3} ${tieY} C ${STAGE_CX + 12} ${tieY + 20} ${STAGE_CX + 24} ${tieY + 44} ${STAGE_CX + 18} ${tieY + 68}`,
+        latkanL: plainV ? null : { x: STAGE_CX - 18, y: tieY + 68 },
+        latkanR: plainV ? null : { x: STAGE_CX + 18, y: tieY + 68 },
         // Lower Waist Tie Dori
         hasLowerTie,
-        lowerTieBow: `M ${STAGE_CX - 10} ${lowerTieY - 3} C ${STAGE_CX - 4} ${lowerTieY - 6} ${STAGE_CX} ${lowerTieY} C ${STAGE_CX + 4} ${lowerTieY - 6} ${STAGE_CX + 10} ${lowerTieY - 3}`,
+        lowerTieBow: `M ${STAGE_CX - 10} ${lowerTieY - 3} Q ${STAGE_CX - 4} ${lowerTieY - 6} ${STAGE_CX} ${lowerTieY} Q ${STAGE_CX + 4} ${lowerTieY - 6} ${STAGE_CX + 10} ${lowerTieY - 3}`,
         lowerDoriL: `M ${STAGE_CX - 2} ${lowerTieY} C ${STAGE_CX - 10} ${lowerTieY + 16} ${STAGE_CX - 18} ${lowerTieY + 32} ${STAGE_CX - 14} ${lowerTieY + 48}`,
         lowerDoriR: `M ${STAGE_CX + 2} ${lowerTieY} C ${STAGE_CX + 10} ${lowerTieY + 16} ${STAGE_CX + 18} ${lowerTieY + 32} ${STAGE_CX + 14} ${lowerTieY + 48}`,
         lowerLatkanL: { x: STAGE_CX - 14, y: lowerTieY + 48 },
@@ -1243,8 +1250,9 @@ interface BlouseDetailsResult {
   const f = FOCUS[activeCategory.slot] || FOCUS.topStyle;
   const isDetail = viewMode === 'detail';
   const fade = isDetail && ['neckline', 'collar', 'topStyle', 'sleeves', 'back', 'texture', 'cuff'].includes(activeCategory.slot) ? 0.65 : 1;
-  const k = isDetail ? f.z : isBack ? 0.66 : BASE_ZOOM;
-  const fy = isDetail ? f.cy : isBack ? 320 : 380;
+  // The painted back is framed like the front: the whole figure
+  const k = isDetail ? f.z : isBack && !painted ? 0.66 : BASE_ZOOM;
+  const fy = isDetail ? f.cy : isBack && !painted ? 320 : 380;
   // Centre the full figure in the space right of the floating rail rather than on the screen
   const fx = railOnLeft && !isDetail ? 29 : 0;
 
@@ -1593,12 +1601,12 @@ interface BlouseDetailsResult {
           </defs>
 
           {/* Avatar Rear Hair (Layer Behind Shoulders & Torso) */}
-          <AvatarRenderer viewMode={viewMode} layer="rearHair" />
+          {!(painted && isBack) && <AvatarRenderer viewMode={viewMode} layer="rearHair" />}
 
           {/* Painted skin across the torso (shows at the neckline and midriff) */}
           {/* (stops at the skirt waistband so no skin peeks out beside it) */}
           {painted && (
-            <g clipPath="url(#above-skirt-clip)">{paintedImage(PAINTED.skin, 'body-clip')}</g>
+            <g clipPath="url(#above-skirt-clip)">{paintedImage(PV.skin, 'body-clip')}</g>
           )}
           {/* Midriff modelling: rounded sides and soft shade under the blouse and above the waistband */}
           {painted && !isBack && (
@@ -1620,7 +1628,7 @@ interface BlouseDetailsResult {
             )}
 
             {/* Avatar 2D Fashion Game Character Head, Face & Jewelry */}
-            <AvatarRenderer viewMode={viewMode} layer={isBack ? 'backHead' : 'face'} />
+            {!(painted && isBack) && <AvatarRenderer viewMode={viewMode} layer={isBack ? 'backHead' : 'face'} />}
 
             {/* Clean 2D Stylized Mannequin Legs */}
             <g id="mannequin-legs" display={painted && (lenId === 'floor' || lenId === 'trail') ? 'none' : undefined}>
@@ -1695,7 +1703,7 @@ interface BlouseDetailsResult {
           {/* Skirt Texture & Fill Overlay */}
           <g clipPath="url(#skirt-clip)">
             {painted ? (
-              paintedImage(PAINTED.skirt)
+              paintedImage(PV.skirt)
             ) : (
               <path
                 d={svgPath(currentGarment === 'shirt' ? botPts('trouser', 'floor', 300) : botPts(botGeo, lenId, botTop))}
@@ -2113,7 +2121,7 @@ interface BlouseDetailsResult {
                 </g>
 
                 {/* Painted forearms and hands from the reference artwork */}
-                {painted && <g mask="url(#painted-forearm-mask)">{paintedImage(PAINTED.armsStretch)}</g>}
+                {painted && <g mask="url(#painted-forearm-mask)">{paintedImage(PV.armsStretch)}</g>}
 
                 {/* Gold Bangles (Churi) for Outstretched Arms */}
                 <g id="wrist-bangles-stretched" opacity="0.92" display={painted ? 'none' : undefined}>
@@ -2150,7 +2158,7 @@ interface BlouseDetailsResult {
           )}
 
           {/* Blouse Fabric Base, Texture & Cel Shading Overlay */}
-          {painted ? paintedImage(PAINTED.blouse, 'top-clip') : <path d={svgPath(topPts())} fill="url(#top-fabric-grad)" />}
+          {painted ? paintedImage(PV.blouse, 'top-clip') : <path d={svgPath(topPts())} fill="url(#top-fabric-grad)" />}
           <g clipPath="url(#top-clip)">
             {texKey === 'net' && <rect width={STAGE_W} height={STAGE_H} fill="url(#net-mesh)" />}
             {texKey === 'banarasi' && <rect width={STAGE_W} height={STAGE_H} fill="url(#banarasi-butis)" />}
@@ -2174,7 +2182,7 @@ interface BlouseDetailsResult {
                 )}
               </>
             )}
-            {isBack && currentGarment !== 'shirt' && (
+            {isBack && currentGarment !== 'shirt' && !painted && (
               <rect x="228" y="150" width="4" height="140" fill="rgba(0,0,0,0.12)" />
             )}
           </g>
@@ -2318,13 +2326,13 @@ interface BlouseDetailsResult {
                 return (
                   <g id="blouse-back-details">
                     {/* Spine seam */}
-                    <path d={bDet.spine!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
+                    <path d={bDet.spine!} fill="none" stroke={fabTheme.outlineColor} strokeWidth={painted ? 0.8 : 1.1} opacity={painted ? 0.45 : 0.6} strokeLinecap="round" />
                     {/* Tailored back darts */}
-                    <path d={bDet.dartLeft!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
-                    <path d={bDet.dartRight!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
+                    {!painted && <path d={bDet.dartLeft!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />}
+                    {!painted && <path d={bDet.dartRight!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />}
 
                     {/* Back Hem Border */}
-                    <path d={bDet.hemBorder!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />
+                    {!painted && <path d={bDet.hemBorder!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
 
                     {/* Potli Buttons (fabric covered buttons with thread loops along back seam) */}
                     {bDet.showPotli && bDet.potliYs && bDet.potliYs.map((py, idx) => (
@@ -2349,9 +2357,9 @@ interface BlouseDetailsResult {
                     ))}
 
                     {/* Upper Neck Dori & Designer Latkans */}
-                    <path d={bDet.tieBow!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />
-                    <path d={bDet.doriLeft!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />
-                    <path d={bDet.doriRight!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />
+                    {bDet.tieBow && <path d={bDet.tieBow} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />}
+                    {bDet.doriLeft && <path d={bDet.doriLeft} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
+                    {bDet.doriRight && <path d={bDet.doriRight} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
 
                     {/* Upper Latkan Left */}
                     {bDet.latkanL && (
@@ -2731,6 +2739,8 @@ interface BlouseDetailsResult {
           })()}
 
           <AvatarRenderer viewMode={viewMode} layer="frontHair" />
+          {/* Painted back of the head and the long hair, over the blouse */}
+          {painted && isBack && paintedImage(PAINTED_BACK.head)}
 
           {/* Shirt Specific Linework: Collar & Placket Buttons */}
           {currentGarment === 'shirt' && !isBack && (
@@ -2750,12 +2760,12 @@ interface BlouseDetailsResult {
           )}
 
           {/* Dupatta / Drape Textures & 2D Game Linework */}
-          {painted && drapeId === 'oneShoulder' && !isBack && (
+          {painted && drapeId === 'oneShoulder' && (
             <g id="drape-painted" opacity={fade}>
-              {paintedImage(PAINTED.dupattaOneShoulder)}
+              {paintedImage(PV.dupattaOneShoulder)}
             </g>
           )}
-          {!(painted && drapeId === 'oneShoulder' && !isBack) && pieces.map((pts, i) => (
+          {!(painted && drapeId === 'oneShoulder') && pieces.map((pts, i) => (
             <g key={`drape-piece-${i}`} id={`drape-${i}`}>
               <clipPath id={`drape-clip-${i}`}>
                 <path d={svgPath(pts)} />
@@ -2809,7 +2819,7 @@ interface BlouseDetailsResult {
         </svg>
 
         {/* Back View Seams & Closures (a corset laces up instead) */}
-        {isBack && topStyleId !== 'corset' && topStyleId !== 'jacket' && (
+        {isBack && !painted && topStyleId !== 'corset' && topStyleId !== 'jacket' && (
           <>
             {/* Center back seam */}
             <div

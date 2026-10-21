@@ -258,19 +258,28 @@ export const BACK_CUTS: Record<string, { pts: number[][] }> = {
       [264, 148],
     ],
   },
+  // Deep V back traced from the back reference painting
   deepBack: {
     pts: [
-      [196, 148],
-      [200, 175],
-      [206, 206],
-      [213, 238],
-      [220, 268],
-      [230, 294],
-      [240, 268],
-      [247, 238],
-      [254, 206],
-      [260, 175],
-      [264, 148],
+      [186.5, 155],
+      [187.5, 163],
+      [189, 172],
+      [192.9, 180.8],
+      [198, 191],
+      [206, 201.7],
+      [214.7, 212],
+      [220, 217.4],
+      [226, 222.7],
+      [230, 226.5],
+      [234, 222.7],
+      [240, 217.4],
+      [245.3, 212],
+      [254, 201.7],
+      [262, 191],
+      [267.1, 180.8],
+      [271, 172],
+      [272.5, 163],
+      [273.5, 155],
     ],
   },
   keyholeBack: {
@@ -901,3 +910,16 @@ export const JACKET_PANEL_L: number[][] = [
 export const JACKET_OPENING_L: number[][] = [
   [197, 151], [193, 166], [190, 186], [188.5, 212], [189, 240], [191.5, 270], [195, 302], [199.5, 337], [204, 372],
 ];
+
+// Back view painted from design/reference-lehenga-back.webp (scripts/painted-assets/build_back.py)
+export const PAINTED_BACK = {
+  skirt: { href: '/assets/painted/skirt-texture-back.png', x: -70.7, y: 262.8, w: 698.4, h: 680.9 },
+  blouse: { href: '/assets/painted/blouse-texture-back.png', x: -114.4, y: 131.9, w: 785.7, h: 419.0 },
+  skin: { href: '/assets/painted/skin-texture-back.png', x: 138.8, y: 123.1, w: 192.1, h: 357.9 },
+  head: { href: '/assets/painted/head-back.png', x: 195.5, y: 40.2, w: 92.5, h: 254.9 },
+  armsStretch: { href: '/assets/painted/arms-stretch-back.png', x: 16.6, y: 255.8, w: 426.9, h: 155.4 },
+  dupattaOneShoulder: { href: '/assets/painted/dupatta-one-shoulder-back.png', x: 279.3, y: 154.6, w: 185.9, h: 575.3 },
+};
+
+// Scalloped hem of the back painting (left half, outer corner to centre back)
+export const PAINTED_HEM_BACK_L: number[][] = [[11.3, 728.1], [18.3, 732.5], [25.3, 736.0], [32.3, 744.7], [39.3, 748.2], [46.2, 750.8], [53.2, 751.7], [60.2, 757.8], [67.2, 760.4], [74.2, 763.0], [81.2, 764.8], [88.1, 765.7], [95.1, 766.5], [102.1, 767.4], [109.1, 771.8], [116.1, 773.5], [123.1, 776.1], [130.0, 777.0], [137.0, 777.0], [144.0, 777.9], [151.0, 778.8], [158.0, 778.8], [165.0, 776.1], [171.9, 779.6], [178.9, 780.5], [185.9, 780.5], [192.9, 781.4], [199.9, 780.5], [206.9, 781.4], [213.9, 784.0], [220.8, 784.0], [227.8, 784.9], [230, 784.9]];
