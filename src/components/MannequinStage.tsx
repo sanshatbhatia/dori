@@ -96,7 +96,6 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   const setLatkanBoxOrientation = propsOnSetLatkanBoxOrientation ?? setInternalLatkanBoxOrientation;
 
   const isBack = viewMode === 'back';
-  const RACK_NUDGE = 14;
   const g = GARMENTS[currentGarment];
   // Lehenga uses the painted fabric, skin and trims from the reference artwork
   const painted = currentGarment === 'lehenga';
@@ -1159,49 +1158,6 @@ interface BlouseDetailsResult {
         {/* Soft Natural Waist & Navel Accent */}
         {!isBack && (
           <div className="absolute left-[228px] top-[316px] w-[5px] h-[7px] rounded-full bg-[#ba8066]/35 shadow-inner pointer-events-none" />
-        )}
-
-        {/* Atelier Hanging Rod with a spare dupatta (painted) */}
-        {painted ? (
-          <img
-            src={PAINTED.rack.href}
-            alt=""
-            className="absolute pointer-events-none transition-all duration-500"
-            style={{
-              // Pulled in slightly from the artwork so it fits the narrower phone screen
-              left: `${isBack ? STAGE_W - PAINTED.rack.x - PAINTED.rack.w + RACK_NUDGE : PAINTED.rack.x - RACK_NUDGE}px`,
-              top: `${PAINTED.rack.y}px`,
-              width: `${PAINTED.rack.w}px`,
-              height: `${PAINTED.rack.h}px`,
-              transform: isBack ? 'scaleX(-1)' : undefined,
-            }}
-          />
-        ) : (
-          <>
-        <div
-          className="absolute top-[196px] w-[104px] h-[330px] transition-all duration-500 pointer-events-none"
-          style={{ left: isBack ? '-36px' : '392px' }}
-        >
-          {/* Sheer cloth folded over the rod, gold zari border on the edges */}
-          <div
-            className="absolute left-[12px] top-[6px] w-[80px] h-[300px] rounded-b-[3px]"
-            style={{
-              background: 'linear-gradient(90deg, #ece2d3 0%, #f8f2e8 28%, #f1e7d8 58%, #e6d9c6 100%)',
-              boxShadow: '0 4px 12px rgba(100,75,50,0.08)',
-              borderLeft: '3px solid #c9a35c',
-              borderRight: '3px solid #c9a35c',
-              borderBottom: '4px solid #c9a35c',
-            }}
-          >
-            <div className="absolute left-[24px] top-0 w-[1px] h-full bg-[#c8b59e]/45" />
-            <div className="absolute left-[50px] top-0 w-[1px] h-full bg-[#c8b59e]/45" />
-            <div className="absolute left-0 top-0 w-full h-[46%] bg-gradient-to-b from-[#fbf7f0]/80 to-transparent" />
-          </div>
-          <div className="absolute left-0 top-0 w-[104px] h-[9px] rounded-[5px] bg-gradient-to-b from-[#cfa46c] to-[#a97f4c]" />
-          <div className="absolute -left-[6px] -top-[3px] w-[15px] h-[15px] rounded-full bg-gradient-to-br from-[#d3aa74] to-[#a97f4c]" />
-          <div className="absolute left-[95px] -top-[3px] w-[15px] h-[15px] rounded-full bg-gradient-to-br from-[#d3aa74] to-[#a97f4c]" />
-        </div>
-          </>
         )}
 
         {/* Layer 1: Skirt / Bottom */}

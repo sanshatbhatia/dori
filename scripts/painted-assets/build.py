@@ -165,8 +165,8 @@ B=np.where(sk_sil[...,None], skirt_full, B)
 D=np.array([250,244,232.])
 diff=a-B; dirv=D-B
 al=np.clip((diff*dirv).sum(2)/np.maximum((dirv*dirv).sum(2),1),0,1)
-# dupatta extent: everything on the right that isn't plain skirt, background, hair, rack or arm
-reg=(X>296)&(Y>=138)&(Y<=815)&~((X>=470)&(Y<680))&~hair
+# dupatta extent: everything on the right that isn't plain skirt, background, hair, rack or arm (the rack itself isn't used)
+reg=(X>296)&(Y>=138)&(Y<=815)&~((X>=458)&(Y<690))&~hair
 reg&=(((dbg>8)&~(green&(dsk<18)))|gold)
 arm_skin=np.asarray(Image.fromarray((skin&(Y>280)&(X>330)&(X<500)&(Y<440)).astype(np.uint8)*255).filter(ImageFilter.MaxFilter(7)))>0
 reg&=~arm_skin
@@ -184,16 +184,20 @@ al=np.where(pm,al,0)
 al=np.where(gold&pm,1,al)
 al=np.where(hair,0,al)
 al=np.where(al<0.08,0,al)
+# drop isolated specks (bits of the rack edge and background noise) outside the main cloth
+from collections import deque
+grow=np.asarray(Image.fromarray(((al>0.05)*255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3)))>0
+keep=np.zeros_like(grow)
+seed=np.argwhere(grow&pm&(Y>500))[0]
+q=deque([tuple(seed)])
+while q:
+    yy,xx=q.popleft()
+    if yy<0 or xx<0 or yy>=H or xx>=W or keep[yy,xx] or not grow[yy,xx]: continue
+    keep[yy,xx]=True
+    q.extend(((yy+1,xx),(yy-1,xx),(yy,xx+1),(yy,xx-1)))
+al=np.where(keep,al,0)
 col=np.where(al[...,None]>0, (a-(1-al[...,None])*B)/np.maximum(al[...,None],0.05), D)
 col=np.where((gold&pm)[...,None],a,np.clip(col,0,255))
 y0,y1,x0,x1=135,820,290,552
 save('dupatta-one-shoulder',col[y0:y1,x0:x1],al[y0:y1,x0:x1],x0,y0)
-# --- rack with hanging dupatta
-rz=np.zeros((H,W),bool); rz[190:680,470:615]=True
-rk=(dbg>7)&rz
-# the right hand's fingertips reach into the rack area; leave them to the arm cut-out
-rk&=~(np.asarray(Image.fromarray((skin&~gold&(X<490)&(Y>370)&(Y<440)).astype(np.uint8)*255).filter(ImageFilter.MaxFilter(5)))>0)
-rk=np.asarray(Image.fromarray((rk*255).astype(np.uint8)).filter(ImageFilter.MaxFilter(7)).filter(ImageFilter.MinFilter(5)).filter(ImageFilter.GaussianBlur(0.8)))/255.
-y0,y1,x0,x1=190,680,470,615
-save('rack',a[y0:y1,x0:x1],rk[y0:y1,x0:x1],x0,y0)
 print(json.dumps(place))

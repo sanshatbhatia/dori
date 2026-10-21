@@ -782,7 +782,6 @@ export const PAINTED = {
   armsStretch: { href: '/assets/painted/arms-stretch.png', x: 16.6, y: 255.8, w: 426.9, h: 146.7 },
   latkan: { href: '/assets/painted/latkan.png', x: 154.5, y: 278.5, w: 48.9, h: 182.5 },
   dupattaOneShoulder: { href: '/assets/painted/dupatta-one-shoulder.png', x: 261.0, y: 145.0, w: 228.7, h: 598.0 },
-  rack: { href: '/assets/painted/rack.png', x: 418.1, y: 193.0, w: 126.6, h: 427.8 },
 };
 // Where the painted latkan hangs from the waistband (light size scales around it)
 export const PAINTED_LATKAN_ANCHOR: [number, number] = [178.9, 285.5];
