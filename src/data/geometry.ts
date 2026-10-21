@@ -178,21 +178,30 @@ export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = 
     ],
     sh: [202, 154],
   },
+  // Wide scoop with a small centre notch, measured from the reference artwork
   notched: {
     pts: [
-      [198, 146],
-      [201, 155],
-      [207, 165],
-      [215, 172],
-      [224, 176],
-      [227, 176],
-      [230, 186],
-      [233, 176],
-      [236, 176],
-      [245, 172],
-      [253, 165],
-      [259, 155],
-      [262, 146],
+      [185.9, 155.4],
+      [191.2, 163.3],
+      [196.4, 172],
+      [201.6, 177.3],
+      [206.9, 179.9],
+      [212.1, 181.6],
+      [217.3, 184.2],
+      [222.6, 185.5],
+      [226.7, 188.5],
+      [228.6, 193],
+      [230.0, 200],
+      [231.4, 193],
+      [233.3, 188.5],
+      [237.4, 185.5],
+      [242.7, 184.2],
+      [247.9, 181.6],
+      [253.1, 179.9],
+      [258.4, 177.3],
+      [263.6, 172],
+      [268.8, 163.3],
+      [274.1, 155.4],
     ],
   },
   high: {
@@ -308,19 +317,23 @@ export const BACK_CUTS: Record<string, { pts: number[][] }> = {
 };
 
 export const TOP: Record<string, { right: number[][]; hemC?: number[][] }> = {
+  // Cropped choli measured from the reference artwork: armpit to a short hem above the midriff
   fitted: {
     right: [
-      [306, 214],
-      [301, 240],
-      [295, 266],
-      [288, 288],
+      [281.6, 215],
+      [278.6, 226],
+      [276.6, 233],
+      [274.1, 240],
+      [272.3, 247],
+      [270.6, 254],
+      [270.1, 258],
     ],
     hemC: [
-      [268, 289],
-      [249, 287],
-      [230, 285],
-      [211, 287],
-      [192, 289],
+      [255.6, 259],
+      [240.6, 259.5],
+      [230.0, 260],
+      [219.4, 259.5],
+      [204.4, 259],
     ],
   },
   peplum: {
@@ -432,24 +445,24 @@ export const SLV: Record<string, { L: number; w: [number, number, number] } | nu
 };
 
 export const BOT: Record<string, { profile: [number, number][]; scallop?: boolean }> = {
-  pleated: { profile: [[0, 51.5], [0.035, 54], [0.12, 82], [0.24, 108], [0.48, 148], [0.72, 192], [1, 228]] },
-  aline: { profile: [[0, 51.5], [0.035, 53.5], [0.12, 78], [0.24, 98], [0.5, 138], [0.75, 172], [1, 204]] },
-  circular: { profile: [[0, 51.5], [0.035, 54], [0.12, 84], [0.24, 114], [0.45, 162], [0.7, 202], [1, 230]] },
-  panelled: { profile: [[0, 51.5], [0.035, 53.5], [0.12, 80], [0.24, 102], [0.5, 146], [0.75, 186], [1, 216]], scallop: true },
-  flared: { profile: [[0, 51.5], [0.035, 53.5], [0.12, 78], [0.24, 96], [0.48, 126], [0.72, 176], [1, 222]] },
-  straight: { profile: [[0, 51.5], [0.035, 53], [0.12, 72], [0.24, 82], [0.45, 88], [0.75, 94], [1, 102]] },
-  tiered: { profile: [[0, 51.5], [0.035, 53.5], [0.12, 80], [0.24, 100], [0.33, 118], [0.35, 132], [0.66, 162], [0.68, 176], [1, 218]] },
-  mermaid: { profile: [[0, 51.5], [0.035, 53], [0.12, 74], [0.24, 82], [0.42, 82], [0.6, 80], [0.72, 88], [0.84, 146], [1, 210]] },
-  trouser: { profile: [[0, 51.5], [0.035, 53], [0.12, 72], [0.24, 80], [0.5, 78], [1, 74]] },
+  pleated: { profile: [[0, 39.6], [0.028, 40.1], [0.04, 48.6], [0.083, 58.6], [0.126, 68.6], [0.211, 85.6], [0.298, 104.6], [0.385, 120.6], [0.47, 138.6], [0.557, 156.6], [0.642, 173.6], [0.729, 190.6], [0.816, 208.6], [0.885, 221.6]] },
+  aline: { profile: [[0, 39.6], [0.028, 40.1], [0.12, 78], [0.24, 98], [0.5, 138], [0.75, 172], [1, 204]] },
+  circular: { profile: [[0, 39.6], [0.028, 40.1], [0.12, 84], [0.24, 114], [0.45, 162], [0.7, 202], [1, 230]] },
+  panelled: { profile: [[0, 39.6], [0.028, 40.1], [0.12, 80], [0.24, 102], [0.5, 146], [0.75, 186], [1, 216]], scallop: true },
+  flared: { profile: [[0, 39.6], [0.028, 40.1], [0.12, 78], [0.24, 96], [0.48, 126], [0.72, 176], [1, 222]] },
+  straight: { profile: [[0, 39.6], [0.028, 40.1], [0.12, 72], [0.24, 82], [0.45, 88], [0.75, 94], [1, 102]] },
+  tiered: { profile: [[0, 39.6], [0.028, 40.1], [0.12, 80], [0.24, 100], [0.33, 118], [0.35, 132], [0.66, 162], [0.68, 176], [1, 218]] },
+  mermaid: { profile: [[0, 39.6], [0.028, 40.1], [0.12, 74], [0.24, 82], [0.42, 82], [0.6, 80], [0.72, 88], [0.84, 146], [1, 210]] },
+  trouser: { profile: [[0, 39.6], [0.028, 40.1], [0.12, 72], [0.24, 80], [0.5, 78], [1, 74]] },
 };
 
 export const LENV: Record<string, number> = {
-  knee: 190,
-  tea: 250,
-  midi: 306,
-  ankle: 356,
-  floor: 488,
-  trail: 524,
+  knee: 212,
+  tea: 272,
+  midi: 328,
+  ankle: 378,
+  floor: 506,
+  trail: 548,
 };
 
 export const FAB: Record<string, { c: string; op: number }> = {
@@ -598,7 +611,7 @@ export const TEXL: Record<string, number> = {
   sheer: 6,
 };
 
-export const BASE_ZOOM = 0.62;
+export const BASE_ZOOM = 0.647;
 
 export const FOCUS: Record<SlotKey, FocusConfig> = {
   topStyle: { cy: 250, z: 0.95, view: 'detail' },
@@ -671,9 +684,9 @@ export const LEG_R: number[][] = mir(LEG_L);
 export const BODY: number[][] = [
   // Neck top
   [216, 120], [244, 120],
-  // Right shoulder, bust, waist, hip
-  [250, 138], [266, 141], [278, 143.5], [288, 145.5], [295, 148], [301, 154], [305, 164], [307, 178], [306, 196], [300, 240], [288, 272],
-  [278, 300], [282, 330], [300, 368], [304, 410], [302, 435],
+  // Right shoulder, bust, waist, hip (sloped shoulders and slim waist from the reference artwork)
+  [245.6, 138], [259.6, 148], [274.1, 155.4], [283.6, 157.4], [292.6, 160], [298.6, 168], [299.6, 180], [293.6, 196], [285.6, 210], [279.6, 222], [275.6, 236], [271.6, 250], [269.6, 264], [269.6, 282],
+  [273.6, 300], [277.6, 330], [295.6, 368], [299.6, 410], [297.6, 435],
   // Right human-contoured leg
   ...LEG_R,
   // Perineum / crotch arch center
@@ -683,16 +696,16 @@ export const BODY: number[][] = [
   // Left hip (going up from [161, 450])
   [158, 435], [156, 410], [160, 368], [178, 330],
   // Left waist, bust, shoulder, neck
-  [182, 300], [172, 272], [160, 240], [154, 196], [153, 178], [155, 164], [159, 154], [165, 148], [172, 145.5], [182, 143.5], [194, 141], [210, 138],
+  [186.4, 300], [190.4, 282], [190.4, 264], [188.4, 250], [184.4, 236], [180.4, 222], [174.4, 210], [166.4, 196], [160.4, 180], [161.4, 168], [167.4, 160], [176.4, 157.4], [185.9, 155.4], [200.4, 148], [214.4, 138],
 ];
 
 export const ARM_L: number[][] = [
-  [164, 146], // Top shoulder cap
-  [158, 146.5],
-  [152, 148.5],
-  [147, 153],
-  [143, 160], // Outer shoulder round
-  [140.5, 172],
+  [164, 159], // Top shoulder cap
+  [158, 159.5],
+  [152, 161],
+  [147, 164],
+  [143, 169], // Outer shoulder round
+  [140.5, 178],
   [140, 190], // Outer upper arm
   [140, 240], // Outer bicep
   [138, 290], // Outer elbow
@@ -715,11 +728,11 @@ export const ARM_R: number[][] = mir(ARM_L);
 
 // Outstretched arms (sideways mannequin pose)
 export const ARM_OUT_L: number[][] = [
-  [164, 146], // Top shoulder cap
-  [156, 146.3], // Outer shoulder transition curve
-  [146, 147],
-  [134, 148],
-  [122, 149], // Upper arm top
+  [164, 158], // Top shoulder cap (sits under the sloped shoulder seam)
+  [156, 158.5], // Outer shoulder transition curve
+  [146, 157],
+  [134, 154],
+  [122, 151], // Upper arm top
   [96, 152],  // Elbow top
   [70, 155],  // Forearm top
   [44, 158],  // Wrist top
@@ -733,14 +746,14 @@ export const ARM_OUT_L: number[][] = [
   [122, 178], // Bicep under
   [146, 180], // Underarm
   [168, 184], // Inner armpit
-  [172, 160], // Inner shoulder joint
-  [168, 148], // Shoulder joint top
+  [172, 162], // Inner shoulder joint
+  [168, 159], // Shoulder joint top
 ];
 
 export const ARM_OUT_R: number[][] = mir(ARM_OUT_L);
 
 // Stretch pose swings the outstretched arms down into an A-pose around the shoulder joint
-export const A_POSE_ANGLE = (55 * Math.PI) / 180;
+export const A_POSE_ANGLE = (58 * Math.PI) / 180;
 export const A_POSE_PIVOT: [number, number] = [170, 162];
 // The outstretched arm is lengthened from the shoulder to the wrist by this factor
 export const ARM_REACH_SCALE = 1.9;
@@ -758,3 +771,29 @@ export function fillGradient(base: string, texKey: string, lift = 0): string {
   const endColor = 8 - t < 0 ? colorMix(base, 'white', -(8 - t)) : colorMix(base, 'black', 8 - t);
   return `linear-gradient(163deg, ${startColor} 0%, ${midColor} 62%, ${endColor} 100%)`;
 }
+
+// Painted artwork cut from the reference design, placed in stage units.
+// Fabric and skin are textures that the garment shapes clip, so every option
+// keeps the painted look; the rest are cut-outs drawn as they are.
+export const PAINTED = {
+  skirt: { href: '/assets/painted/skirt-texture.png', x: -70.7, y: 262.8, w: 698.4, h: 680.9 },
+  blouse: { href: '/assets/painted/blouse-texture.png', x: -114.4, y: 131.9, w: 785.7, h: 419.0 },
+  skin: { href: '/assets/painted/skin-texture.png', x: 138.8, y: 123.1, w: 192.1, h: 357.9 },
+  armsStretch: { href: '/assets/painted/arms-stretch.png', x: 16.6, y: 280.3, w: 426.9, h: 122.2 },
+  latkan: { href: '/assets/painted/latkan.png', x: 154.5, y: 278.5, w: 48.9, h: 182.5 },
+  dupattaOneShoulder: { href: '/assets/painted/dupatta-one-shoulder.png', x: 261.0, y: 145.0, w: 228.7, h: 598.0 },
+  rack: { href: '/assets/painted/rack.png', x: 418.1, y: 193.0, w: 126.6, h: 427.8 },
+};
+// Where the painted latkan hangs from the waistband (light size scales around it)
+export const PAINTED_LATKAN_ANCHOR: [number, number] = [178.9, 285.5];
+
+// Stretch pose: the drawn arm only fills the upper arm; the painted forearm takes over
+// just past the painted sleeve hem (a little overlap so no gap shows)
+export const UPPER_ARM_CLIP_L: number[][] = [[186, 132], [36, 190], [64, 270], [148, 330], [192, 262]];
+
+// Scalloped pleated hem traced from the reference artwork (left half, outer corner to centre front)
+export const PAINTED_HEM_L: number[][] = [[11.3, 721.1], [18.3, 724.6], [25.3, 729.0], [32.3, 730.7], [35.8, 733.4], [39.3, 740.3], [46.2, 744.7], [53.2, 747.3], [60.2, 750.0], [67.2, 750.0], [74.2, 750.8], [77.7, 752.6], [81.2, 756.9], [88.1, 760.4], [95.1, 763.0], [102.1, 765.7], [109.1, 766.5], [116.1, 768.3], [123.1, 769.2], [130.0, 768.3], [133.5, 769.2], [137.0, 772.6], [144.0, 774.4], [151.0, 776.1], [158.0, 777.9], [168.5, 777.9], [178.9, 777.9], [185.9, 777.0], [192.9, 776.1], [199.9, 776.1], [203.4, 777.9], [206.9, 782.3], [213.9, 784.0], [220.8, 784.0], [226.4, 785.7], [230.0, 785.7]];
+
+// Flared elbow sleeve in the stretch pose, traced from the reference artwork:
+// armpit, down the inner edge, across the hem, and up the outer edge to the shoulder tip
+export const PAINTED_FLARED_SLEEVE_L: number[][] = [[178.4, 215], [175.4, 219.2], [173.7, 226.2], [171.1, 233.1], [169.3, 240.1], [166.7, 247.1], [165.0, 254.1], [162.3, 261.1], [160.6, 268.1], [158.0, 275], [156.2, 282], [154.5, 289], [151.9, 296], [150.1, 303], [147.5, 310], [144.4, 312.5], [141.4, 310], [123.1, 303], [117.8, 296], [113.5, 289], [106.5, 282], [88.1, 275], [82.9, 268.1], [81.2, 261.1], [87.3, 254.1], [93.4, 247.1], [99.5, 240.1], [105.6, 233.1], [110.8, 226.2], [116.9, 219.2], [122.2, 212.2], [128.3, 205.2], [133.5, 198.2], [139.6, 191.2], [144.9, 184.2], [150.1, 177.3], [155.4, 170.3], [163.2, 163.3], [167.4, 160]];

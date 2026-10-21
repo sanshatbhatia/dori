@@ -114,7 +114,7 @@ export const AvatarRenderer: React.FC<AvatarRendererProps> = ({
         {/* Painted head, face and long hair from the reference artwork */}
         <image
           href="/assets/dori-face.png"
-          x={188.5}
+          x={192.9}
           y={30.6}
           width={120.5}
           height={275.9}
