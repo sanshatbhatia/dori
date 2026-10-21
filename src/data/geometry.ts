@@ -425,12 +425,23 @@ export const TOP: Record<string, { right: number[][]; hemC?: number[][] }> = {
       [192.6, 276.4],
     ],
   },
+  // Jacket set: a cropped choli underneath (the open jacket itself is drawn over it)
   jacket: {
     right: [
-      [306, 218],
-      [302, 270],
-      [298, 330],
-      [294, 392],
+      [281.6, 215],
+      [278.6, 226],
+      [276.6, 233],
+      [274.1, 240],
+      [272.3, 247],
+      [270.6, 254],
+      [270.1, 258],
+    ],
+    hemC: [
+      [255.6, 259],
+      [240.6, 259.5],
+      [230.0, 260],
+      [219.4, 259.5],
+      [204.4, 259],
     ],
   },
   bodice: {
@@ -876,3 +887,17 @@ export const PAINTED_SLEEVES: Record<string, { len: number; ease: number; flare:
   full: { len: 178, ease: 2, flare: 0, puff: 0 },
   bell: { len: 176, ease: 3, flare: 26, flareFrom: 100, puff: 0 },
 };
+
+// Open-front jacket worn over the choli (left front panel; the right one is its mirror).
+// Neck point, down the front opening to the hem, across to the side, up to the armpit,
+// and along the shoulder seam back to the neck.
+export const JACKET_PANEL_L: number[][] = [
+  [197, 151], [193, 166], [190, 186], [188.5, 212], [189, 240], [191.5, 270], [195, 302], [199.5, 337], [204, 372],
+  [186, 373.5], [166, 371.5], [146, 367],
+  [150.5, 336], [157, 302], [165, 270], [171, 244], [176, 224], [178.4, 215],
+  [175, 192], [172, 172], [167.4, 160], [174, 157.6], [181, 155.6], [189, 153.2],
+];
+// Inner edge of the front opening, top to hem: where the embroidered placket runs
+export const JACKET_OPENING_L: number[][] = [
+  [197, 151], [193, 166], [190, 186], [188.5, 212], [189, 240], [191.5, 270], [195, 302], [199.5, 337], [204, 372],
+];

@@ -72,6 +72,21 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
         </svg>
       );
     }
+    if (optId === 'jacket') {
+      return (
+        <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>
+          {/* Cropped choli with an embroidered hem band */}
+          <path d="M 15 11 Q 20 15 25 11 L 25.5 21 L 14.5 21 Z" fill="currentColor" fillOpacity="0.35" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
+          <path d="M 14.5 19 L 25.5 19" stroke="#b68235" strokeWidth="1.4" />
+          {/* Open jacket with gold-bordered front edges and sleeves */}
+          <path d="M 15 10 L 11 10.5 L 5 22 L 9 24 L 11.5 19 L 11 33 L 17 33 L 16 18 Z" fill="#f4ede4" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+          <path d="M 25 10 L 29 10.5 L 35 22 L 31 24 L 28.5 19 L 29 33 L 23 33 L 24 18 Z" fill="#f4ede4" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+          <path d="M 15.3 10.5 L 16.3 18 L 17 32.5" stroke="#b68235" strokeWidth="1.2" fill="none" />
+          <path d="M 24.7 10.5 L 23.7 18 L 23 32.5" stroke="#b68235" strokeWidth="1.2" fill="none" />
+          <path d="M 11.3 32.4 L 16.8 32.4 M 23.2 32.4 L 28.7 32.4" stroke="#b68235" strokeWidth="1.2" />
+        </svg>
+      );
+    }
     if (optId === 'corset') {
       return (
         <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>

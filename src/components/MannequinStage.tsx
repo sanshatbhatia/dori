@@ -39,6 +39,8 @@ import {
   armAt,
   PAINTED_HEM_L,
   PAINTED_FLARED_SLEEVE_L,
+  JACKET_PANEL_L,
+  JACKET_OPENING_L,
   SLV,
   STAGE_CX,
   STAGE_H,
@@ -1524,6 +1526,11 @@ interface BlouseDetailsResult {
             <clipPath id="skirt-clip">
               <path d={svgPath(currentGarment === 'shirt' ? botPts('trouser', 'floor', 300) : botPts(botGeo, lenId, botTop))} />
             </clipPath>
+            <linearGradient id="jacket-fold-shade" x1="0" y1="0" x2="1" y2="0.25">
+              <stop offset="0" stopColor="#8a7055" stopOpacity="0.16" />
+              <stop offset="0.45" stopColor="#ffffff" stopOpacity="0.1" />
+              <stop offset="1" stopColor="#8a7055" stopOpacity="0.14" />
+            </linearGradient>
             <linearGradient id="midriff-side-shade" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0" stopColor="#b9826a" stopOpacity="0.32" />
               <stop offset="0.22" stopColor="#b9826a" stopOpacity="0.06" />
@@ -2600,6 +2607,128 @@ interface BlouseDetailsResult {
           )}
 
           {/* Avatar Front Hair Cascade (Glossy locks falling over shoulder & bodice) */}
+          {/* Jacket set: embroidered band at the choli hem, then the open jacket in the dupatta fabric */}
+          {topStyleId === 'jacket' && currentGarment === 'lehenga' && (() => {
+            const gold = '#c8a24f';
+            const cloth = fabTheme.drapeColor;
+            const panelL = scaleX(JACKET_PANEL_L, fitK);
+            const panelR = mir(panelL);
+            const backPanel = [...panelL.slice(9), ...mir(panelL.slice(9)).reverse()];
+            const opening = scaleX(JACKET_OPENING_L, fitK);
+            const line = (pts: number[][]) => 'M ' + pts.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ');
+            const offset = (pts: number[][], d: number) => pts.map(([x, y]) => [x - d, y]);
+            // placket motifs along the opening
+            const motifs: number[][] = [];
+            for (let i = 0; i < opening.length - 1; i++) {
+              const [a, b] = [opening[i], opening[i + 1]];
+              const steps = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 9));
+              for (let k = 0; k < steps; k++) {
+                const f = (k + 0.5) / steps;
+                motifs.push([a[0] + (b[0] - a[0]) * f - 3.2, a[1] + (b[1] - a[1]) * f]);
+              }
+            }
+            const hemL = [panelL[8], panelL[9], panelL[10], panelL[11]];
+            const sleeves = [sleevePts('l'), sleevePts('r')].filter(Boolean) as number[][][];
+            // cuff band on painted stretch-pose sleeves
+            const cuffBand = (() => {
+              const spec = PAINTED_SLEEVES[sleeveId];
+              if (!painted || armPose !== 'stretched' || !spec) return null;
+              const at = (sv: number, sd: 1 | -1) => {
+                const a = armAt(sv);
+                const e = spec.ease + spec.flare * Math.pow(Math.max(0, (sv - (spec.flareFrom ?? spec.len * 0.6)) / Math.max(1, spec.len - (spec.flareFrom ?? spec.len * 0.6))), 1.3);
+                return [a.p[0] + sd * a.n[0] * (a.w + e), a.p[1] + sd * a.n[1] * (a.w + e)];
+              };
+              const l = [at(spec.len - 9, 1), at(spec.len, 1), at(spec.len, -1), at(spec.len - 9, -1)];
+              return [l, mir(l)];
+            })();
+            // gold border along the hem of the painted flared sleeve
+            const flaredHem =
+              painted && armPose === 'stretched' && sleeveId === 'flared'
+                ? (() => {
+                    const h = PAINTED_FLARED_SLEEVE_L.filter(([x, y]) => y >= 274 && x <= 146);
+                    return [h, mir(h)];
+                  })()
+                : null;
+            return (
+              <g id="jacket-set">
+                {/* Choli hem band: gold-bordered embroidery strip */}
+                {!isBack && (
+                  <g id="choli-embroidered-band">
+                    <path d={`M ${STAGE_CX - 39.8 * fitK} 247 Q ${STAGE_CX} 249 ${STAGE_CX + 39.8 * fitK} 247 L ${STAGE_CX + 40.1 * fitK} 259 Q ${STAGE_CX} 261 ${STAGE_CX - 40.1 * fitK} 259 Z`} fill="rgba(0,0,0,0.08)" />
+                    <path d={`M ${STAGE_CX - 39.8 * fitK} 247.5 Q ${STAGE_CX} 249.5 ${STAGE_CX + 39.8 * fitK} 247.5`} fill="none" stroke={gold} strokeWidth="1.2" />
+                    <path d={`M ${STAGE_CX - 40.1 * fitK} 258.2 Q ${STAGE_CX} 260.2 ${STAGE_CX + 40.1 * fitK} 258.2`} fill="none" stroke={gold} strokeWidth="1.2" />
+                    {Array.from({ length: 11 }, (_, i) => {
+                      const x = STAGE_CX + (i - 5) * 7 * fitK;
+                      return (
+                        <path
+                          key={`band-motif-${i}`}
+                          d={`M ${x} 250 L ${x + 2.6} 253.3 L ${x} 256.6 L ${x - 2.6} 253.3 Z`}
+                          fill={i % 2 ? gold : cloth}
+                          stroke={fabTheme.outlineColor}
+                          strokeWidth="0.4"
+                          strokeOpacity="0.6"
+                        />
+                      );
+                    })}
+                  </g>
+                )}
+
+                {/* Jacket sleeves over the choli sleeves */}
+                {sleeves.map((pts, i) => (
+                  <g key={`jacket-sleeve-${i}`}>
+                    <path d={svgPath(pts)} fill={cloth} opacity="0.96" />
+                    <path d={svgPath(pts)} fill="url(#jacket-fold-shade)" />
+                    <path d={svgPath(pts)} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.8" opacity="0.45" strokeLinejoin="round" />
+                  </g>
+                ))}
+                {flaredHem?.map((pts, i) => (
+                  <g key={`jacket-flare-hem-${i}`}>
+                    <path d={line(pts)} fill="none" stroke={gold} strokeWidth="2.6" strokeLinecap="round" />
+                    <path d={line(pts.map(([x, y]) => [x + (i ? -1 : 1) * 2.2, y - 3.6]))} fill="none" stroke={gold} strokeWidth="0.8" strokeLinecap="round" />
+                  </g>
+                ))}
+                {cuffBand?.map((pts, i) => (
+                  <g key={`jacket-cuff-${i}`}>
+                    <path d={svgPath(pts)} fill={gold} opacity="0.85" />
+                    <path d={svgPath(pts)} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.5" opacity="0.5" />
+                  </g>
+                ))}
+
+                {/* Jacket body: two open front panels, or the full back */}
+                {(isBack ? [backPanel] : [panelL, panelR]).map((pts, i) => (
+                  <g key={`jacket-panel-${i}`}>
+                    <path d={svgPath(pts)} fill={cloth} opacity="0.97" />
+                    <path d={svgPath(pts)} fill="url(#jacket-fold-shade)" />
+                    <path d={svgPath(pts)} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.85" opacity="0.5" strokeLinejoin="round" />
+                  </g>
+                ))}
+
+                {/* Gold zari placket along the front opening, with embroidered motifs */}
+                {!isBack && [1, -1].map((sd) => {
+                  const op = sd === 1 ? opening : mir(opening);
+                  const ms = sd === 1 ? motifs : mir(motifs);
+                  return (
+                    <g key={`placket-${sd}`}>
+                      <path d={line(op)} fill="none" stroke={gold} strokeWidth="1.4" strokeLinecap="round" />
+                      <path d={line(offset(op, sd * 6.4))} fill="none" stroke={gold} strokeWidth="1.1" strokeLinecap="round" />
+                      {ms.map(([x, y], k) => (
+                        <circle key={`m-${k}`} cx={x} cy={y} r="1.5" fill={k % 2 ? gold : fabTheme.baseColor} stroke={fabTheme.outlineColor} strokeWidth="0.3" strokeOpacity="0.5" />
+                      ))}
+                    </g>
+                  );
+                })}
+
+                {/* Gold hem border */}
+                {[hemL.slice(isBack ? 1 : 0), mir(hemL.slice(isBack ? 1 : 0))].map((pts, i) => (
+                  <g key={`jacket-hem-${i}`}>
+                    <path d={line(pts)} fill="none" stroke={gold} strokeWidth="2.4" strokeLinecap="round" />
+                    <path d={line(pts.map(([x, y]) => [x, y - 4]))} fill="none" stroke={gold} strokeWidth="0.8" strokeLinecap="round" />
+                  </g>
+                ))}
+              </g>
+            );
+          })()}
+
           <AvatarRenderer viewMode={viewMode} layer="frontHair" />
 
           {/* Shirt Specific Linework: Collar & Placket Buttons */}
@@ -2679,7 +2808,7 @@ interface BlouseDetailsResult {
         </svg>
 
         {/* Back View Seams & Closures (a corset laces up instead) */}
-        {isBack && topStyleId !== 'corset' && (
+        {isBack && topStyleId !== 'corset' && topStyleId !== 'jacket' && (
           <>
             {/* Center back seam */}
             <div
