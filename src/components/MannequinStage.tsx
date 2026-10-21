@@ -35,6 +35,7 @@ import {
   PAINTED_BACK,
   PAINTED_HEM_BACK_L,
   HALTER_STRAP_OUTER_L,
+  HALTER_STRAP,
   PAINTED_ARM_L,
   PAINTED_SLEEVES,
   ARM_UPPER_LEN,
@@ -2198,32 +2199,25 @@ interface BlouseDetailsResult {
             )}
           </g>
 
-          {/* Halter straps: gathered (ruched) fabric between the strap edges */}
+          {/* Halter straps: rounded ruched bands, gathered folds across them */}
           {painted && neckId === 'halter' && !isBack && sleeveId === 'sleeveless' && (() => {
-            const inner = NECK.halter.pts.slice(0, 6);
-            const outer = [...HALTER_STRAP_OUTER_L].reverse().slice(0, 6);
-            const lerp = (pts: number[][], f: number) => {
-              const i = Math.min(pts.length - 2, Math.floor(f * (pts.length - 1)));
-              const u = f * (pts.length - 1) - i;
-              return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * u, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * u];
-            };
-            const folds: string[] = [];
-            for (let k = 1; k < 16; k++) {
-              const f = k / 16;
-              const a = lerp(inner, f), b = lerp(outer, f);
-              const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + (k % 2 ? 1.6 : -1.6)];
-              folds.push(`M ${a[0]} ${a[1]} Q ${m[0]} ${m[1]} ${b[0]} ${b[1]}`);
-            }
+            const band = [...HALTER_STRAP.innerL, ...[...HALTER_STRAP.outerL.slice(2)].reverse()];
+            const line = (pts: number[][]) => 'M ' + pts.map((q) => `${q[0]} ${q[1]}`).join(' L ');
             return (
               <g id="halter-ruching" fill="none" strokeLinecap="round">
                 {[1, -1].map((sd) => (
                   <g key={sd} transform={sd === -1 ? `translate(${STAGE_W} 0) scale(-1 1)` : undefined}>
-                    {folds.map((d, i) => (
+                    {/* tubular shading: shade at the edges, light down the middle */}
+                    <path d={svgPath(band)} fill="rgba(0,0,0,0.08)" stroke="none" />
+                    <path d={line(HALTER_STRAP.centre)} stroke="rgba(255,255,255,0.22)" strokeWidth="3" />
+                    {/* gathered folds: a shadowed crease with a lit ridge beside it */}
+                    {HALTER_STRAP.ridges.map((r, i) => (
                       <g key={i}>
-                        <path d={d} stroke="rgba(0,0,0,0.22)" strokeWidth="0.9" />
-                        <path d={d} stroke="rgba(255,255,255,0.18)" strokeWidth="0.7" transform="translate(0 1.1)" />
+                        <path d={`M ${r.a[0]} ${r.a[1]} Q ${r.c[0]} ${r.c[1] + (i % 3) * 0.6} ${r.b[0]} ${r.b[1]}`} stroke="rgba(0,0,0,0.17)" strokeWidth={i % 2 ? 0.9 : 0.6} />
+                        <path d={`M ${r.a[0]} ${r.a[1] - 1.3} Q ${r.c[0]} ${r.c[1] - 1.3} ${r.b[0]} ${r.b[1] - 1.3}`} stroke="rgba(255,255,255,0.14)" strokeWidth="0.8" />
                       </g>
                     ))}
+                    <path d={line(HALTER_STRAP.outerL.slice(2))} stroke={fabTheme.outlineColor} strokeWidth="0.8" opacity="0.55" />
                   </g>
                 ))}
               </g>

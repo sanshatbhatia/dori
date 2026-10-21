@@ -49,6 +49,39 @@ export function resample(pts: number[][], n: number): number[][] {
 export const scaleX = (pts: number[][], k: number): number[][] =>
   pts.map((p) => [STAGE_CX + (p[0] - STAGE_CX) * k, p[1]]);
 
+// Halter strap (left): a narrow ruched band along a gently bowed centreline from the bodice
+// corner up behind the neck. Its edges ripple slightly where the fabric gathers.
+export const HALTER_STRAP = (() => {
+  const steps = 22;
+  const width = 8.2;
+  const centre = (t: number) => [194 + 27 * t - 4.5 * Math.sin(Math.PI * t), 196 - 68 * t];
+  const innerL: number[][] = [];
+  const outerUp: number[][] = [];
+  const ridges: { a: number[]; b: number[]; c: number[] }[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const p = centre(t);
+    const q = centre(Math.min(1, t + 0.01));
+    const r = centre(Math.max(0, t - 0.01));
+    const len = Math.hypot(q[0] - r[0], q[1] - r[1]);
+    const tx = (q[0] - r[0]) / len, ty = (q[1] - r[1]) / len;
+    const nx = -ty, ny = tx; // points to the inner (body-centre) side
+    const ripple = i % 2 ? 0.55 : -0.25;
+    const w = width / 2 + ripple;
+    innerL.push([+(p[0] + nx * w).toFixed(2), +(p[1] + ny * w).toFixed(2)]);
+    outerUp.push([+(p[0] - nx * w).toFixed(2), +(p[1] - ny * w).toFixed(2)]);
+    if (i > 0 && i < steps) ridges.push({ a: innerL[i], b: outerUp[i], c: [p[0] + tx * 1.8, p[1] + ty * 1.8] });
+  }
+  return {
+    innerL: innerL.reverse(), // top to bottom
+    // armhole: underarm up to the strap, then the strap's outer edge to the neck
+    outerL: [[180, 207], [185, 200.5], ...outerUp.slice(1)],
+    centre: Array.from({ length: steps + 1 }, (_, i) => centre(i / steps)),
+    ridges,
+  };
+})();
+export const HALTER_STRAP_OUTER_L = HALTER_STRAP.outerL;
+
 export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = {
   // Sweetheart: rounded curves over the bust sweeping in to a soft V at centre front
   sweetheart: {
@@ -162,29 +195,18 @@ export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = 
       [262, 150],
     ],
   },
-  // Halter: straps rise from the bodice corners to fasten behind the neck; the bodice
-  // has a gently curved top edge across the bust (left strap inner edge, across, right strap)
+  // Halter: ruched straps rise from the bodice corners to fasten behind the neck, over a
+  // bodice with a gently curved top edge (left strap inner edge, across, right strap)
   halter: {
     pts: [
-      [224.5, 131],
-      [219, 148],
-      [212, 163],
-      [205, 176],
-      [198, 187],
-      [194, 193.5],
-      [202, 195.5],
+      ...HALTER_STRAP.innerL,
+      [204, 195.5],
       [215, 198],
       [230, 199.5],
       [245, 198],
-      [258, 195.5],
-      [266, 193.5],
-      [262, 187],
-      [255, 176],
-      [248, 163],
-      [241, 148],
-      [235.5, 131],
+      [256, 195.5],
+      ...HALTER_STRAP.innerL.map(([x, y]) => [STAGE_W - x, y]).reverse(),
     ],
-    sh: [202, 154],
   },
   // Wide scoop with a small centre notch, measured from the reference artwork
   notched: {
@@ -931,5 +953,3 @@ export const PAINTED_BACK = {
 // Scalloped hem of the back painting (left half, outer corner to centre back)
 export const PAINTED_HEM_BACK_L: number[][] = [[11.3, 728.1], [18.3, 732.5], [25.3, 736.0], [32.3, 744.7], [39.3, 748.2], [46.2, 750.8], [53.2, 751.7], [60.2, 757.8], [67.2, 760.4], [74.2, 763.0], [81.2, 764.8], [88.1, 765.7], [95.1, 766.5], [102.1, 767.4], [109.1, 771.8], [116.1, 773.5], [123.1, 776.1], [130.0, 777.0], [137.0, 777.0], [144.0, 777.9], [151.0, 778.8], [158.0, 778.8], [165.0, 776.1], [171.9, 779.6], [178.9, 780.5], [185.9, 780.5], [192.9, 781.4], [199.9, 780.5], [206.9, 781.4], [213.9, 784.0], [220.8, 784.0], [227.8, 784.9], [230, 784.9]];
 
-// Halter strap outer edge (left), from the underarm up to the neck
-export const HALTER_STRAP_OUTER_L: number[][] = [[180, 207], [183, 199], [187.5, 191], [193.5, 179], [200.5, 165], [207.5, 150], [214.5, 133.5], [217.5, 128]];
