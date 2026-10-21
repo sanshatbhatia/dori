@@ -49,38 +49,10 @@ export function resample(pts: number[][], n: number): number[][] {
 export const scaleX = (pts: number[][], k: number): number[][] =>
   pts.map((p) => [STAGE_CX + (p[0] - STAGE_CX) * k, p[1]]);
 
-// Halter strap (left): a narrow ruched band along a gently bowed centreline from the bodice
-// corner up behind the neck. Its edges ripple slightly where the fabric gathers.
-export const HALTER_STRAP = (() => {
-  const steps = 22;
-  const width = 8.2;
-  const centre = (t: number) => [194 + 27 * t - 4.5 * Math.sin(Math.PI * t), 196 - 68 * t];
-  const innerL: number[][] = [];
-  const outerUp: number[][] = [];
-  const ridges: { a: number[]; b: number[]; c: number[] }[] = [];
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    const p = centre(t);
-    const q = centre(Math.min(1, t + 0.01));
-    const r = centre(Math.max(0, t - 0.01));
-    const len = Math.hypot(q[0] - r[0], q[1] - r[1]);
-    const tx = (q[0] - r[0]) / len, ty = (q[1] - r[1]) / len;
-    const nx = -ty, ny = tx; // points to the inner (body-centre) side
-    const ripple = i % 2 ? 0.55 : -0.25;
-    const w = width / 2 + ripple;
-    innerL.push([+(p[0] + nx * w).toFixed(2), +(p[1] + ny * w).toFixed(2)]);
-    outerUp.push([+(p[0] - nx * w).toFixed(2), +(p[1] - ny * w).toFixed(2)]);
-    if (i > 0 && i < steps) ridges.push({ a: innerL[i], b: outerUp[i], c: [p[0] + tx * 1.8, p[1] + ty * 1.8] });
-  }
-  return {
-    innerL: innerL.reverse(), // top to bottom
-    // armhole: underarm up to the strap, then the strap's outer edge to the neck
-    outerL: [[180, 207], [185, 200.5], ...outerUp.slice(1)],
-    centre: Array.from({ length: steps + 1 }, (_, i) => centre(i / steps)),
-    ridges,
-  };
-})();
-export const HALTER_STRAP_OUTER_L = HALTER_STRAP.outerL;
+// Halter armhole (left): from the underarm, cut in diagonally up to the neck
+export const HALTER_STRAP_OUTER_L: number[][] = [
+  [180, 207], [182.5, 197], [186.5, 187], [191.5, 176], [197, 164], [203, 152], [209, 141], [214.5, 130],
+];
 
 export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = {
   // Sweetheart: rounded curves over the bust sweeping in to a soft V at centre front
@@ -195,17 +167,29 @@ export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = 
       [262, 150],
     ],
   },
-  // Halter: ruched straps rise from the bodice corners to fasten behind the neck, over a
-  // bodice with a gently curved top edge (left strap inner edge, across, right strap)
+  // Halter: wide panels rise from the bodice to fasten behind the neck, their inner edges
+  // turning at the bust into a V at centre front
   halter: {
     pts: [
-      ...HALTER_STRAP.innerL,
-      [204, 195.5],
-      [215, 198],
-      [230, 199.5],
-      [245, 198],
-      [256, 195.5],
-      ...HALTER_STRAP.innerL.map(([x, y]) => [STAGE_W - x, y]).reverse(),
+      [221.5, 130],
+      [218, 142],
+      [213.5, 156],
+      [208.5, 169],
+      [204, 180],
+      [203, 184],
+      [209, 190],
+      [216, 196],
+      [223, 201],
+      [230, 205.5],
+      [237, 201],
+      [244, 196],
+      [251, 190],
+      [257, 184],
+      [256, 180],
+      [251.5, 169],
+      [246.5, 156],
+      [242, 142],
+      [238.5, 130],
     ],
   },
   // Wide scoop with a small centre notch, measured from the reference artwork

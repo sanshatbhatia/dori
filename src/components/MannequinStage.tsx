@@ -35,7 +35,6 @@ import {
   PAINTED_BACK,
   PAINTED_HEM_BACK_L,
   HALTER_STRAP_OUTER_L,
-  HALTER_STRAP,
   PAINTED_ARM_L,
   PAINTED_SLEEVES,
   ARM_UPPER_LEN,
@@ -2199,25 +2198,21 @@ interface BlouseDetailsResult {
             )}
           </g>
 
-          {/* Halter straps: rounded ruched bands, gathered folds across them */}
+          {/* Halter: gold beaded piping along the neckline, armholes and blouse hem */}
           {painted && neckId === 'halter' && !isBack && sleeveId === 'sleeveless' && (() => {
-            const band = [...HALTER_STRAP.innerL, ...[...HALTER_STRAP.outerL.slice(2)].reverse()];
-            const line = (pts: number[][]) => 'M ' + pts.map((q) => `${q[0]} ${q[1]}`).join(' L ');
+            const b = TOP[topStyleId] || TOP.fitted;
+            const sideR = b.right[b.right.length - 1];
+            const hem = [[STAGE_W - sideR[0], sideR[1]], ...[...(b.hemC || [])].reverse(), sideR];
+            const neck = scaleX(NECK.halter.pts, fitK);
+            const arm = scaleX(HALTER_STRAP_OUTER_L.slice(1), fitK);
+            const runs = [neck, arm, mir(arm), scaleX(hem, fitK)];
+            const line = (pts: number[][]) => 'M ' + pts.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ');
             return (
-              <g id="halter-ruching" fill="none" strokeLinecap="round">
-                {[1, -1].map((sd) => (
-                  <g key={sd} transform={sd === -1 ? `translate(${STAGE_W} 0) scale(-1 1)` : undefined}>
-                    {/* tubular shading: shade at the edges, light down the middle */}
-                    <path d={svgPath(band)} fill="rgba(0,0,0,0.08)" stroke="none" />
-                    <path d={line(HALTER_STRAP.centre)} stroke="rgba(255,255,255,0.22)" strokeWidth="3" />
-                    {/* gathered folds: a shadowed crease with a lit ridge beside it */}
-                    {HALTER_STRAP.ridges.map((r, i) => (
-                      <g key={i}>
-                        <path d={`M ${r.a[0]} ${r.a[1]} Q ${r.c[0]} ${r.c[1] + (i % 3) * 0.6} ${r.b[0]} ${r.b[1]}`} stroke="rgba(0,0,0,0.17)" strokeWidth={i % 2 ? 0.9 : 0.6} />
-                        <path d={`M ${r.a[0]} ${r.a[1] - 1.3} Q ${r.c[0]} ${r.c[1] - 1.3} ${r.b[0]} ${r.b[1] - 1.3}`} stroke="rgba(255,255,255,0.14)" strokeWidth="0.8" />
-                      </g>
-                    ))}
-                    <path d={line(HALTER_STRAP.outerL.slice(2))} stroke={fabTheme.outlineColor} strokeWidth="0.8" opacity="0.55" />
+              <g id="halter-piping" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                {runs.map((pts, i) => (
+                  <g key={i}>
+                    <path d={line(pts)} stroke="#a8843f" strokeWidth="1.9" />
+                    <path d={line(pts)} stroke="#e6cb86" strokeWidth="1" strokeDasharray="0.1 1.5" />
                   </g>
                 ))}
               </g>
@@ -2259,7 +2254,7 @@ interface BlouseDetailsResult {
                     fill="none"
                     stroke={fabTheme.outlineColor}
                     strokeWidth={painted ? 0.8 : 1.55}
-                    opacity={painted ? 0.6 : 1}
+                    opacity={painted && neckId === 'halter' ? 0 : painted ? 0.6 : 1}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
