@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Category, GarmentKey, SelectionState, RailMode, LibraryMode, ViewMode, BeltLatkanMode } from '../types';
-import { GARMENTS } from '../data/garments';
+import { GARMENTS, categoryUnavailableReason } from '../data/garments';
 import { X, Check, AlertCircle, Sparkles, HelpCircle, Layers, LayoutGrid, RotateCcw } from 'lucide-react';
 
 interface MenuDropdownProps {
@@ -217,12 +217,15 @@ export const DesignSummaryModal: React.FC<DesignSummaryModalProps> = ({
 
           {g.cats.map((c) => {
             const currentOpt = c.opts.find((o) => o.id === selection[c.id]) || c.opts[0];
+            const unavailable = categoryUnavailableReason(c, selection);
             return (
               <div key={c.id} className="flex items-center justify-between py-2 text-xs">
                 <span className="uppercase tracking-wider text-[#5a534c] text-[10px] font-medium">
                   {c.label}
                 </span>
-                <span className="font-medium text-[#174d33]">{currentOpt.name}</span>
+                <span className={unavailable ? 'italic text-[#5a534c]' : 'font-medium text-[#174d33]'}>
+                  {unavailable ? 'None (jacket set)' : currentOpt.name}
+                </span>
               </div>
             );
           })}

@@ -15,6 +15,8 @@ interface ComponentRailProps {
   activeCategoryIndex: number;
   onSelectCategoryIndex: (index: number) => void;
   selection: SelectionState;
+  /** Categories that can't be used with the current design: shown greyed out with a slash */
+  unavailableIds?: string[];
 }
 
 export const ComponentRail: React.FC<ComponentRailProps> = ({
@@ -24,7 +26,15 @@ export const ComponentRail: React.FC<ComponentRailProps> = ({
   activeCategoryIndex,
   onSelectCategoryIndex,
   selection,
+  unavailableIds = [],
 }) => {
+  const off = (id: string) => unavailableIds.includes(id);
+  // diagonal slash drawn across an unavailable category's glyph
+  const slash = (
+    <span className="absolute inset-0 pointer-events-none flex items-center justify-center">
+      <span className="block w-[130%] h-[1.5px] bg-[#5a534c]/60 rotate-[-45deg]" />
+    </span>
+  );
   const g = GARMENTS[currentGarment];
 
   // Circles Mode: Floating on left edge of canvas
@@ -43,8 +53,10 @@ export const ComponentRail: React.FC<ComponentRailProps> = ({
               key={c.id}
               id={`rail-cat-${c.id}`}
               onClick={() => onSelectCategoryIndex(i)}
-              className={`flex flex-col items-center gap-0.5 cursor-pointer min-w-[44px] min-h-[48px] justify-center transition-opacity ${
-                isSelected ? 'opacity-100' : 'opacity-70 hover:opacity-90'
+              title={off(c.id) ? `${c.label} isn't available with this design` : undefined}
+              aria-disabled={off(c.id)}
+              className={`flex flex-col items-center gap-0.5 min-w-[44px] min-h-[48px] justify-center transition-opacity ${
+                off(c.id) ? 'opacity-35 cursor-not-allowed' : isSelected ? 'opacity-100 cursor-pointer' : 'opacity-70 hover:opacity-90 cursor-pointer'
               }`}
             >
               <div
@@ -58,6 +70,7 @@ export const ComponentRail: React.FC<ComponentRailProps> = ({
                 <span className="font-serif text-[13px] font-bold text-[#174d33]">
                   {c.short.slice(0, 2)}
                 </span>
+                {off(c.id) && slash}
               </div>
               <span
                 className={`text-[9px] uppercase tracking-tight truncate max-w-[42px] font-sans ${
@@ -89,10 +102,13 @@ export const ComponentRail: React.FC<ComponentRailProps> = ({
               key={c.id}
               id={`rail-labelled-${c.id}`}
               onClick={() => onSelectCategoryIndex(i)}
-              className={`flex-none flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${
-                isSelected
-                  ? 'bg-[#f7f4ef] border-[#174d33] shadow-xs'
-                  : 'border-[#3c342c]/15 hover:bg-black/5'
+              aria-disabled={off(c.id)}
+              className={`flex-none flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all ${
+                off(c.id)
+                  ? 'opacity-40 cursor-not-allowed border-[#3c342c]/15'
+                  : isSelected
+                  ? 'bg-[#f7f4ef] border-[#174d33] shadow-xs cursor-pointer'
+                  : 'border-[#3c342c]/15 hover:bg-black/5 cursor-pointer'
               }`}
             >
               <div className="w-[30px] h-[30px] rounded-lg bg-[#f7f4ef] border border-[#3c342c]/15 flex items-center justify-center font-serif text-[12px] font-semibold text-[#174d33]">
@@ -107,7 +123,7 @@ export const ComponentRail: React.FC<ComponentRailProps> = ({
                   {c.label}
                 </div>
                 <div className="text-[10px] text-[#5a534c] leading-tight truncate max-w-[85px]">
-                  {currentOpt.name}
+                  {off(c.id) ? 'Not with jacket' : currentOpt.name}
                 </div>
               </div>
             </button>
@@ -135,7 +151,7 @@ export const ComponentRail: React.FC<ComponentRailProps> = ({
         return (
           <div
             key={c.id}
-            className="absolute pointer-events-auto cursor-pointer transition-transform duration-300"
+            className={`absolute pointer-events-auto transition-transform duration-300 ${off(c.id) ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer'}`}
             style={{
               left: `${ax}px`,
               top: `${ay}px`,
@@ -145,7 +161,7 @@ export const ComponentRail: React.FC<ComponentRailProps> = ({
             onClick={() => onSelectCategoryIndex(i)}
           >
             <div
-              className={`w-[34px] h-[34px] rounded-full overflow-hidden bg-[#f7f4ef] flex items-center justify-center border transition-all ${
+              className={`relative w-[34px] h-[34px] rounded-full overflow-hidden bg-[#f7f4ef] flex items-center justify-center border transition-all ${
                 isSelected
                   ? 'border-[1.5px] border-[#174d33] scale-110 shadow-md ring-2 ring-[#174d33]/20'
                   : 'border-[#3c342c]/20 hover:scale-105'
@@ -154,6 +170,7 @@ export const ComponentRail: React.FC<ComponentRailProps> = ({
               <span className="font-serif text-[12px] font-bold text-[#174d33]">
                 {c.short.slice(0, 2)}
               </span>
+              {off(c.id) && slash}
             </div>
           </div>
         );

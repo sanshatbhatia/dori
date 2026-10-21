@@ -16,7 +16,7 @@ import {
   BeltLatkanMode,
   LatkanBoxOrientation,
 } from './types';
-import { GARMENTS, getDefaults, checkCompatibilityReason, PREFERRED_WITH } from './data/garments';
+import { GARMENTS, getDefaults, checkCompatibilityReason, categoryUnavailableReason, PREFERRED_WITH } from './data/garments';
 import { PhoneFrame } from './components/PhoneFrame';
 import { StudioHeader } from './components/StudioHeader';
 import { MannequinStage } from './components/MannequinStage';
@@ -193,8 +193,13 @@ export default function App() {
   // Category selection on rail
   const handleSelectCategoryIndex = useCallback(
     (index: number) => {
-      setActiveCatIndex(index);
       const cat = garmentConfig.cats[index];
+      const unavailable = cat && categoryUnavailableReason(cat, selections[currentGarment]);
+      if (unavailable) {
+        flashToast(unavailable);
+        return;
+      }
+      setActiveCatIndex(index);
       if (cat) {
         const focusConf = FOCUS[cat.slot];
         if (focusConf) {
@@ -203,8 +208,18 @@ export default function App() {
       }
       setMenuOpen(false);
     },
-    [garmentConfig.cats]
+    [garmentConfig.cats, selections, currentGarment, flashToast]
   );
+
+  // Categories that can't be used with the current design (e.g. no dupatta with a jacket)
+  const unavailableCategoryIds = categories
+    .filter((c) => categoryUnavailableReason(c, currentSelection))
+    .map((c) => c.id);
+
+  // If undo/redo or a change makes the open category unavailable, move back to the blouse
+  useEffect(() => {
+    if (unavailableCategoryIds.includes(activeCategory.id)) setActiveCatIndex(0);
+  }, [unavailableCategoryIds.join(','), activeCategory.id]);
 
   // Reset category
   const handleResetCategory = useCallback(() => {
@@ -281,7 +296,7 @@ export default function App() {
           railOnLeft={railMode === 'circles'}
           onSelectCategorySlot={(slot) => {
             const idx = categories.findIndex((c) => c.slot === slot);
-            if (idx >= 0) {
+            if (idx >= 0 && !unavailableCategoryIds.includes(categories[idx].id)) {
               handleSelectCategoryIndex(idx);
               flashToast(`Selected ${categories[idx].label} to customize`);
             }
@@ -296,6 +311,7 @@ export default function App() {
           activeCategoryIndex={activeCatIndex}
           onSelectCategoryIndex={handleSelectCategoryIndex}
           selection={currentSelection}
+          unavailableIds={unavailableCategoryIds}
         />
       </div>
 

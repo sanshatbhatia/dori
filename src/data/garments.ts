@@ -106,6 +106,14 @@ export const PREFERRED_WITH: Record<string, Record<string, string>> = {
   'blouseFront:jacket': { sleeves: 'threequarter' },
 };
 
+/** Why a whole category can't be used with the current design, or null when it can */
+export function categoryUnavailableReason(cat: Category, sel: SelectionState): string | null {
+  if (cat.slot === 'drape' && sel.blouseFront === 'jacket') {
+    return 'The jacket set is worn without a dupatta.';
+  }
+  return null;
+}
+
 export function getDefaults(gk: GarmentKey = 'lehenga'): SelectionState {
   const g = GARMENTS[gk] || GARMENTS.lehenga;
   const s: SelectionState = {};

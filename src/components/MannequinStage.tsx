@@ -872,7 +872,8 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   };
 
   // Dupatta / Pallu Drape
-  const drapeId = geo('drape', '');
+  // A jacket set is worn without a dupatta
+  const drapeId = topStyleId === 'jacket' ? '' : geo('drape', '');
   const pieces = drapeId && DRP[drapeId] ? DRP[drapeId].filter(Boolean).map((p) => resample(isBack ? mir(p) : p, 26)) : [];
   const dupCat = g.cats.find((c) => c.slot === 'drape' || c.slot === 'fabric');
   const hemBack = hemY != null ? hemY : topStyleId === 'kurta' ? 536 : topStyleId === 'shirtBody' ? 428 : 330;
