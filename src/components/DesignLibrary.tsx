@@ -75,18 +75,17 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
     if (optId === 'halter') {
       return (
         <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>
-          {/* Halter panels rising to the neck, V at the front, gold piped edges */}
+          {/* High-neck halter: mock collar, armholes cut in to the neck */}
           <path
-            d="M 17 5 L 23 5 L 29 19 L 28.5 32 L 11.5 32 L 11 19 Z"
+            d="M 16.5 5 L 23.5 5 L 23.5 9 L 29 18 L 28.5 32 L 11.5 32 L 11 18 L 16.5 9 Z"
             fill="currentColor"
             fillOpacity="0.18"
             stroke="currentColor"
             strokeWidth="1.2"
             strokeLinejoin="round"
           />
-          <path d="M 18.5 5.5 L 15.5 15 L 20 21 L 24.5 15 L 21.5 5.5" fill="#f7f4ef" stroke="#b68235" strokeWidth="1" strokeLinejoin="round" />
-          <path d="M 11.5 31.4 L 28.5 31.4" stroke="#b68235" strokeWidth="1" />
-          <path d="M 16 23 Q 16.5 27 16.5 31 M 24 23 Q 23.5 27 23.5 31" fill="none" stroke="currentColor" strokeWidth="0.75" opacity="0.6" />
+          <path d="M 16.5 9 Q 20 10.5 23.5 9" fill="none" stroke="currentColor" strokeWidth="0.8" opacity="0.7" />
+          <path d="M 14 17 L 26 29 M 26 17 L 14 29 M 13 23 L 19 17 M 27 23 L 21 17 M 13 23 L 19 29 M 27 23 L 21 29" stroke="#b68235" strokeWidth="0.6" opacity="0.8" />
         </svg>
       );
     }
