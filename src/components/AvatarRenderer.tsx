@@ -10,12 +10,15 @@ interface AvatarRendererProps {
   viewMode: ViewMode;
   layer: 'rearHair' | 'face' | 'frontHair' | 'backHead';
   skinTone?: string;
+  /** The body below the face is already painted skin, so no drawn neck is needed */
+  paintedSkin?: boolean;
 }
 
 export const AvatarRenderer: React.FC<AvatarRendererProps> = ({
   viewMode,
   layer,
   skinTone = 'url(#avatar-skin-grad)',
+  paintedSkin = false,
 }) => {
   const isBack = viewMode === 'back';
 
@@ -94,6 +97,7 @@ export const AvatarRenderer: React.FC<AvatarRendererProps> = ({
 
   // 3. FRONT VIEW: NECK BASE (the painted head image is drawn in the frontHair layer)
   if (layer === 'face') {
+    if (paintedSkin) return null;
     return (
       <g id="avatar-face-head">
         {/* Neck Column */}

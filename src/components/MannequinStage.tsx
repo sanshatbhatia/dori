@@ -1628,7 +1628,7 @@ interface BlouseDetailsResult {
             )}
 
             {/* Avatar 2D Fashion Game Character Head, Face & Jewelry */}
-            {!(painted && isBack) && <AvatarRenderer viewMode={viewMode} layer={isBack ? 'backHead' : 'face'} />}
+            {!(painted && isBack) && <AvatarRenderer viewMode={viewMode} layer={isBack ? 'backHead' : 'face'} paintedSkin={painted} />}
 
             {/* Clean 2D Stylized Mannequin Legs */}
             <g id="mannequin-legs" display={painted && (lenId === 'floor' || lenId === 'trail') ? 'none' : undefined}>
