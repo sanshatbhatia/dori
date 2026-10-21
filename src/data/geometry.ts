@@ -786,13 +786,58 @@ export const PAINTED = {
 // Where the painted latkan hangs from the waistband (light size scales around it)
 export const PAINTED_LATKAN_ANCHOR: [number, number] = [178.9, 285.5];
 
-// Stretch pose: the drawn arm only fills the upper arm; the painted forearm takes over
-// just past the painted sleeve hem (a little overlap so no gap shows)
-export const UPPER_ARM_CLIP_L: number[][] = [[186, 132], [36, 190], [64, 270], [148, 330], [192, 262]];
-
 // Scalloped pleated hem traced from the reference artwork (left half, outer corner to centre front)
 export const PAINTED_HEM_L: number[][] = [[11.3, 721.1], [18.3, 724.6], [25.3, 729.0], [32.3, 730.7], [35.8, 733.4], [39.3, 740.3], [46.2, 744.7], [53.2, 747.3], [60.2, 750.0], [67.2, 750.0], [74.2, 750.8], [77.7, 752.6], [81.2, 756.9], [88.1, 760.4], [95.1, 763.0], [102.1, 765.7], [109.1, 766.5], [116.1, 768.3], [123.1, 769.2], [130.0, 768.3], [133.5, 769.2], [137.0, 772.6], [144.0, 774.4], [151.0, 776.1], [158.0, 777.9], [168.5, 777.9], [178.9, 777.9], [185.9, 777.0], [192.9, 776.1], [199.9, 776.1], [203.4, 777.9], [206.9, 782.3], [213.9, 784.0], [220.8, 784.0], [226.4, 785.7], [230.0, 785.7]];
 
 // Flared elbow sleeve in the stretch pose, traced from the reference artwork:
 // armpit, down the inner edge, across the hem, and up the outer edge to the shoulder tip
 export const PAINTED_FLARED_SLEEVE_L: number[][] = [[178.4, 215], [175.4, 219.2], [173.7, 226.2], [171.1, 233.1], [169.3, 240.1], [166.7, 247.1], [165.0, 254.1], [162.3, 261.1], [160.6, 268.1], [158.0, 275], [156.2, 282], [154.5, 289], [151.9, 296], [150.1, 303], [147.5, 310], [144.4, 312.5], [141.4, 310], [123.1, 303], [117.8, 296], [113.5, 289], [106.5, 282], [88.1, 275], [82.9, 268.1], [81.2, 261.1], [87.3, 254.1], [93.4, 247.1], [99.5, 240.1], [105.6, 233.1], [110.8, 226.2], [116.9, 219.2], [122.2, 212.2], [128.3, 205.2], [133.5, 198.2], [139.6, 191.2], [144.9, 184.2], [150.1, 177.3], [155.4, 170.3], [163.2, 163.3], [167.4, 160]];
+
+// Stretch-pose arm skeleton traced from the reference artwork (left arm): shoulder joint, elbow and
+// wrist, with the arm's half-width at each. Painted forearms, drawn upper arms and every sleeve
+// are built along it, so they meet whichever blouse, neckline or sleeve is chosen.
+export const PAINTED_ARM_L = {
+  shoulder: [166, 190] as [number, number],
+  elbow: [127, 274] as [number, number],
+  wrist: [68, 342] as [number, number],
+  halfWidth: [13, 8.8, 5.5] as [number, number, number],
+  tip: [167.4, 160] as [number, number],
+  armpit: [178.4, 215] as [number, number],
+};
+
+const sub = (a: number[], b: number[]) => [a[0] - b[0], a[1] - b[1]];
+const len = (v: number[]) => Math.hypot(v[0], v[1]);
+const unit = (v: number[]) => [v[0] / len(v), v[1] / len(v)];
+export const ARM_UPPER_LEN = len(sub(PAINTED_ARM_L.elbow, PAINTED_ARM_L.shoulder));
+export const ARM_FORE_LEN = len(sub(PAINTED_ARM_L.wrist, PAINTED_ARM_L.elbow));
+
+/** Point, direction and half-width at distance s down the left arm from the shoulder joint.
+ *  n is the side facing away from the body. */
+export function armAt(s: number) {
+  const { shoulder: S, elbow: E, wrist: Wr, halfWidth: hw } = PAINTED_ARM_L;
+  const t1 = unit(sub(E, S));
+  const t2 = unit(sub(Wr, E));
+  const p = s <= ARM_UPPER_LEN
+    ? [S[0] + t1[0] * s, S[1] + t1[1] * s]
+    : [E[0] + t2[0] * (s - ARM_UPPER_LEN), E[1] + t2[1] * (s - ARM_UPPER_LEN)];
+  // ease the direction round the elbow so offset edges don't kink
+  const k = Math.min(1, Math.max(0, (s - ARM_UPPER_LEN + 12) / 24));
+  const e = k * k * (3 - 2 * k);
+  const t = unit([t1[0] + (t2[0] - t1[0]) * e, t1[1] + (t2[1] - t1[1]) * e]);
+  const w = s <= ARM_UPPER_LEN
+    ? hw[0] + (hw[1] - hw[0]) * Math.max(0, s / ARM_UPPER_LEN)
+    : hw[1] + (hw[2] - hw[1]) * Math.min(1, (s - ARM_UPPER_LEN) / ARM_FORE_LEN);
+  return { p, t, w, n: [-t[1], t[0]] };
+}
+
+// Sleeve cut along the painted arm: length from the shoulder joint, ease over the arm,
+// flare toward the hem (from flareFrom), and puff volume over the middle
+export const PAINTED_SLEEVES: Record<string, { len: number; ease: number; flare: number; flareFrom?: number; puff: number }> = {
+  cap: { len: 30, ease: 4, flare: 3, puff: 0 },
+  short: { len: 52, ease: 3.5, flare: 2, puff: 0 },
+  puff: { len: 56, ease: 3, flare: 0, puff: 9 },
+  elbow: { len: 98, ease: 3, flare: 2, puff: 0 },
+  threequarter: { len: 146, ease: 2.5, flare: 1, puff: 0 },
+  full: { len: 178, ease: 2, flare: 0, puff: 0 },
+  bell: { len: 176, ease: 3, flare: 26, flareFrom: 100, puff: 0 },
+};

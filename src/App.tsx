@@ -276,6 +276,7 @@ export default function App() {
           latkanBoxOrientation={latkanBoxOrientation}
           onSetLatkanBoxOrientation={setLatkanBoxOrientation}
           loadingSlot={loadingSlot}
+          railOnLeft={railMode === 'circles'}
           onSelectCategorySlot={(slot) => {
             const idx = categories.findIndex((c) => c.slot === slot);
             if (idx >= 0) {

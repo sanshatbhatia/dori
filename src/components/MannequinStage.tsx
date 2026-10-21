@@ -32,7 +32,11 @@ import {
   NECK,
   PAINTED,
   PAINTED_LATKAN_ANCHOR,
-  UPPER_ARM_CLIP_L,
+  PAINTED_ARM_L,
+  PAINTED_SLEEVES,
+  ARM_UPPER_LEN,
+  ARM_FORE_LEN,
+  armAt,
   PAINTED_HEM_L,
   PAINTED_FLARED_SLEEVE_L,
   SLV,
@@ -64,6 +68,8 @@ interface MannequinStageProps {
   onSetLatkanBoxOrientation?: (o: LatkanBoxOrientation) => void;
   loadingSlot: string;
   onSelectCategorySlot?: (slot: string) => void;
+  /** The floating category rail covers the stage's left edge */
+  railOnLeft?: boolean;
 }
 
 export const MannequinStage: React.FC<MannequinStageProps> = ({
@@ -80,6 +86,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   onSetLatkanBoxOrientation: propsOnSetLatkanBoxOrientation,
   loadingSlot,
   onSelectCategorySlot,
+  railOnLeft = false,
 }) => {
   const [internalArmPose, setInternalArmPose] = useState<ArmPose>('resting');
   const armPose = propsArmPose ?? internalArmPose;
@@ -205,6 +212,57 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   const armOutR = mir(armOutL);
   const bentXY = (x: number, y: number) => bendArm([[x, y]])[0].map((v) => Math.round(v * 10) / 10).join(' ');
 
+  // Stretch pose on the painted lehenga: sleeves are cut along the painted arm skeleton
+  // (armpit, down the inner edge, across the hem, up the outer edge to the shoulder tip)
+  const paintedSleeveL = (sId: string): number[][] | null => {
+    if (sId === 'flared') return PAINTED_FLARED_SLEEVE_L;
+    const spec = PAINTED_SLEEVES[sId];
+    if (!spec) return null;
+    const { len, ease, flare, puff } = spec;
+    const flareFrom = spec.flareFrom ?? len * 0.6;
+    const s0 = 14;
+    const steps = Math.max(6, Math.round((len - s0) / 6));
+    const edge = (side: 1 | -1) =>
+      Array.from({ length: steps + 1 }, (_, i) => {
+        const sAt = s0 + ((len - s0) * i) / steps;
+        const a = armAt(sAt);
+        const f = Math.max(0, (sAt - flareFrom) / Math.max(1, len - flareFrom));
+        const extra = ease + flare * Math.pow(f, 1.3) + puff * Math.sin((Math.PI * sAt) / len);
+        return [a.p[0] + side * a.n[0] * (a.w + extra), a.p[1] + side * a.n[1] * (a.w + extra)];
+      });
+    const inner = edge(-1);
+    const outer = edge(1).reverse();
+    const top = armAt(0);
+    const cap = [top.p[0] + top.n[0] * (top.w + ease) - top.t[0] * 6, top.p[1] + top.n[1] * (top.w + ease) - top.t[1] * 6];
+    return [PAINTED_ARM_L.armpit, ...inner, ...outer, cap, PAINTED_ARM_L.tip];
+  };
+
+  // Bare upper arm (shoulder to just past the elbow) that the painted forearm continues from
+  const paintedUpperArmSide = (sd: 1 | -1): number[][] => {
+    const s1 = ARM_UPPER_LEN + 34;
+    const steps = 16;
+    return Array.from({ length: steps + 1 }, (_, i) => {
+      const a = armAt(-16 + ((s1 + 16) * i) / steps);
+      return [a.p[0] + sd * a.n[0] * a.w, a.p[1] + sd * a.n[1] * a.w];
+    });
+  };
+  const paintedUpperArmL = (): number[][] => [...paintedUpperArmSide(1), ...paintedUpperArmSide(-1).reverse()];
+  // Where the painted forearm fades in over the drawn arm (just below the painted sleeve hem,
+  // so the part of the forearm the painting hid under its sleeve is never shown)
+  const forearmFade = () => [armAt(ARM_UPPER_LEN + 16).p, armAt(ARM_UPPER_LEN + 30).p];
+
+  // The painted forearm takes over from the elbow down; nothing of it shows above the elbow
+  const paintedForearmClipL = (): number[][] => {
+    const e = armAt(ARM_UPPER_LEN + 12);
+    const w = armAt(ARM_UPPER_LEN + ARM_FORE_LEN + 70);
+    return [
+      [e.p[0] + e.n[0] * 30, e.p[1] + e.n[1] * 30],
+      [e.p[0] - e.n[0] * 30, e.p[1] - e.n[1] * 30],
+      [w.p[0] - w.n[0] * 45, w.p[1] - w.n[1] * 45],
+      [w.p[0] + w.n[0] * 45, w.p[1] + w.n[1] * 45],
+    ];
+  };
+
   const buildLeftSleevePath = (sId: string, pose: string, tip: number[], underarm: number[]): number[][] => {
     const s = SLV[sId];
     if (!s) {
@@ -221,7 +279,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
       ];
     }
 
-    if (pose === 'stretched' && painted && sId === 'flared') return PAINTED_FLARED_SLEEVE_L;
+    if (pose === 'stretched' && painted) return paintedSleeveL(sId)!;
     if (pose === 'stretched') {
       const { reach, hemDrop, maxSag } = stretchDims(sId);
 
@@ -536,8 +594,10 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     const s = SLV[sleeveId];
     if (!s) return null;
 
-    if (armPose === 'stretched' && painted && sleeveId === 'flared') {
-      const p = resample(scaleX([...PAINTED_FLARED_SLEEVE_L, [170, 168], [176, 196]], fitK), 34);
+    if (armPose === 'stretched' && painted) {
+      const path = paintedSleeveL(sleeveId);
+      if (!path) return null;
+      const p = resample(scaleX(path, fitK), 40);
       return side === 'r' ? mir(p) : p;
     }
     if (armPose === 'stretched') {
@@ -686,7 +746,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     // Short, elbow, and three-quarter are simple tailored sleeves (no baggy droop or baggy fold ripples)
     if (sleeveId === 'short' || sleeveId === 'elbow' || sleeveId === 'threequarter') return [];
 
-    if (sleeveId !== 'bell') return [];
+    if (sleeveId !== 'bell' || painted) return [];
     const { reach, hemDrop, maxSag } = stretchDims(sleeveId);
 
     const xEnd = 164 - reach;
@@ -1128,6 +1188,8 @@ interface BlouseDetailsResult {
   const fade = isDetail && ['neckline', 'collar', 'topStyle', 'sleeves', 'back', 'texture', 'cuff'].includes(activeCategory.slot) ? 0.65 : 1;
   const k = isDetail ? f.z : isBack ? 0.66 : BASE_ZOOM;
   const fy = isDetail ? f.cy : isBack ? 320 : 380;
+  // Centre the full figure in the space right of the floating rail rather than on the screen
+  const fx = railOnLeft && !isDetail ? 29 : 0;
 
 
   // Active layer loading effect
@@ -1144,7 +1206,7 @@ interface BlouseDetailsResult {
           height: `${STAGE_H}px`,
           marginLeft: `-${STAGE_W / 2}px`,
           marginTop: `-${STAGE_H / 2}px`,
-          transform: `scale(${k}) translate(0px, ${410 - fy}px)`,
+          transform: `scale(${k}) translate(${fx}px, ${410 - fy}px)`,
         }}
       >
         {/* Floor Shadow */}
@@ -1408,10 +1470,30 @@ interface BlouseDetailsResult {
             <clipPath id="skirt-clip">
               <path d={svgPath(currentGarment === 'shirt' ? botPts('trouser', 'floor', 300) : botPts(botGeo, lenId, botTop))} />
             </clipPath>
-            <clipPath id="upper-arm-clip">
-              <path d={svgPath(UPPER_ARM_CLIP_L)} />
-              <path d={svgPath(mir(UPPER_ARM_CLIP_L))} />
-            </clipPath>
+            <linearGradient id="painted-upper-arm-skin" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#f4d6c2" />
+              <stop offset="45%" stopColor="#fae1ce" />
+              <stop offset="100%" stopColor="#f3d2bd" />
+            </linearGradient>
+            {painted && (() => {
+              const [a, b] = forearmFade();
+              return (
+                <>
+                  <linearGradient id="forearm-fade-l" gradientUnits="userSpaceOnUse" x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]}>
+                    <stop offset="0" stopColor="#000" />
+                    <stop offset="1" stopColor="#fff" />
+                  </linearGradient>
+                  <linearGradient id="forearm-fade-r" gradientUnits="userSpaceOnUse" x1={STAGE_W - a[0]} y1={a[1]} x2={STAGE_W - b[0]} y2={b[1]}>
+                    <stop offset="0" stopColor="#000" />
+                    <stop offset="1" stopColor="#fff" />
+                  </linearGradient>
+                  <mask id="painted-forearm-mask" maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE_W} height={STAGE_H}>
+                    <path d={svgPath(paintedForearmClipL())} fill="url(#forearm-fade-l)" />
+                    <path d={svgPath(mir(paintedForearmClipL()))} fill="url(#forearm-fade-r)" />
+                  </mask>
+                </>
+              );
+            })()}
             <clipPath id="body-clip">
               <path d={svgPath(scaleX(BODY, fitK))} />
             </clipPath>
@@ -1884,10 +1966,24 @@ interface BlouseDetailsResult {
               </g>
             ) : (
               <g id="outstretched-arms-linework" filter="url(#arm-shadow)">
-                <g
-                  clipPath={painted ? 'url(#upper-arm-clip)' : undefined}
-                  display={painted && !['sleeveless', 'cap', 'short', 'puff'].includes(sleeveId) ? 'none' : undefined}
-                >
+                {painted && (
+                  <g id="painted-upper-arms">
+                    {[paintedUpperArmL(), mir(paintedUpperArmL())].map((pts, i) => (
+                      <path key={`upper-arm-${i}`} d={svgPath(pts)} fill="url(#painted-upper-arm-skin)" />
+                    ))}
+                    {[1, -1].flatMap((sd) => [paintedUpperArmSide(sd as 1 | -1), mir(paintedUpperArmSide(sd as 1 | -1))]).map((pts, i) => (
+                      <path
+                        key={`upper-arm-edge-${i}`}
+                        d={'M ' + pts.map((q) => q.join(' ')).join(' L ')}
+                        fill="none"
+                        stroke="#c99a84"
+                        strokeWidth="0.7"
+                        strokeOpacity="0.55"
+                      />
+                    ))}
+                  </g>
+                )}
+                <g display={painted ? 'none' : undefined}>
                 {/* Outstretched Arms Opaque Fills (Hides underlying background / linework) */}
                 <path
                   d={svgPath(scaleX(armOutL, fitK))}
@@ -1926,7 +2022,7 @@ interface BlouseDetailsResult {
                 </g>
 
                 {/* Painted forearms and hands from the reference artwork */}
-                {painted && paintedImage(PAINTED.armsStretch)}
+                {painted && <g mask="url(#painted-forearm-mask)">{paintedImage(PAINTED.armsStretch)}</g>}
 
                 {/* Gold Bangles (Churi) for Outstretched Arms */}
                 <g id="wrist-bangles-stretched" opacity="0.92" display={painted ? 'none' : undefined}>
@@ -2408,8 +2504,8 @@ interface BlouseDetailsResult {
           )}
 
           {/* Stretched Pose Sleeve Hem Lines */}
-          {armPose === 'stretched' && sleevePts('l') && !(painted && sleeveId === 'flared') && (
-            <g id="stretched-sleeve-cuffs" opacity={painted ? 0.5 : 1}>
+          {armPose === 'stretched' && sleevePts('l') && !painted && (
+            <g id="stretched-sleeve-cuffs">
               {(() => {
                 const { reach, hemDrop } = stretchDims(sleeveId);
                 const xEndL = 164 - reach;
