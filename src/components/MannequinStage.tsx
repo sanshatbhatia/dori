@@ -35,6 +35,8 @@ import {
   PAINTED_BACK,
   PAINTED_HEM_BACK_L,
   HALTER_STRAP_OUTER_L,
+  HALTER_BACK_TOP,
+  HALTER_NAPE_BAND,
   PAINTED_ARM_L,
   PAINTED_SLEEVES,
   ARM_UPPER_LEN,
@@ -519,16 +521,19 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
       // On the painted figure the armhole curves up to a strap that starts inside the
       // shoulder tip, so no fabric juts out over the arm
       const halter = painted && neckId === 'halter' && !isBack;
-      const strapL = halter ? [HALTER_STRAP_OUTER_L[HALTER_STRAP_OUTER_L.length - 1]] : [[180.5, 157]];
+      const halterBack = painted && neckId === 'halter' && isBack;
+      const strapL = halter ? [HALTER_STRAP_OUTER_L[HALTER_STRAP_OUTER_L.length - 1]] : halterBack ? [] : [[180.5, 157]];
       const leftSleevePath = halter
         ? [underarmL, ...HALTER_STRAP_OUTER_L.slice(0, -1)]
+        : halterBack
+        ? [underarmL, [180, 206], [182, 199]]
         : painted
         ? [underarmL, [175.5, 206], [173.5, 192], [174.5, 176], [177, 165]]
         : buildLeftSleevePath(sleeveId, armPose, tipL, underarmL);
       const rightSleevePath = mir(leftSleevePath).reverse();
       const combined = [
         ...(painted ? strapL : shL_pts),
-        ...n.pts,
+        ...(halterBack ? HALTER_BACK_TOP : n.pts),
         ...(painted ? mir(strapL) : shR_pts),
         ...rightSleevePath,
         ...right.slice(1),
@@ -2773,6 +2778,45 @@ interface BlouseDetailsResult {
           <AvatarRenderer viewMode={viewMode} layer="frontHair" />
           {/* Painted back of the head and the long hair, over the blouse */}
           {painted && isBack && paintedImage(PAINTED_BACK.head)}
+          {/* Halter from the back: the straps meet in a band around the nape, under the hair */}
+          {painted && isBack && neckId === 'halter' && sleeveId === 'sleeveless' && (() => {
+            const { y, half, h, sag } = HALTER_NAPE_BAND;
+            const xl = STAGE_CX - half, xr = STAGE_CX + half;
+            const band = `M ${xl} ${y} Q ${STAGE_CX} ${y + sag} ${xr} ${y} L ${xr + 1} ${y + h} Q ${STAGE_CX} ${y + h + sag} ${xl - 1} ${y + h} Z`;
+            const H = PAINTED_BACK.head;
+            return (
+              <g id="halter-nape-band">
+                <mask id="nape-under-hair" maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE_W} height={STAGE_H}>
+                  <rect width={STAGE_W} height={STAGE_H} fill="#fff" />
+                  {/* the dark hair hides the band; the painted skin lets it show */}
+                  <image href={H.href} x={H.x} y={H.y} width={H.w} height={H.h} preserveAspectRatio="none" style={{ filter: 'grayscale(1) contrast(4) brightness(1.15)' }} />
+                </mask>
+                <g mask="url(#nape-under-hair)">
+                  {/* each strap runs from the band down the side of the neck, then forward over the shoulder */}
+                  {[1, -1].map((sd) => {
+                    const X = (dx: number) => STAGE_CX + sd * dx;
+                    const d = `M ${X(half - 1)} ${y + 1} C ${X(half + 1)} ${y + 8} ${X(half + 3)} ${y + 14} ${X(half + 8)} ${y + 19} L ${X(half + 1)} ${y + 21} C ${X(half - 3)} ${y + 15} ${X(half - 5.5)} ${y + 9} ${X(half - 6)} ${y + h}`;
+                    return (
+                      <g key={sd}>
+                        <path d={d} fill={fabTheme.baseColor} />
+                        <path d={d} fill="url(#jacket-fold-shade)" opacity="0.6" />
+                        <path d={`M ${X(half - 1)} ${y + 1} C ${X(half + 1)} ${y + 8} ${X(half + 3)} ${y + 14} ${X(half + 8)} ${y + 19}`} fill="none" stroke="#a8843f" strokeWidth="1.4" />
+                        <path d={`M ${X(half - 6)} ${y + h} C ${X(half - 5.5)} ${y + 9} ${X(half - 3)} ${y + 15} ${X(half + 1)} ${y + 21}`} fill="none" stroke="#a8843f" strokeWidth="1.4" />
+                      </g>
+                    );
+                  })}
+                  <path d={band} fill={fabTheme.baseColor} />
+                  <path d={band} fill="url(#jacket-fold-shade)" opacity="0.6" />
+                  {[0, h].map((dy, i) => (
+                    <g key={i}>
+                      <path d={`M ${xl - i} ${y + dy} Q ${STAGE_CX} ${y + dy + sag} ${xr + i} ${y + dy}`} fill="none" stroke="#a8843f" strokeWidth="1.6" />
+                      <path d={`M ${xl - i} ${y + dy} Q ${STAGE_CX} ${y + dy + sag} ${xr + i} ${y + dy}`} fill="none" stroke="#e6cb86" strokeWidth="0.9" strokeDasharray="0.1 1.5" strokeLinecap="round" />
+                    </g>
+                  ))}
+                </g>
+              </g>
+            );
+          })()}
 
           {/* Shirt Specific Linework: Collar & Placket Buttons */}
           {currentGarment === 'shirt' && !isBack && (
