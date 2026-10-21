@@ -714,7 +714,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   const botGeo = currentGarment === 'shirt' ? 'trouser' : geo('bottom', 'aline');
   const lenId = currentGarment === 'shirt' ? 'floor' : (bySlot('bottomLength') || { id: 'floor' }).id;
   // Lehenga waistband sits where the painted skirt's waistband starts
-  const botTop = currentGarment === 'dress' ? hemY || 330 : currentGarment === 'shirt' ? 300 : currentGarment === 'lehenga' ? 276 : 298;
+  const botTop = currentGarment === 'dress' ? hemY || 330 : currentGarment === 'shirt' ? 300 : currentGarment === 'lehenga' ? 273 : 298;
 
   const botPts = (bg: string, lg: string, topY: number) => {
     const sk = BOT[bg] || BOT.aline;

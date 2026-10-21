@@ -119,8 +119,28 @@ arm=lz&(dbg>8)&~green
 # drop the pale anti-aliased fringe against the background
 arm&=~((dbg<26)&(m['dbg']>0))
 arm=np.asarray(Image.fromarray((arm*255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.7)))/255.
-y0,y1,x0,x1=290,430,10,160
-left=a[y0:y1,x0:x1]; la=arm[y0:y1,x0:x1]
+# The painting hides the elbow under the sleeve, so the cut-out stops at the hem.
+# Extend the forearm up its own axis so its top always tucks under the sleeve.
+solid=(arm>0.6)&(Y>=318)&(Y<=360)
+ys,xs=np.nonzero(solid)
+pts=np.stack([xs,ys],1).astype(float); mean=pts.mean(0)
+_,_,vt=np.linalg.svd(pts-mean,full_matrices=False)
+d=vt[0]/np.linalg.norm(vt[0])
+if d[1]<0: d=-d                      # point down the arm, toward the hand
+arm_rgb=a.copy(); ext=arm.copy()
+for yy in range(262,345):
+    for xx in range(60,175):
+        if arm[yy,xx]>0.6: continue
+        for k in range(1,60):
+            qx=int(round(xx+d[0]*k)); qy=int(round(yy+d[1]*k))
+            if qy>=H or qx<0: break
+            if solid[qy,qx]:
+                if k>2:              # only fill above the painted forearm, not beside it
+                    arm_rgb[yy,xx]=a[qy,qx]; ext[yy,xx]=arm[qy,qx]
+                break
+arm=ext; a_arm=arm_rgb
+y0,y1,x0,x1=262,430,10,175
+left=a_arm[y0:y1,x0:x1]; la=arm[y0:y1,x0:x1]
 # right arm: mirror around the centre line
 rx0=int(round(2*CX-x1)); rx1=rx0+(x1-x0)
 full=np.zeros((y1-y0, rx1-x0, 3)); fa=np.zeros((y1-y0, rx1-x0))
@@ -148,9 +168,18 @@ al=np.clip((diff*dirv).sum(2)/np.maximum((dirv*dirv).sum(2),1),0,1)
 # dupatta extent: everything on the right that isn't plain skirt, background, hair, rack or arm
 reg=(X>296)&(Y>=138)&(Y<=815)&~((X>=470)&(Y<680))&~hair
 reg&=(((dbg>8)&~(green&(dsk<18)))|gold)
-reg&=~(skin&(Y>280)&(X>360))
+arm_skin=np.asarray(Image.fromarray((skin&(Y>280)&(X>330)&(X<500)&(Y<440)).astype(np.uint8)*255).filter(ImageFilter.MaxFilter(7)))>0
+reg&=~arm_skin
+# keep the right forearm (mirror of the left arm outline, extended up under the sleeve) out of the dupatta
+ra=Image.new('L',(W,H),0)
+ImageDraw.Draw(ra).polygon([(int(2*CX)-x,y) for x,y in [(150,300),(158,330),(120,372),(80,412),(58,432),(10,432),(10,378),(38,356),(68,330),(100,292),(130,286)]],fill=255)
+reg&=~(np.asarray(ra.filter(ImageFilter.MaxFilter(5)))>0)
 reg=np.asarray(Image.fromarray((reg*255).astype(np.uint8)).filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.MinFilter(5)))>0
-pm=reg|dup_poly
+# outer (right) limit of the dupatta, notched where the right forearm comes out of the sleeve
+clamp=Image.new('L',(W,H),0)
+ImageDraw.Draw(clamp).polygon([(290,130),(340,130),(356,150),(398,280),(382,300),(382,352),(444,420),(486,560),(526,700),(552,815),(290,815)],fill=255)
+reg&=np.asarray(clamp)>0
+pm=reg|(dup_poly&(np.asarray(clamp)>0))
 al=np.where(pm,al,0)
 al=np.where(gold&pm,1,al)
 al=np.where(hair,0,al)
@@ -162,6 +191,8 @@ save('dupatta-one-shoulder',col[y0:y1,x0:x1],al[y0:y1,x0:x1],x0,y0)
 # --- rack with hanging dupatta
 rz=np.zeros((H,W),bool); rz[190:680,470:615]=True
 rk=(dbg>7)&rz
+# the right hand's fingertips reach into the rack area; leave them to the arm cut-out
+rk&=~(np.asarray(Image.fromarray((skin&~gold&(X<490)&(Y>370)&(Y<440)).astype(np.uint8)*255).filter(ImageFilter.MaxFilter(5)))>0)
 rk=np.asarray(Image.fromarray((rk*255).astype(np.uint8)).filter(ImageFilter.MaxFilter(7)).filter(ImageFilter.MinFilter(5)).filter(ImageFilter.GaussianBlur(0.8)))/255.
 y0,y1,x0,x1=190,680,470,615
 save('rack',a[y0:y1,x0:x1],rk[y0:y1,x0:x1],x0,y0)
