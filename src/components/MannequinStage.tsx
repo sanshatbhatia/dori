@@ -2776,8 +2776,63 @@ interface BlouseDetailsResult {
           })()}
 
           <AvatarRenderer viewMode={viewMode} layer="frontHair" />
+          {/* Halter strap tops run up the sides of the neck over the painted neck, then wrap behind it */}
+          {painted && neckId === 'halter' && !isBack && sleeveId === 'sleeveless' && (() => {
+            const neckPts = scaleX(NECK.halter.pts, fitK);
+            const armPts = scaleX(HALTER_STRAP_OUTER_L, fitK);
+            const line = (pts: number[][]) => 'M ' + pts.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ');
+            const topOf = (pts: number[][]) => pts.filter((q) => q[1] < 142);
+            return (
+              <g id="halter-strap-tops">
+                <clipPath id="halter-strap-top-clip">
+                  <rect x="0" y="131" width={STAGE_W} height="12" />
+                </clipPath>
+                {/* the long hair stays in front of the strap */}
+                <mask id="strap-under-hair" maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE_W} height={STAGE_H}>
+                  <rect width={STAGE_W} height={STAGE_H} fill="#fff" />
+                  <image href="/assets/dori-face.png" x={192.9} y={30.6} width={120.5} height={275.9} preserveAspectRatio="none" style={{ filter: 'grayscale(1) contrast(4) brightness(1.15)' }} />
+                </mask>
+                <g clipPath="url(#halter-strap-top-clip)" mask="url(#strap-under-hair)">
+                  {paintedImage(PV.blouse, 'top-clip')}
+                  {[1, -1].map((sd) => (
+                    <path
+                      key={`wrap-shade-${sd}`}
+                      d={`M ${STAGE_CX - sd * 13.4} 133.2 Q ${STAGE_CX - sd * 10.5} 136.4 ${STAGE_CX - sd * 6.5} 137.6`}
+                      fill="none"
+                      stroke="rgba(120,80,60,0.28)"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                    />
+                  ))}
+                  {[topOf(neckPts.slice(0, 6)), topOf(neckPts.slice(-6)), topOf(armPts), topOf(mir(armPts))].map((pts, i) => (
+                    <g key={i} fill="none" strokeLinecap="round" strokeLinejoin="round">
+                      <path d={line(pts)} stroke="#a8843f" strokeWidth="1.9" />
+                      <path d={line(pts)} stroke="#e6cb86" strokeWidth="1" strokeDasharray="0.1 1.5" />
+                    </g>
+                  ))}
+                </g>
+              </g>
+            );
+          })()}
           {/* Painted back of the head and the long hair, over the blouse */}
           {painted && isBack && paintedImage(PAINTED_BACK.head)}
+          {/* Halter from the back: gold piping along the bodice top and hem */}
+          {painted && isBack && neckId === 'halter' && sleeveId === 'sleeveless' && (() => {
+            const b = TOP[topStyleId] || TOP.fitted;
+            const side = b.right[b.right.length - 1];
+            const runs = [scaleX(HALTER_BACK_TOP, fitK), scaleX([[STAGE_W - side[0], side[1]], side], fitK)];
+            const line = (pts: number[][]) => 'M ' + pts.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ');
+            return (
+              <g id="halter-back-piping" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                {runs.map((pts, i) => (
+                  <g key={i}>
+                    <path d={line(pts)} stroke="#a8843f" strokeWidth="1.9" />
+                    <path d={line(pts)} stroke="#e6cb86" strokeWidth="1" strokeDasharray="0.1 1.5" />
+                  </g>
+                ))}
+              </g>
+            );
+          })()}
           {/* Halter from the back: the straps meet in a band around the nape, under the hair */}
           {painted && isBack && neckId === 'halter' && sleeveId === 'sleeveless' && (() => {
             const { y, half, h, sag } = HALTER_NAPE_BAND;
@@ -2792,16 +2847,18 @@ interface BlouseDetailsResult {
                   <image href={H.href} x={H.x} y={H.y} width={H.w} height={H.h} preserveAspectRatio="none" style={{ filter: 'grayscale(1) contrast(4) brightness(1.15)' }} />
                 </mask>
                 <g mask="url(#nape-under-hair)">
-                  {/* each strap runs from the band down the side of the neck, then forward over the shoulder */}
+                  {/* each strap curves from the band down the side of the neck and wraps forward, tapering */}
                   {[1, -1].map((sd) => {
                     const X = (dx: number) => STAGE_CX + sd * dx;
-                    const d = `M ${X(half - 1)} ${y + 1} C ${X(half + 1)} ${y + 8} ${X(half + 3)} ${y + 14} ${X(half + 8)} ${y + 19} L ${X(half + 1)} ${y + 21} C ${X(half - 3)} ${y + 15} ${X(half - 5.5)} ${y + 9} ${X(half - 6)} ${y + h}`;
+                    const outer = `M ${X(half - 0.5)} ${y} C ${X(half + 2.5)} ${y + 5} ${X(half + 4.5)} ${y + 10} ${X(half + 7)} ${y + 15}`;
+                    const inner = `${X(half + 7)} ${y + 15} C ${X(half + 3)} ${y + 12.5} ${X(half - 1.5)} ${y + 10} ${X(half - 3.5)} ${y + h}`;
+                    const d = `${outer} L ${inner} Z`;
                     return (
                       <g key={sd}>
                         <path d={d} fill={fabTheme.baseColor} />
-                        <path d={d} fill="url(#jacket-fold-shade)" opacity="0.6" />
-                        <path d={`M ${X(half - 1)} ${y + 1} C ${X(half + 1)} ${y + 8} ${X(half + 3)} ${y + 14} ${X(half + 8)} ${y + 19}`} fill="none" stroke="#a8843f" strokeWidth="1.4" />
-                        <path d={`M ${X(half - 6)} ${y + h} C ${X(half - 5.5)} ${y + 9} ${X(half - 3)} ${y + 15} ${X(half + 1)} ${y + 21}`} fill="none" stroke="#a8843f" strokeWidth="1.4" />
+                        <path d={d} fill="rgba(0,0,0,0.12)" />
+                        <path d={outer} fill="none" stroke="#a8843f" strokeWidth="1.3" strokeLinecap="round" />
+                        <path d={outer} fill="none" stroke="#e6cb86" strokeWidth="0.8" strokeDasharray="0.1 1.5" strokeLinecap="round" />
                       </g>
                     );
                   })}

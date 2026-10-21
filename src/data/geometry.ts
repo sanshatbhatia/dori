@@ -51,8 +51,8 @@ export const scaleX = (pts: number[][], k: number): number[][] =>
 
 // Halter armhole (left): from the underarm, cut in diagonally up to the neck
 export const HALTER_STRAP_OUTER_L: number[][] = [
-  [180, 207], [182.5, 197], [186.5, 187], [191.5, 176], [197, 164], [203, 152], [209, 141], [213.2, 133],
-  [216.2, 126.5], [218.4, 120.5],
+  [180, 207], [182.5, 197], [186.5, 187], [191.5, 176], [197, 164], [203, 152], [209, 141], [212.6, 136],
+  [215.2, 132],
 ];
 
 export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = {
@@ -172,9 +172,8 @@ export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = 
   // turning at the bust into a V at centre front
   halter: {
     pts: [
-      [221.6, 120.5],
-      [221.2, 127],
-      [219.6, 135],
+      [221.4, 136.2],
+      [220, 139.6],
       [218, 142],
       [213.5, 156],
       [208.5, 169],
@@ -192,9 +191,8 @@ export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = 
       [251.5, 169],
       [246.5, 156],
       [242, 142],
-      [240.4, 135],
-      [238.8, 127],
-      [238.4, 120.5],
+      [240, 139.6],
+      [238.6, 136.2],
     ],
   },
   // Wide scoop with a small centre notch, measured from the reference artwork
@@ -946,6 +944,7 @@ export const PAINTED_HEM_BACK_L: number[][] = [[11.3, 728.1], [18.3, 732.5], [25
 // Halter seen from the back: the bodice top runs straight across below the shoulder blades,
 // opening into the back V, and the straps meet in a band around the nape
 export const HALTER_BACK_TOP: number[][] = [
-  [184, 194], [199, 193], [213, 206], [230, 223], [247, 206], [261, 193], [276, 194],
+  [182.5, 199], [190, 198.2], [198, 198.6], [206, 200.6], [213, 203.8], [219.5, 208], [225, 212], [230, 214.5],
+  [235, 212], [240.5, 208], [247, 203.8], [254, 200.6], [262, 198.6], [270, 198.2], [277.5, 199],
 ];
 export const HALTER_NAPE_BAND = { y: 129, half: 15.5, h: 6.5, sag: 3 };
