@@ -958,6 +958,10 @@ interface BlouseDetailsResult {
   waistSeam?: string;
   waistFrillUpper?: string;
   peplumFlutes?: { d: string; shadow: string | null }[];
+  peplumPleats?: { crease: string; shadow: string; ridge: string; fold: string }[];
+  peplumDarts?: string[];
+  peplumHemStitch?: string;
+  peplumShade?: string;
   hemRuffleLine?: string;
   hemRuffleAccent?: string;
   spine?: string;
@@ -996,82 +1000,61 @@ interface BlouseDetailsResult {
     const neckLowestY = Math.max(...n.pts.map((p) => p[1]));
 
     // PEPLUM TOP: Smocked / Shirred Bodice with Flared Fluted Ruffled Peplum
+    // PEPLUM TOP: fitted bodice with princess darts to a natural-waist seam, then
+    // inverted box pleats opening into a flared peplum with a stitched hem
     if (topStyleId === 'peplum') {
-      const waistY = 270;
-      const hemY_val = hem || 345;
-      const startSmockingY = Math.max(186, neckLowestY + 2);
-
-      const smockingLines: { d: string; accentD: string; y: number }[] = [];
-      const smockingGathers: string[] = [];
-
-      const step = 7.2;
-      for (let y = startSmockingY; y <= waistY - 2; y += step) {
-        const progress = Math.max(0, Math.min(1, (y - 190) / 80));
-        const halfW = 75 - progress * 17;
-        const xL = STAGE_CX - halfW + 1;
-        const xR = STAGE_CX + halfW - 1;
-
-        let d = `M ${xL.toFixed(1)} ${y.toFixed(1)}`;
-        const waveCount = 8;
-        const wStep = (xR - xL) / waveCount;
-        for (let wi = 0; wi < waveCount; wi++) {
-          const xMid = xL + (wi + 0.5) * wStep;
-          const xNext = xL + (wi + 1) * wStep;
-          const waveAmp = wi % 2 === 0 ? 0.8 : -0.8;
-          d += ` Q ${xMid.toFixed(1)} ${(y + waveAmp).toFixed(1)} ${xNext.toFixed(1)} ${y.toFixed(1)}`;
-        }
-
-        const accentD = `M ${(xL + 2).toFixed(1)} ${(y + 1.2).toFixed(1)} Q ${STAGE_CX} ${(y + 2.2).toFixed(1)} ${(xR - 2).toFixed(1)} ${(y + 1.2).toFixed(1)}`;
-        smockingLines.push({ d, accentD, y });
-      }
-
-      for (let i = 0; i < smockingLines.length - 1; i++) {
-        const yTop = smockingLines[i].y + 1;
-        const yBot = smockingLines[i + 1].y - 1;
-        const progress = (yTop - 190) / 80;
-        const halfW = 74 - progress * 16;
-        const ticks = [-0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75];
-        ticks.forEach((t) => {
-          const x = STAGE_CX + t * (halfW - 5);
-          smockingGathers.push(`M ${x.toFixed(1)} ${yTop.toFixed(1)} Q ${(x + (t >= 0 ? 0.9 : -0.9)).toFixed(1)} ${((yTop + yBot) / 2).toFixed(1)} ${x.toFixed(1)} ${yBot.toFixed(1)}`);
-        });
-      }
-
-      const waistSeam = `M ${STAGE_CX - 58} ${waistY} Q ${STAGE_CX} ${waistY + 3.5} ${STAGE_CX + 58} ${waistY}`;
-      const waistFrillUpper = `M ${STAGE_CX - 57} ${waistY - 2.5} Q ${STAGE_CX} ${waistY + 1} ${STAGE_CX + 57} ${waistY - 2.5}`;
-
-      const peplumFlutes = [
-        { d: `M ${STAGE_CX - 52} ${waistY + 1} C ${STAGE_CX - 68} 295 ${STAGE_CX - 88} 320 ${STAGE_CX - 96} ${hemY_val - 2}`, shadow: `M ${STAGE_CX - 52} ${waistY + 1} C ${STAGE_CX - 68} 295 ${STAGE_CX - 88} 320 ${STAGE_CX - 96} ${hemY_val - 2} L ${STAGE_CX - 90} ${hemY_val - 1} C ${STAGE_CX - 82} 320 ${STAGE_CX - 64} 295 ${STAGE_CX - 50} ${waistY + 1} Z` },
-        { d: `M ${STAGE_CX - 38} ${waistY + 2} C ${STAGE_CX - 48} 296 ${STAGE_CX - 62} 322 ${STAGE_CX - 72} ${hemY_val - 1}`, shadow: `M ${STAGE_CX - 38} ${waistY + 2} C ${STAGE_CX - 48} 296 ${STAGE_CX - 62} 322 ${STAGE_CX - 72} ${hemY_val - 1} L ${STAGE_CX - 66} ${hemY_val} C ${STAGE_CX - 56} 322 ${STAGE_CX - 44} 296 ${STAGE_CX - 36} ${waistY + 2} Z` },
-        { d: `M ${STAGE_CX - 24} ${waistY + 2.5} C ${STAGE_CX - 30} 297 ${STAGE_CX - 38} 323 ${STAGE_CX - 44} ${hemY_val}`, shadow: `M ${STAGE_CX - 24} ${waistY + 2.5} C ${STAGE_CX - 30} 297 ${STAGE_CX - 38} 323 ${STAGE_CX - 44} ${hemY_val} L ${STAGE_CX - 38} ${hemY_val + 1} C ${STAGE_CX - 32} 323 ${STAGE_CX - 26} 297 ${STAGE_CX - 22} ${waistY + 2.5} Z` },
-        { d: `M ${STAGE_CX - 11} ${waistY + 3} C ${STAGE_CX - 13} 298 ${STAGE_CX - 16} 324 ${STAGE_CX - 18} ${hemY_val + 2}`, shadow: null },
-        { d: `M ${STAGE_CX} ${waistY + 3.5} C ${STAGE_CX} 298 ${STAGE_CX} 324 ${STAGE_CX} ${hemY_val + 3}`, shadow: null },
-        { d: `M ${STAGE_CX + 11} ${waistY + 3} C ${STAGE_CX + 13} 298 ${STAGE_CX + 16} 324 ${STAGE_CX + 18} ${hemY_val + 2}`, shadow: null },
-        { d: `M ${STAGE_CX + 24} ${waistY + 2.5} C ${STAGE_CX + 30} 297 ${STAGE_CX + 38} 323 ${STAGE_CX + 44} ${hemY_val}`, shadow: `M ${STAGE_CX + 24} ${waistY + 2.5} C ${STAGE_CX + 30} 297 ${STAGE_CX + 38} 323 ${STAGE_CX + 44} ${hemY_val} L ${STAGE_CX + 38} ${hemY_val + 1} C ${STAGE_CX + 32} 323 ${STAGE_CX + 26} 297 ${STAGE_CX + 22} ${waistY + 2.5} Z` },
-        { d: `M ${STAGE_CX + 38} ${waistY + 2} C ${STAGE_CX + 48} 296 ${STAGE_CX + 62} 322 ${STAGE_CX + 72} ${hemY_val - 1}`, shadow: `M ${STAGE_CX + 38} ${waistY + 2} C ${STAGE_CX + 48} 296 ${STAGE_CX + 62} 322 ${STAGE_CX + 72} ${hemY_val - 1} L ${STAGE_CX + 66} ${hemY_val} C ${STAGE_CX + 56} 322 ${STAGE_CX + 44} 296 ${STAGE_CX + 36} ${waistY + 2} Z` },
-        { d: `M ${STAGE_CX + 52} ${waistY + 1} C ${STAGE_CX + 68} 295 ${STAGE_CX + 88} 320 ${STAGE_CX + 96} ${hemY_val - 2}`, shadow: `M ${STAGE_CX + 52} ${waistY + 1} C ${STAGE_CX + 68} 295 ${STAGE_CX + 88} 320 ${STAGE_CX + 96} ${hemY_val - 2} L ${STAGE_CX + 90} ${hemY_val - 1} C ${STAGE_CX + 82} 320 ${STAGE_CX + 64} 295 ${STAGE_CX + 50} ${waistY + 1} Z` },
-      ];
-
-      const hemRuffleLine = `M ${STAGE_CX - 108} ${hemY_val - 2} Q ${STAGE_CX - 85} ${hemY_val + 3} ${STAGE_CX - 62} ${hemY_val - 2} Q ${STAGE_CX - 35} ${hemY_val + 4} ${STAGE_CX} ${hemY_val + 1} Q ${STAGE_CX + 35} ${hemY_val + 4} ${STAGE_CX + 62} ${hemY_val - 2} Q ${STAGE_CX + 85} ${hemY_val + 3} ${STAGE_CX + 108} ${hemY_val - 2}`;
-      const hemRuffleAccent = `M ${STAGE_CX - 106} ${hemY_val - 0.5} Q ${STAGE_CX - 85} ${hemY_val + 4.5} ${STAGE_CX - 62} ${hemY_val - 0.5} Q ${STAGE_CX - 35} ${hemY_val + 5.5} ${STAGE_CX} ${hemY_val + 2.5} Q ${STAGE_CX + 35} ${hemY_val + 5.5} ${STAGE_CX + 62} ${hemY_val - 0.5} Q ${STAGE_CX + 85} ${hemY_val + 4.5} ${STAGE_CX + 106} ${hemY_val - 0.5}`;
-
-      const tieY = Math.min(neckLowestY + 12, 185);
+      const waistY = 262;
+      const hemSideY = hem || 344;
+      const hemC = b.hemC || [];
+      // hem height at x (front hem curves lower at centre)
+      const hemAt = (x: number) => {
+        let best = hemC[0];
+        for (const q of hemC) if (Math.abs(q[0] - x) < Math.abs(best[0] - x)) best = q;
+        return best ? best[1] : hemSideY;
+      };
+      const waistHalf = 40.3 * fitK;
+      const hemHalf = 102 * fitK;
+      const pleatW = [18, 34]; // pleat centres at the waist seam (from centre front)
+      const pleatH = [34, 76]; // pleat centres at the hem
+      const pleats: { crease: string; shadow: string; ridge: string; fold: string }[] = [];
+      [-1, 1].forEach((sd) =>
+        pleatW.forEach((pw, i) => {
+          const xw = STAGE_CX + sd * pw * fitK;
+          const xh = STAGE_CX + sd * pleatH[i] * fitK;
+          const yh = hemAt(xh);
+          const spread = 5 + i * 2;
+          const mid = (waistY + yh) / 2;
+          pleats.push({
+            crease: `M ${xw} ${waistY + 1} C ${xw + sd * 2} ${mid - 10} ${xh - sd * 4} ${mid + 14} ${xh} ${yh - 1}`,
+            shadow: `M ${xw} ${waistY + 1} C ${xw + sd * 2} ${mid - 10} ${xh - sd * 4} ${mid + 14} ${xh} ${yh} L ${xh + sd * spread} ${yh - 0.5} C ${xh + sd * spread - sd * 6} ${mid + 14} ${xw + sd * 3} ${mid - 10} ${xw + sd * 1.2} ${waistY + 1} Z`,
+            ridge: `M ${xw - sd * 2} ${waistY + 12} C ${xw - sd * 1.5} ${mid - 4} ${xh - sd * 10} ${mid + 14} ${xh - sd * 7} ${yh - 4}`,
+            fold: `M ${xw} ${waistY + 1} C ${xw + sd * 3} ${mid - 10} ${xh + sd * 2} ${mid + 14} ${xh + sd * (spread + 6)} ${yh} L ${xh + sd * (spread + 14)} ${yh - 1} C ${xh + sd * 8} ${mid + 14} ${xw + sd * 6} ${mid - 10} ${xw + sd * 2} ${waistY + 1} Z`,
+          });
+        })
+      );
+      const darts = [-1, 1].map((sd) => {
+        const xt = STAGE_CX + sd * 24;
+        const xb = STAGE_CX + sd * pleatW[0] * fitK;
+        return `M ${xt} ${Math.max(neckLowestY + 14, 204)} C ${xt - sd * 1} 228 ${xb + sd * 2} 248 ${xb} ${waistY}`;
+      });
+      const sideDarts = [-1, 1].map((sd) => {
+        const xb = STAGE_CX + sd * pleatW[1] * fitK;
+        return `M ${xb + sd * 6} 226 Q ${xb + sd * 3} 246 ${xb} ${waistY}`;
+      });
+      const waistSeam = `M ${STAGE_CX - waistHalf} ${waistY} Q ${STAGE_CX} ${waistY + 3} ${STAGE_CX + waistHalf} ${waistY}`;
+      const hemPts = [[STAGE_CX + hemHalf, hemSideY], ...hemC, [STAGE_CX - hemHalf, hemSideY]];
+      const hemStitch = 'M ' + hemPts.map((q, i) => `${(STAGE_CX + (q[0] - STAGE_CX) * 0.985).toFixed(1)} ${(q[1] - 4.5).toFixed(1)}`).join(' L ');
+      const peplumShade = `M ${STAGE_CX - waistHalf} ${waistY} Q ${STAGE_CX} ${waistY + 3} ${STAGE_CX + waistHalf} ${waistY} L ${STAGE_CX + waistHalf + 2} ${waistY + 6} Q ${STAGE_CX} ${waistY + 9} ${STAGE_CX - waistHalf - 2} ${waistY + 6} Z`;
 
       return {
         isBack,
         isPeplum: true,
-        smockingLines,
-        smockingGathers,
         waistSeam,
-        waistFrillUpper,
-        peplumFlutes,
-        hemRuffleLine,
-        hemRuffleAccent,
-        tieBow: isBack ? `M ${STAGE_CX - 12} ${tieY - 4} Q ${STAGE_CX - 5} ${tieY - 8} ${STAGE_CX} ${tieY} Q ${STAGE_CX + 5} ${tieY - 8} ${STAGE_CX + 12} ${tieY - 4}` : null,
-        doriLeft: isBack ? `M ${STAGE_CX - 3} ${tieY} C ${STAGE_CX - 12} ${tieY + 20} ${STAGE_CX - 24} ${tieY + 44} ${STAGE_CX - 18} ${tieY + 68}` : null,
-        doriRight: isBack ? `M ${STAGE_CX + 3} ${tieY} C ${STAGE_CX + 12} ${tieY + 20} ${STAGE_CX + 24} ${tieY + 44} ${STAGE_CX + 18} ${tieY + 68}` : null,
-        latkanL: isBack ? { x: STAGE_CX - 18, y: tieY + 68 } : null,
-        latkanR: isBack ? { x: STAGE_CX + 18, y: tieY + 68 } : null,
+        peplumPleats: pleats,
+        peplumDarts: isBack ? [] : [...darts, ...sideDarts],
+        peplumHemStitch: hemStitch,
+        peplumShade,
+        spine: isBack ? `M ${STAGE_CX} ${neckLowestY + 2} L ${STAGE_CX} ${hemAt(STAGE_CX)}` : undefined,
       };
     }
 
@@ -2050,12 +2033,11 @@ interface BlouseDetailsResult {
             )}
           </g>
 
-          {/* Peplum Flounce Drop Shadow on Skirt */}
-          {topStyleId === 'peplum' && (
+          {/* Peplum soft drop shadow on the skirt */}
+          {topStyleId === 'peplum' && !isBack && (
             <path
-              d={`M 118 346 Q ${STAGE_CX} 358 342 346 Q ${STAGE_CX} 363 118 346 Z`}
-              fill="rgba(0,0,0,0.18)"
-              opacity="0.85"
+              d={`M ${STAGE_CX - 102 * fitK} 344 Q ${STAGE_CX} 366 ${STAGE_CX + 102 * fitK} 344 Q ${STAGE_CX} 372 ${STAGE_CX - 102 * fitK} 344 Z`}
+              fill="rgba(0,0,0,0.16)"
             />
           )}
 
@@ -2078,10 +2060,8 @@ interface BlouseDetailsResult {
                   <path d="M 180 258 Q 230 266 280 258 L 280 263 Q 230 271 180 263 Z" fill="rgba(0,0,0,0.14)" />
                 ) : (
                   <>
-                    {/* Soft waist cinch shadow */}
-                    <path d="M 172 268 Q 230 273 288 268 L 288 273 Q 230 278 172 273 Z" fill="rgba(0,0,0,0.14)" />
-                    {/* Fluted fold depth gradient across peplum flare */}
-                    <path d="M 160 272 C 140 300 120 330 126 345 Q 230 354 334 345 C 340 330 320 300 300 272 Z" fill="url(#peplum-flare-depth)" opacity="0.32" />
+                    {/* Flared peplum falls into shade toward the hem */}
+                    <path d={`M ${STAGE_CX - 41} 262 L ${STAGE_CX + 41} 262 L ${STAGE_CX + 104} 358 L ${STAGE_CX - 104} 358 Z`} fill="url(#peplum-flare-depth)" opacity="0.28" />
                   </>
                 )}
               </>
@@ -2151,79 +2131,35 @@ interface BlouseDetailsResult {
               if (bDet.isPeplum) {
                 return (
                   <g id="blouse-peplum-details">
-                    {/* Flute Valley Shadows */}
-                    {bDet.peplumFlutes && bDet.peplumFlutes.map((f, idx) => f.shadow ? (
-                      <path key={`peplum-flute-sh-${idx}`} d={f.shadow} fill="rgba(0,0,0,0.12)" />
-                    ) : null)}
+                    {/* Soft shadow where the peplum leaves the waist seam */}
+                    {bDet.peplumShade && <path d={bDet.peplumShade} fill="rgba(0,0,0,0.05)" />}
 
-                    {/* Fluted Crease Lines & Highlight Ridges */}
-                    {bDet.peplumFlutes && bDet.peplumFlutes.map((f, idx) => (
-                      <g key={`peplum-flute-line-${idx}`}>
-                        <path d={f.d} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.15" opacity="0.8" strokeLinecap="round" />
-                        <path d={f.d} fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.75" transform="translate(0.8, 0)" />
+                    {/* Inverted box pleats: valley shadow, crease and lit ridge */}
+                    {bDet.peplumPleats?.map((pl, idx) => (
+                      <g key={`peplum-pleat-${idx}`}>
+                        <path d={pl.fold} fill="rgba(0,0,0,0.06)" />
+                        <path d={pl.shadow} fill="rgba(0,0,0,0.12)" />
+                        <path d={pl.crease} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.85" opacity="0.5" strokeLinecap="round" />
+                        <path d={pl.ridge} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="2.2" strokeLinecap="round" />
                       </g>
                     ))}
 
-                    {/* Cinched Waist Seam & Micro Frill */}
+                    {/* Princess darts shaping the bodice into the waist */}
+                    {bDet.peplumDarts?.map((d, idx) => (
+                      <path key={`peplum-dart-${idx}`} d={d} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.85" opacity="0.5" strokeLinecap="round" />
+                    ))}
+
+                    {/* Centre back seam */}
+                    {bDet.spine && <path d={bDet.spine} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.9" opacity="0.5" strokeLinecap="round" />}
+
+                    {/* Natural waist seam */}
                     {bDet.waistSeam && (
-                      <path d={bDet.waistSeam} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.4" strokeLinecap="round" />
-                    )}
-                    {bDet.waistFrillUpper && (
-                      <path d={bDet.waistFrillUpper} fill="none" stroke={fabTheme.accentColor} strokeWidth="1.0" strokeDasharray="3 2" opacity="0.85" strokeLinecap="round" />
+                      <path d={bDet.waistSeam} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.7" strokeLinecap="round" />
                     )}
 
-                    {/* Smocking Horizontal Elastic Shirring Rows */}
-                    {bDet.smockingLines && bDet.smockingLines.map((line, idx) => (
-                      <g key={`smock-row-${idx}`}>
-                        <path d={line.d} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.9" opacity="0.7" strokeLinecap="round" />
-                        <path d={line.accentD} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.65" opacity="0.55" strokeLinecap="round" />
-                      </g>
-                    ))}
-
-                    {/* Smocking Vertical Micro-Gathering Puckers */}
-                    {bDet.smockingGathers && bDet.smockingGathers.map((gD, idx) => (
-                      <path key={`smock-gather-${idx}`} d={gD} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.7" opacity="0.4" strokeLinecap="round" />
-                    ))}
-
-                    {/* Undulating Lettuce Hem Ruffle Border */}
-                    {bDet.hemRuffleLine && (
-                      <path d={bDet.hemRuffleLine} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.4" strokeLinecap="round" />
-                    )}
-                    {bDet.hemRuffleAccent && (
-                      <path d={bDet.hemRuffleAccent} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.95" opacity="0.85" strokeLinecap="round" />
-                    )}
-
-                    {/* If Back View: Upper Nape Tie Dori & Latkans */}
-                    {bDet.isBack && (
-                      <g id="peplum-back-ties">
-                        {bDet.tieBow && <path d={bDet.tieBow} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />}
-                        {bDet.doriLeft && <path d={bDet.doriLeft} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
-                        {bDet.doriRight && <path d={bDet.doriRight} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
-                        {bDet.latkanL && (
-                          <g id="peplum-latkan-l">
-                            <circle cx={bDet.latkanL.x} cy={bDet.latkanL.y} r="2.2" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
-                            <path
-                              d={`M ${bDet.latkanL.x} ${bDet.latkanL.y + 2} L ${bDet.latkanL.x - 5} ${bDet.latkanL.y + 12} Q ${bDet.latkanL.x} ${bDet.latkanL.y + 14} ${bDet.latkanL.x + 5} ${bDet.latkanL.y + 12} Z`}
-                              fill={fabTheme.baseColor}
-                              stroke={fabTheme.outlineColor}
-                              strokeWidth="1.1"
-                              strokeLinejoin="round"
-                            />
-                          </g>
-                        )}
-                        {bDet.latkanR && (
-                          <g id="peplum-latkan-r">
-                            <circle cx={bDet.latkanR.x} cy={bDet.latkanR.y} r="2.2" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
-                            <path
-                              d={`M ${bDet.latkanR.x} ${bDet.latkanR.y + 2} L ${bDet.latkanR.x - 5} ${bDet.latkanR.y + 12} Q ${bDet.latkanR.x} ${bDet.latkanR.y + 14} ${bDet.latkanR.x + 5} ${bDet.latkanR.y + 12} Z`}
-                              fill={fabTheme.baseColor}
-                              stroke={fabTheme.outlineColor}
-                              strokeWidth="1.1"
-                              strokeLinejoin="round"
-                            />
-                          </g>
-                        )}
-                      </g>
+                    {/* Stitched hem */}
+                    {bDet.peplumHemStitch && (
+                      <path d={bDet.peplumHemStitch} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.7" opacity="0.45" strokeLinecap="round" />
                     )}
                   </g>
                 );

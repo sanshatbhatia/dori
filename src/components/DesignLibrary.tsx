@@ -45,31 +45,30 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
     if (optId === 'peplum') {
       return (
         <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>
-          {/* Smocked bodice silhouette */}
+          {/* Fitted bodice with a crew neck and princess darts */}
           <path
-            d="M 12 10 Q 20 12 28 10 L 26 23 Q 20 24 14 23 Z"
+            d="M 14 9 Q 20 12 26 9 L 28 11 L 26.5 23 Q 20 24 13.5 23 L 12 11 Z"
             fill="none"
             stroke="currentColor"
             strokeWidth="1.2"
             strokeLinejoin="round"
           />
-          {/* Smocking shirring lines */}
-          <line x1="13" y1="13" x2="27" y2="13" stroke="currentColor" strokeWidth="0.75" strokeDasharray="1.5 1" opacity="0.8" />
-          <line x1="13.5" y1="16" x2="26.5" y2="16" stroke="currentColor" strokeWidth="0.75" strokeDasharray="1.5 1" opacity="0.8" />
-          <line x1="14" y1="19" x2="26" y2="19" stroke="currentColor" strokeWidth="0.75" strokeDasharray="1.5 1" opacity="0.8" />
-          {/* Flared fluted peplum skirtlet */}
+          <path d="M 16.5 14 Q 16.8 19 17 23" stroke="currentColor" strokeWidth="0.75" fill="none" opacity="0.7" />
+          <path d="M 23.5 14 Q 23.2 19 23 23" stroke="currentColor" strokeWidth="0.75" fill="none" opacity="0.7" />
+          {/* Pleated peplum flaring from the natural waist */}
           <path
-            d="M 14 23 Q 20 24 26 23 C 29 27 33 32 34 34 Q 20 37 6 34 C 7 32 11 27 14 23 Z"
+            d="M 13.5 23 Q 20 24 26.5 23 C 29 27 32 31 33.5 34 Q 20 36.5 6.5 34 C 8 31 11 27 13.5 23 Z"
             fill="currentColor"
             fillOpacity="0.18"
             stroke="currentColor"
             strokeWidth="1.3"
             strokeLinejoin="round"
           />
-          {/* Flute pleat folds */}
-          <path d="M 17 24 C 15 28 13 32 12 34" stroke="currentColor" strokeWidth="0.8" fill="none" opacity="0.7" />
-          <path d="M 20 24 L 20 35" stroke="currentColor" strokeWidth="0.8" fill="none" opacity="0.7" />
-          <path d="M 23 24 C 25 28 27 32 28 34" stroke="currentColor" strokeWidth="0.8" fill="none" opacity="0.7" />
+          {/* Inverted box pleats */}
+          <path d="M 17 23.6 L 14.5 35" stroke="currentColor" strokeWidth="0.8" fill="none" opacity="0.7" />
+          <path d="M 23 23.6 L 25.5 35" stroke="currentColor" strokeWidth="0.8" fill="none" opacity="0.7" />
+          <path d="M 14.5 23.4 L 9.5 34.2" stroke="currentColor" strokeWidth="0.7" fill="none" opacity="0.55" />
+          <path d="M 25.5 23.4 L 30.5 34.2" stroke="currentColor" strokeWidth="0.7" fill="none" opacity="0.55" />
         </svg>
       );
     }
