@@ -1608,6 +1608,13 @@ interface BlouseDetailsResult {
           {painted && (
             <g clipPath="url(#above-skirt-clip)">{paintedImage(PV.skin, 'body-clip')}</g>
           )}
+          {/* Neck sides curving out into the shoulders */}
+          {painted && !isBack && (
+            <g opacity="0.35" fill="none" stroke="#9c6a55" strokeWidth="0.7" strokeLinecap="round">
+              <path d="M 218 124 C 217.6 132 214 138.5 205 143.8" />
+              <path d="M 245 124 C 245.4 132 249 138.5 258 143.8" />
+            </g>
+          )}
           {/* Midriff modelling: rounded sides and soft shade under the blouse and above the waistband */}
           {painted && !isBack && (
             <g clipPath="url(#body-clip)">
