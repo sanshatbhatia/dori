@@ -742,6 +742,10 @@ export const ARM_OUT_R: number[][] = mir(ARM_OUT_L);
 // Stretch pose swings the outstretched arms down into an A-pose around the shoulder joint
 export const A_POSE_ANGLE = (55 * Math.PI) / 180;
 export const A_POSE_PIVOT: [number, number] = [170, 162];
+// The outstretched arm is lengthened from the shoulder to the wrist by this factor
+export const ARM_REACH_SCALE = 1.9;
+export const ARM_REACH_START = 150;
+export const ARM_WRIST_X = 44;
 
 export function colorMix(base: string, tint: 'white' | 'black', pct: number): string {
   return `color-mix(in oklab, ${base}, ${tint} ${Math.max(0, Math.min(100, Math.round(pct)))}%)`;

@@ -12,6 +12,9 @@ import {
   ARM_OUT_L,
   A_POSE_ANGLE,
   A_POSE_PIVOT,
+  ARM_REACH_SCALE,
+  ARM_REACH_START,
+  ARM_WRIST_X,
   BACK_CUTS,
   BASE_ZOOM,
   BODY,
@@ -164,19 +167,24 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     if (sId === 'cap') return { reach: 28, hemDrop: 2, maxSag: 1 };
     if (sId === 'short') return { reach: 50, hemDrop: 2, maxSag: 1 };
     if (sId === 'elbow') return { reach: 74, hemDrop: 2, maxSag: 1 };
-    if (sId === 'flared') return { reach: 80, hemDrop: 24, maxSag: 8 };
+    if (sId === 'flared') return { reach: 72, hemDrop: 30, maxSag: 8 };
     if (sId === 'threequarter') return { reach: 94, hemDrop: 2, maxSag: 1 };
     if (sId === 'bell') return { reach: 110, hemDrop: 44, maxSag: 16 };
     if (sId === 'puff') return { reach: 56, hemDrop: 14, maxSag: 10 };
     return { reach: 114, hemDrop: 3, maxSag: 2 };
   };
 
-  // Stretch pose: the left arm swings down from the shoulder into a relaxed A-pose.
+  // Stretch pose: the left arm lengthens to full reach (the base outstretched arm is
+  // drawn short) and swings down from the shoulder into a relaxed A-pose.
   // Points at the armpit stay put and the bend ramps up along the upper arm,
   // so the sleeve's inner edge settles against the bodice side seam.
   const bendArm = (pts: number[][]): number[][] =>
-    pts.map(([x, y]) => {
-      const t = Math.min(1, Math.max(0, (A_POSE_PIVOT[0] - 20 - x) / 30));
+    pts.map(([x0, y]) => {
+      // Stretch the arm between the shoulder and the wrist; the hand keeps its size
+      const x = x0 >= ARM_REACH_START ? x0
+        : x0 >= ARM_WRIST_X ? ARM_REACH_START - (ARM_REACH_START - x0) * ARM_REACH_SCALE
+        : ARM_REACH_START - (ARM_REACH_START - ARM_WRIST_X) * ARM_REACH_SCALE - (ARM_WRIST_X - x0);
+      const t = Math.min(1, Math.max(0, (A_POSE_PIVOT[0] - 6 - x) / 36));
       const a = -A_POSE_ANGLE * t * t * (3 - 2 * t);
       const dx = x - A_POSE_PIVOT[0];
       const dy = y - A_POSE_PIVOT[1];
@@ -1116,7 +1124,7 @@ interface BlouseDetailsResult {
         {/* Atelier Hanging Rod with a spare dupatta */}
         <div
           className="absolute top-[196px] w-[104px] h-[330px] transition-all duration-500 pointer-events-none"
-          style={{ left: isBack ? '6px' : '352px' }}
+          style={{ left: isBack ? '-36px' : '392px' }}
         >
           {/* Sheer cloth folded over the rod, gold zari border on the edges */}
           <div
@@ -2541,6 +2549,7 @@ interface BlouseDetailsResult {
               </g>
 
               {/* Gravity Fold Creases (Natural Draping Folds at Elbow & Forearm) */}
+              <g clipPath="url(#sleeve-clip-l)">
               {gravityFoldPaths('l').map((d, idx) => (
                 <path
                   key={`fold-l-${idx}`}
@@ -2552,6 +2561,8 @@ interface BlouseDetailsResult {
                   strokeLinecap="round"
                 />
               ))}
+              </g>
+              <g clipPath="url(#sleeve-clip-r)">
               {gravityFoldPaths('r').map((d, idx) => (
                 <path
                   key={`fold-r-${idx}`}
@@ -2563,6 +2574,7 @@ interface BlouseDetailsResult {
                   strokeLinecap="round"
                 />
               ))}
+              </g>
 
               {/* Sleeve Cuffs / Hem Border */}
               {cuffPts('l') && (

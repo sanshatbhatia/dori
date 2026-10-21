@@ -64,7 +64,7 @@ export const AvatarRenderer: React.FC<AvatarRendererProps> = ({
   // 2. BACK VIEW HEAD: Rendered when viewMode === 'back'
   if (layer === 'backHead' || (isBack && layer === 'face')) {
     return (
-      <g id="avatar-back-head">
+      <g id="avatar-back-head" transform="translate(230 140) scale(1.18) translate(-230 -140)">
         {/* Rear Head Crown Volume */}
         <ellipse cx="230" cy="80" rx="32" ry="38" fill="url(#hair-dark-grad)" stroke="#121010" strokeWidth="1.2" />
         
@@ -97,10 +97,10 @@ export const AvatarRenderer: React.FC<AvatarRendererProps> = ({
     return (
       <g id="avatar-face-head">
         {/* Neck Column */}
-        <path d="M 219 104 L 217 146 Q 230 152 243 146 L 241 104 Z" fill={skinTone} />
+        <path d="M 216 118 L 215 146 Q 230 152 245 146 L 244 118 Z" fill={skinTone} />
         {/* Soft neck sides flowing into the shoulders */}
-        <path d="M 218.5 124 Q 218 140 210 148" fill="none" stroke="#2a1f18" strokeWidth="0.8" opacity="0.35" strokeLinecap="round" />
-        <path d="M 241.5 124 Q 242 140 250 148" fill="none" stroke="#2a1f18" strokeWidth="0.8" opacity="0.35" strokeLinecap="round" />
+        <path d="M 216 134 Q 216 142 209 148" fill="none" stroke="#2a1f18" strokeWidth="0.8" opacity="0.35" strokeLinecap="round" />
+        <path d="M 244 134 Q 244 142 251 148" fill="none" stroke="#2a1f18" strokeWidth="0.8" opacity="0.35" strokeLinecap="round" />
       </g>
     );
   }
@@ -114,10 +114,10 @@ export const AvatarRenderer: React.FC<AvatarRendererProps> = ({
         {/* Painted head, face and long hair from the reference artwork */}
         <image
           href="/assets/dori-face.png"
-          x={194.9}
-          y={34.9}
-          width={102.1}
-          height={233.8}
+          x={188.5}
+          y={30.6}
+          width={120.5}
+          height={275.9}
           preserveAspectRatio="none"
         />
       </g>
