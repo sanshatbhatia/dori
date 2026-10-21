@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Lora', Georgia, serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
+  }
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+/* Hide scrollbar for clean app experience */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+@keyframes dShim {
+  0% { opacity: 0.35; }
+  50% { opacity: 0.75; }
+  100% { opacity: 0.35; }
+}
+
+@keyframes dToast {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes dSheet {
+  from { transform: translateY(102%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes dFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-shim {
+  animation: dShim 1.2s ease-in-out infinite;
+}
+
+.animate-toast {
+  animation: dToast 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-sheet {
+  animation: dSheet 0.32s cubic-bezier(0.32, 1, 0.23, 1) both;
+}
+
+.animate-fade {
+  animation: dFade 0.2s ease both;
+}

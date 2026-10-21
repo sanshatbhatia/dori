@@ -1,0 +1,2953 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState } from 'react';
+import { ArmPose, Category, GarmentKey, SelectionState, ViewMode, BeltLatkanMode, LatkanBoxOrientation } from '../types';
+import { Sparkles, ArrowUpDown, ArrowLeftRight } from 'lucide-react';
+import {
+  ARM_L,
+  ARM_R,
+  ARM_OUT_L,
+  ARM_OUT_R,
+  BACK_CUTS,
+  BASE_ZOOM,
+  BODY,
+  BOT,
+  COLLAR,
+  DRP,
+  FAB,
+  FABRIC,
+  FABRIC_THEMES,
+  FOCUS,
+  GOLD,
+  LEG_L,
+  LEG_R,
+  LENV,
+  NECK,
+  SLV,
+  STAGE_CX,
+  STAGE_H,
+  STAGE_W,
+  TOP,
+  fillGradient,
+  mir,
+  poly,
+  svgPath,
+  resample,
+  scaleX,
+} from '../data/geometry';
+import { GARMENTS } from '../data/garments';
+import { AvatarRenderer } from './AvatarRenderer';
+
+interface MannequinStageProps {
+  currentGarment: GarmentKey;
+  selection: SelectionState;
+  activeCategory: Category;
+  viewMode: ViewMode;
+  onSetViewMode: (v: ViewMode) => void;
+  armPose?: ArmPose;
+  onSetArmPose?: (p: ArmPose) => void;
+  beltLatkan?: BeltLatkanMode;
+  onSetBeltLatkan?: (b: BeltLatkanMode) => void;
+  latkanBoxOrientation?: LatkanBoxOrientation;
+  onSetLatkanBoxOrientation?: (o: LatkanBoxOrientation) => void;
+  loadingSlot: string;
+  onSelectCategorySlot?: (slot: string) => void;
+}
+
+export const MannequinStage: React.FC<MannequinStageProps> = ({
+  currentGarment,
+  selection,
+  activeCategory,
+  viewMode,
+  onSetViewMode,
+  armPose: propsArmPose,
+  onSetArmPose: propsOnSetArmPose,
+  beltLatkan: propsBeltLatkan,
+  onSetBeltLatkan: propsOnSetBeltLatkan,
+  latkanBoxOrientation: propsLatkanBoxOrientation,
+  onSetLatkanBoxOrientation: propsOnSetLatkanBoxOrientation,
+  loadingSlot,
+  onSelectCategorySlot,
+}) => {
+  const [internalArmPose, setInternalArmPose] = useState<ArmPose>('resting');
+  const armPose = propsArmPose ?? internalArmPose;
+  const setArmPose = propsOnSetArmPose ?? setInternalArmPose;
+
+  const [internalBeltLatkan, setInternalBeltLatkan] = useState<BeltLatkanMode>(
+    currentGarment === 'lehenga' ? 'heavy' : 'none'
+  );
+  const beltLatkan = propsBeltLatkan ?? internalBeltLatkan;
+  const setBeltLatkan = propsOnSetBeltLatkan ?? setInternalBeltLatkan;
+
+  const [internalLatkanBoxOrientation, setInternalLatkanBoxOrientation] = useState<LatkanBoxOrientation>('horizontal');
+  const latkanBoxOrientation = propsLatkanBoxOrientation ?? internalLatkanBoxOrientation;
+  const setLatkanBoxOrientation = propsOnSetLatkanBoxOrientation ?? setInternalLatkanBoxOrientation;
+
+  const isBack = viewMode === 'back';
+  const g = GARMENTS[currentGarment];
+
+  const optOf = (c: Category) => c.opts.find((o) => o.id === selection[c.id]) || c.opts[0];
+  const bySlot = (s: string) => {
+    const c = g.cats.find((x) => x.slot === s);
+    return c ? optOf(c) : null;
+  };
+  const geo = (s: string, fb: string) => {
+    const o = bySlot(s);
+    return o ? o.geo || o.id : fb;
+  };
+  const val = (s: string, fb: number): number => {
+    const o = bySlot(s);
+    return o && o.val != null ? o.val : fb;
+  };
+
+  const fabId = (bySlot('fabric') || {}).id || (bySlot('texture') || {}).id || 'sage';
+  const fabTheme = FABRIC_THEMES[fabId] || FABRIC_THEMES.sage;
+  const texKey = (bySlot('texture') || {}).id || (bySlot('topStyle') || {}).tex || fabTheme.texKey || 'plain';
+  const topFill = currentGarment === 'shirt' ? fillGradient(FABRIC, texKey, 3) : fabTheme.topGradient;
+  const topGradColors = (() => {
+    const matches = topFill.match(/#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)/g);
+    if (matches && matches.length >= 2) {
+      return {
+        start: matches[0],
+        mid: matches[Math.floor(matches.length / 2)],
+        end: matches[matches.length - 1],
+      };
+    }
+    return {
+      start: fabTheme.baseColor,
+      mid: fabTheme.baseColor,
+      end: fabTheme.baseColor,
+    };
+  })();
+  const botFill = currentGarment === 'shirt' ? fillGradient(FABRIC, texKey, -5) : fabTheme.botGradient;
+  const botGradColors = (() => {
+    const matches = botFill.match(/#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)/g);
+    if (matches && matches.length >= 2) {
+      return {
+        start: matches[0],
+        mid: matches[Math.floor(matches.length / 2)],
+        end: matches[matches.length - 1],
+      };
+    }
+    return {
+      start: fabTheme.baseColor,
+      mid: fabTheme.baseColor,
+      end: fabTheme.baseColor,
+    };
+  })();
+  const fab = FAB[fabId] || FAB.organza;
+  const bodyFill = 'linear-gradient(152deg, #f1d7bd, #e2c1a1)';
+
+  const fitK = val('fit', 1);
+  const hemY = val('hemY', 0) || null;
+  const topStyleId = geo('topStyle', 'fitted');
+  const neckId = currentGarment === 'shirt' ? 'shirtOpen' : geo('neckline', 'round');
+
+  const shL = (n: { pts?: number[][]; sh?: [number, number] }) =>
+    n.sh
+      ? [n.sh, [(n.sh[0] + 194) / 2, (n.sh[1] + 140) / 2], [194, 140]]
+      : [[165, 146], [174, 143.8], [184, 141.8], [194, 140]];
+  const shR = (n: { pts?: number[][]; sh?: [number, number] }) =>
+    n.sh
+      ? [[STAGE_W - n.sh[0], n.sh[1]]]
+      : [[266, 140], [276, 141.8], [286, 143.8], [295, 146]];
+
+  // Sleeves Configuration & Dynamic Path Builder
+  const sleeveId = geo('sleeves', 'threequarter');
+
+  const buildLeftSleevePath = (sId: string, pose: string, tip: number[], underarm: number[]): number[][] => {
+    const s = SLV[sId];
+    if (!s) {
+      // Anatomically sculpted armscye (armhole) for sleeveless bodice
+      // Clean, elegant S-curve scoop around the shoulder joint
+      return [
+        underarm,
+        [underarm[0] + 2, underarm[1] - 8],
+        [underarm[0] + 6, underarm[1] - 22],
+        [tip[0] + 3, tip[1] + 38],
+        [tip[0] + 4, tip[1] + 24],
+        [tip[0] + 2, tip[1] + 11],
+        tip,
+      ];
+    }
+
+    if (pose === 'stretched') {
+      let reach = 114;
+      let hemDrop = 2;
+      let maxSag = 1;
+      if (sId === 'cap') { reach = 28; hemDrop = 2; maxSag = 1; }
+      else if (sId === 'short') { reach = 50; hemDrop = 2; maxSag = 1; }
+      else if (sId === 'elbow') { reach = 74; hemDrop = 2; maxSag = 1; }
+      else if (sId === 'threequarter') { reach = 94; hemDrop = 2; maxSag = 1; }
+      else if (sId === 'full') { reach = 114; hemDrop = 3; maxSag = 2; }
+      else if (sId === 'bell') { reach = 110; hemDrop = 76; maxSag = 42; }
+      else if (sId === 'puff') { reach = 56; hemDrop = 14; maxSag = 10; }
+
+      const xEnd = 164 - reach;
+      const yArmTopEnd = 146 + reach * 0.1;
+      const yArmBotEnd = 178 - reach * 0.05;
+      const yHemBot = yArmBotEnd + hemDrop;
+
+      // 1. Underarm to sleeve hem
+      const underPts: number[][] = [];
+      const sagSteps = 6;
+      for (let i = sagSteps; i >= 0; i--) {
+        const f = i / sagSteps;
+        const x = xEnd + f * (underarm[0] - xEnd);
+        const yLinear = yHemBot + f * (underarm[1] - yHemBot);
+        const sag = maxSag * Math.sin(f * Math.PI);
+        underPts.push([x, yLinear + sag]);
+      }
+
+      // 2. Sleeve hem across
+      const hemPts: number[][] = [];
+      const hemSteps = 5;
+      for (let i = hemSteps - 1; i >= 0; i--) {
+        const f = i / hemSteps;
+        const x = xEnd - Math.sin(f * Math.PI) * (sId === 'bell' ? 8 : 0);
+        const y = (yArmTopEnd - 2) + f * (yHemBot - (yArmTopEnd - 2));
+        hemPts.push([x, y]);
+      }
+
+      // 3. Sleeve outer edge returning smoothly over shoulder crown to shoulder tip
+      const topPtsList: number[][] = [];
+      if (sId === 'puff') {
+        topPtsList.push(
+          [xEnd, yArmTopEnd - 2],
+          [xEnd + reach * 0.25, 142],
+          [xEnd + reach * 0.5, 134],
+          [xEnd + reach * 0.72, 132],
+          [152, 136],
+          [160, 141],
+          tip
+        );
+      } else {
+        const topSteps = 8;
+        for (let i = 1; i <= topSteps; i++) {
+          const f = i / topSteps;
+          const x = xEnd + f * (tip[0] - xEnd);
+          // Subtle convex arch over the outstretched shoulder deltoid
+          const curveLift = Math.sin(f * Math.PI) * (reach > 40 ? 2.5 : 1.2);
+          const y = (yArmTopEnd - 2) + f * (tip[1] - (yArmTopEnd - 2)) - curveLift;
+          topPtsList.push([x, y]);
+        }
+      }
+
+      return [...underPts, ...hemPts, ...topPtsList];
+    } else {
+      // Natural anatomical resting pose with rounded, curved shoulder cap
+
+      // Cap sleeve: hugs and rounds gracefully over the shoulder ball
+      if (sId === 'cap') {
+        const outerCapPts: number[][] = [
+          tip,
+          [tip[0] - 4, tip[1] + 0.5],
+          [tip[0] - 9.5, tip[1] + 2],
+          [tip[0] - 15, tip[1] + 5],
+          [tip[0] - 20, tip[1] + 9.5],
+          [tip[0] - 24, tip[1] + 15.5],
+          [tip[0] - 26.5, tip[1] + 23],
+          [tip[0] - 27.5, tip[1] + 31],
+          [tip[0] - 27, tip[1] + 39], // outer hem endpoint at ~ [138, 185]
+        ];
+
+        const oEnd = outerCapPts[outerCapPts.length - 1];
+        const capHemPts: number[][] = [
+          oEnd,
+          [oEnd[0] + 3, oEnd[1] + 5],
+          [oEnd[0] + 7, oEnd[1] + 10],
+          [oEnd[0] + 11.5, oEnd[1] + 15],
+          [underarm[0] + 1, underarm[1] - 4],
+          underarm,
+        ];
+
+        const hemToOuter = capHemPts.slice(0, -1).reverse();
+        const outerToTip = outerCapPts.slice(1).reverse();
+        return [...hemToOuter, ...outerToTip];
+      }
+
+      // Puff sleeve: voluminous rounded gathers blooming over shoulder
+      if (sId === 'puff') {
+        const puffCrown: number[][] = [
+          tip,
+          [tip[0] - 4, tip[1] - 8],
+          [tip[0] - 12, tip[1] - 14],
+          [tip[0] - 23, tip[1] - 15],
+          [tip[0] - 34, tip[1] - 11],
+          [tip[0] - 42, tip[1] - 1],
+          [tip[0] - 47, tip[1] + 14],
+          [tip[0] - 48, tip[1] + 32],
+          [tip[0] - 45, tip[1] + 50],
+          [tip[0] - 39, tip[1] + 68],
+          [tip[0] - 30, tip[1] + 85],
+          [tip[0] - 20, tip[1] + 99], // outer hem at ~ [145, 245]
+        ];
+        const oEnd = puffCrown[puffCrown.length - 1];
+        const puffHemPts: number[][] = [
+          oEnd,
+          [oEnd[0] + 6, oEnd[1] + 2],
+          [oEnd[0] + 13, oEnd[1] + 2],
+          [165, 245],
+        ];
+        const innerJunction = [165, 245];
+        const hemToOuter = puffHemPts.slice(0, -1).reverse();
+        const outerToTip = puffCrown.slice(1).reverse();
+        return [
+          innerJunction,
+          ...hemToOuter,
+          ...outerToTip,
+        ];
+      }
+
+      // Smooth, convex shoulder cap crown rounding seamlessly over deltoid
+      const capCrown: number[][] = [
+        tip,
+        [tip[0] - 3.5, tip[1] + 0.4],
+        [tip[0] - 8.5, tip[1] + 1.8],
+        [tip[0] - 14, tip[1] + 4.8],
+        [tip[0] - 19, tip[1] + 9.2],
+        [tip[0] - 23, tip[1] + 15],
+        [tip[0] - 25.5, tip[1] + 22.5],
+        [tip[0] - 26.8, tip[1] + 31],
+        [tip[0] - 27, tip[1] + 40], // reaches ~ [138, 186]
+      ];
+
+      // Down the arm from y = 186 to sleeve length s.L
+      const hemYTarget = 150 + s.L;
+      const armSteps = Math.max(6, Math.round(s.L / 20));
+      const outerArmPts: number[][] = [];
+      const innerArmPts: number[][] = [];
+
+      // Anatomical outer arm contour with tailoring ease ensuring complete coverage of the bare arm
+      const getArmOuterX = (cy: number) => {
+        if (cy <= 186) return 138;
+        if (cy <= 240) return 138 + ((cy - 186) / 54) * (138.5 - 138);
+        if (cy <= 290) return 138.5 + ((cy - 240) / 50) * (136.5 - 138.5);
+        if (cy <= 350) return 136.5 + ((cy - 290) / 60) * (134.5 - 136.5);
+        return 134.5 + ((cy - 350) / 62) * (136.5 - 134.5);
+      };
+
+      // Anatomical inner arm contour with tailoring ease ensuring complete coverage of the bare arm
+      const getArmInnerX = (cy: number) => {
+        if (cy <= 190) return 170 + ((190 - cy) / 6) * (172 - 170);
+        if (cy <= 240) return 170 + ((cy - 190) / 50) * (167 - 170);
+        if (cy <= 290) return 167 + ((cy - 240) / 50) * (163 - 167);
+        if (cy <= 350) return 163 + ((cy - 290) / 60) * (160 - 163);
+        return 160 + ((cy - 350) / 62) * (157 - 160);
+      };
+
+      for (let i = 0; i <= armSteps; i++) {
+        const f = i / armSteps;
+        const cy = 186 + f * (hemYTarget - 186);
+
+        if (sId === 'bell') {
+          // Bell flare below elbow
+          const bellFlare = cy > 260 ? Math.pow((cy - 260) / (hemYTarget - 260), 1.5) * 36 : 0;
+          outerArmPts.push([getArmOuterX(cy) - bellFlare, cy]);
+          innerArmPts.push([getArmInnerX(cy) + bellFlare * 0.7, cy]);
+        } else {
+          outerArmPts.push([getArmOuterX(cy), cy]);
+          innerArmPts.push([getArmInnerX(cy), cy]);
+        }
+      }
+
+      // Natural junction point where the inner sleeve connects directly to the bodice side seam
+      // Eliminates the sharp triangular apex or unnatural detour to underarm [154, 214]
+      const junctionY = Math.min(hemYTarget - 6, 260);
+      const junctionPt = [getArmInnerX(junctionY), junctionY];
+
+      // Inner arm points from the junction point down to the sleeve hem
+      const validInnerPts: number[][] = [junctionPt];
+      for (const p of innerArmPts) {
+        if (p[1] > junctionY + 3) {
+          validInnerPts.push(p);
+        }
+      }
+      if (validInnerPts.length === 1) {
+        validInnerPts.push(innerArmPts[innerArmPts.length - 1]);
+      }
+
+      // Sleeve hem across
+      const oEnd = outerArmPts[outerArmPts.length - 1];
+      const iEnd = validInnerPts[validInnerPts.length - 1];
+      const hemPts: number[][] = [
+        iEnd,
+        [(iEnd[0] * 2 + oEnd[0]) / 3, (iEnd[1] * 2 + oEnd[1]) / 3 + 1.5],
+        [(iEnd[0] + oEnd[0] * 2) / 3, (iEnd[1] + oEnd[1] * 2) / 3 + 1.5],
+        oEnd,
+      ];
+
+      // Assemble full sleeve path:
+      // junctionPt -> down inner arm -> hem -> up outer arm -> shoulder cap curve -> tip
+      const outerPath = [...outerArmPts.slice(0, -1)].reverse();
+      const capPath = [...capCrown.slice(1)].reverse();
+
+      return [
+        ...validInnerPts,
+        ...hemPts.slice(1),
+        ...outerPath,
+        ...capPath,
+      ];
+    }
+  };
+
+  // Top / Blouse / Bodice & Sleeves: Unified Continuous Silhouette
+  const topPts = () => {
+    const b = TOP[topStyleId] || TOP.fitted;
+    const n = (isBack ? BACK_CUTS[geo('back', 'roundBack')] : NECK[neckId]) || NECK.round;
+    const right = b.right.map((p) => p.slice());
+    if (hemY != null) right[right.length - 1] = [right[right.length - 1][0], hemY];
+    const hemC = isBack && topStyleId !== 'peplum' ? [] : b.hemC || [];
+    const shR_pts = shR(n);
+    const shL_pts = shL(n);
+    const tipR = shR_pts[shR_pts.length - 1];
+    const tipL = shL_pts[0];
+    const underarmR = right[0];
+    const underarmL: [number, number] = [STAGE_W - underarmR[0], underarmR[1]];
+
+    const s = SLV[sleeveId];
+
+    // 1. Sleeveless: standard sleeveless bodice silhouette with armhole scoop
+    if (!s) {
+      const leftSleevePath = buildLeftSleevePath(sleeveId, armPose, tipL, underarmL);
+      const rightSleevePath = mir(leftSleevePath).reverse();
+      const combined = [
+        ...shL_pts,
+        ...n.pts,
+        ...shR_pts,
+        ...rightSleevePath,
+        ...right.slice(1),
+        ...hemC,
+        ...mir(right).reverse().slice(0, -1),
+        ...leftSleevePath,
+      ];
+      return resample(scaleX(combined, fitK), 140);
+    }
+
+    // 2. Cap sleeve or outstretched pose: underarm connects cleanly at underarm point
+    if (sleeveId === 'cap' || armPose === 'stretched') {
+      const leftSleevePath = buildLeftSleevePath(sleeveId, armPose, tipL, underarmL);
+      const rightSleevePath = mir(leftSleevePath).reverse();
+      const combined = [
+        ...shL_pts,
+        ...n.pts,
+        ...shR_pts,
+        ...rightSleevePath,
+        ...right.slice(1),
+        ...hemC,
+        ...mir(right).reverse().slice(0, -1),
+        ...leftSleevePath,
+      ];
+      return resample(scaleX(combined, fitK), 240);
+    }
+
+    // 3. Resting pose with sleeves (short, puff, elbow, threequarter, full, bell):
+    // The sleeve inner edge merges directly into the torso side seam at the natural junction point.
+    // This completely eliminates the sharp triangular wedge between the blouse and sleeves.
+    const hemYTarget = sleeveId === 'puff' ? 245 : 150 + s.L;
+    const junctionY = Math.min(hemYTarget - 6, 260);
+
+    const leftSleevePath = buildLeftSleevePath(sleeveId, armPose, tipL, underarmL);
+    const rightSleevePath = mir(leftSleevePath).reverse();
+
+    const junctionPtL = leftSleevePath[0];
+    const junctionPtR = [STAGE_W - junctionPtL[0], junctionPtL[1]];
+
+    // Filter torso side points strictly below junctionY, seamlessly starting at junctionPt
+    const torsoRightBelowJunction = right.filter((p) => p[1] > junctionY + 2);
+    const torsoRightSeam = [junctionPtR, ...torsoRightBelowJunction];
+    const torsoLeftSeam = mir(torsoRightSeam).reverse();
+
+    const combined = [
+      ...shL_pts,
+      ...n.pts,
+      ...shR_pts,
+      ...rightSleevePath,
+      ...torsoRightSeam.slice(1),
+      ...hemC,
+      ...torsoLeftSeam.slice(0, -1),
+      ...leftSleevePath,
+    ];
+
+    return resample(scaleX(combined, fitK), 240);
+  };
+
+  const sleeveAnchors = () => {
+    const b = TOP[topStyleId] || TOP.fitted;
+    const n = (isBack ? BACK_CUTS[geo('back', 'roundBack')] : NECK[neckId]) || NECK.round;
+    const shR_pts = shR(n);
+    const shL_pts = shL(n);
+    const tipR = shR_pts[shR_pts.length - 1];
+    const tipL = shL_pts[0];
+    const underarmR = b.right[0];
+    const underarmL = [STAGE_W - underarmR[0], underarmR[1]];
+
+    const [scaledTipL] = scaleX([tipL], fitK);
+    const [scaledUnderL] = scaleX([underarmL], fitK);
+    const [scaledTipR] = scaleX([tipR], fitK);
+    const [scaledUnderR] = scaleX([underarmR], fitK);
+
+    return { scaledTipL, scaledUnderL, scaledTipR, scaledUnderR };
+  };
+
+  const sleevePts = (side: 'l' | 'r') => {
+    const s = SLV[sleeveId];
+    if (!s) return null;
+
+    if (armPose === 'stretched') {
+      let reach = 120;
+      let hemDrop = 2;
+      let maxSag = 1;
+
+      if (sleeveId === 'cap') {
+        reach = 28;
+        hemDrop = 2;
+        maxSag = 1;
+      } else if (sleeveId === 'short') {
+        reach = 50;
+        hemDrop = 2;
+        maxSag = 1;
+      } else if (sleeveId === 'elbow') {
+        reach = 74;
+        hemDrop = 2;
+        maxSag = 1;
+      } else if (sleeveId === 'threequarter') {
+        reach = 94;
+        hemDrop = 2;
+        maxSag = 1;
+      } else if (sleeveId === 'full') {
+        reach = 114;
+        hemDrop = 3;
+        maxSag = 2;
+      } else if (sleeveId === 'bell') {
+        reach = 110;
+        hemDrop = 76;
+        maxSag = 42;
+      } else if (sleeveId === 'puff') {
+        reach = 56;
+        hemDrop = 14;
+        maxSag = 10;
+      }
+
+      const xEnd = 164 - reach;
+      const yArmTopEnd = 146 + reach * 0.1;
+      const yArmBotEnd = 178 - reach * 0.05;
+      const yHemBot = yArmBotEnd + hemDrop;
+
+      const topPtsList: number[][] = [];
+      if (sleeveId === 'puff') {
+        topPtsList.push([164, 144]);
+        topPtsList.push([150, 134]);
+        topPtsList.push([132, 136]);
+        topPtsList.push([xEnd, yArmTopEnd - 2]);
+      } else {
+        const topSteps = 6;
+        for (let i = 0; i <= topSteps; i++) {
+          const f = i / topSteps;
+          const x = 164 - f * reach;
+          const y = 146 + f * reach * 0.1 - 2;
+          topPtsList.push([x, y]);
+        }
+      }
+
+      const hemPtsList: number[][] = [];
+      const hemSteps = 4;
+      for (let i = 1; i <= hemSteps; i++) {
+        const f = i / hemSteps;
+        const x = xEnd - Math.sin(f * Math.PI) * (sleeveId === 'bell' ? 8 : 0);
+        const y = (yArmTopEnd - 2) + f * (yHemBot - (yArmTopEnd - 2));
+        hemPtsList.push([x, y]);
+      }
+
+      const underPtsList: number[][] = [];
+      const sagSteps = 8;
+      for (let i = 1; i <= sagSteps; i++) {
+        const f = i / sagSteps;
+        const x = xEnd + f * (168 - xEnd);
+        const yLinear = yHemBot + f * (184 - yHemBot);
+        const sag = maxSag * Math.sin(f * Math.PI);
+        underPtsList.push([x, yLinear + sag]);
+      }
+
+      const armholePts = [[170, 160], [164, 144]];
+      const allPts = [...topPtsList, ...hemPtsList, ...underPtsList, ...armholePts];
+      const p = resample(scaleX(allPts, fitK), 34);
+      return side === 'r' ? mir(p) : p;
+    }
+
+    // Natural anatomical resting sleeve polygon connecting smoothly over shoulder cap to underarm
+    const b = TOP[topStyleId] || TOP.fitted;
+    const n = (isBack ? BACK_CUTS[geo('back', 'roundBack')] : NECK[neckId]) || NECK.round;
+    const right = b.right.map((p) => p.slice());
+    const shL_pts = shL(n);
+    const tipL = shL_pts[0];
+    const underarmR = right[0];
+    const underarmL: [number, number] = [STAGE_W - underarmR[0], underarmR[1]];
+
+    const leftPath = buildLeftSleevePath(sleeveId, 'resting', tipL, underarmL);
+    if (!leftPath || leftPath.length === 0) return null;
+
+    // Connect tipL back to junction startPt along the armscye seam curve
+    const startPt = leftPath[0];
+    const armscyeSteps = 8;
+    const armscyePts: number[][] = [];
+    for (let i = 1; i < armscyeSteps; i++) {
+      const f = i / armscyeSteps;
+      const p0 = tipL;
+      const p1 = [tipL[0] + 5, tipL[1] * 0.6 + startPt[1] * 0.4];
+      const p2 = [startPt[0] + 4, tipL[1] * 0.25 + startPt[1] * 0.75];
+      const p3 = startPt;
+      const cx =
+        Math.pow(1 - f, 3) * p0[0] +
+        3 * Math.pow(1 - f, 2) * f * p1[0] +
+        3 * (1 - f) * Math.pow(f, 2) * p2[0] +
+        Math.pow(f, 3) * p3[0];
+      const cy =
+        Math.pow(1 - f, 3) * p0[1] +
+        3 * Math.pow(1 - f, 2) * f * p1[1] +
+        3 * (1 - f) * Math.pow(f, 2) * p2[1] +
+        Math.pow(f, 3) * p3[1];
+      armscyePts.push([cx, cy]);
+    }
+
+    const closedLeft = [...leftPath, ...armscyePts];
+    const resampled = resample(scaleX(closedLeft, fitK), 64);
+    return side === 'r' ? mir(resampled) : resampled;
+  };
+
+  // Cuffs
+  const cuffH = val('cuff', 0);
+  const cuffPts = (side: 'l' | 'r') => {
+    const s = SLV[sleeveId];
+    if (!s || !cuffH) return null;
+
+    if (armPose === 'stretched') {
+      let reach = 120;
+      if (sleeveId === 'cap') reach = 28;
+      else if (sleeveId === 'short') reach = 52;
+      else if (sleeveId === 'elbow') reach = 76;
+      else if (sleeveId === 'threequarter') reach = 98;
+      else if (sleeveId === 'full') reach = 120;
+      else if (sleeveId === 'bell') reach = 110;
+      else if (sleeveId === 'puff') reach = 56;
+
+      const xEnd = 164 - reach;
+      const cuffW = Math.max(6, Math.min(16, cuffH * 0.35));
+      const x1 = xEnd + cuffW;
+      const x2 = xEnd;
+      const yTop1 = 146 + (164 - x1) * 0.1 - 2;
+      const yTop2 = 146 + reach * 0.1 - 2;
+      const yBot1 = 178 - (164 - x1) * 0.05 + 2;
+      const yBot2 = 178 - reach * 0.05 + 2;
+
+      const p = scaleX(
+        [
+          [x1, yTop1],
+          [x2, yTop2],
+          [x2, yBot2],
+          [x1, yBot1],
+        ],
+        fitK
+      );
+      return side === 'r' ? mir(p) : p;
+    }
+
+    const y2 = 150 + s.L;
+    const y1 = y2 - cuffH;
+    const t2 = s.L;
+    const t1 = s.L - cuffH;
+    const x2 = t2 <= 150 ? 159 - 0.065 * t2 : 149.25 - 0.03 * (t2 - 150);
+    const x1 = t1 <= 150 ? 159 - 0.065 * t1 : 149.25 - 0.03 * (t1 - 150);
+    const wEnd = s.w[2];
+    const wMid = s.w[1] + (s.w[2] - s.w[1]) * (t1 / s.L > 0.5 ? 1 : 0.6);
+    const p = scaleX(
+      [
+        [x1 - wMid / 2 - 1, y1],
+        [x1 + wMid / 2 + 1, y1],
+        [x2 + wEnd / 2 + 1.5, y2],
+        [x2 - wEnd / 2 - 1.5, y2],
+      ],
+      fitK
+    );
+    return side === 'r' ? mir(p) : p;
+  };
+
+  const gravityFoldPaths = (side: 'l' | 'r') => {
+    if (armPose !== 'stretched') return [];
+    if (!SLV[sleeveId] || sleeveId === 'sleeveless' || sleeveId === 'cap') return [];
+    // Short, elbow, and three-quarter are simple tailored sleeves (no baggy droop or baggy fold ripples)
+    if (sleeveId === 'short' || sleeveId === 'elbow' || sleeveId === 'threequarter') return [];
+
+    let reach = 110;
+    let hemDrop = 76;
+    let maxSag = 42;
+    if (sleeveId === 'bell') {
+      reach = 110;
+      hemDrop = 76;
+      maxSag = 42;
+    } else {
+      return [];
+    }
+
+    const xEnd = 164 - reach;
+    const yHemBot = 178 - reach * 0.05 + hemDrop;
+
+    const raw = [
+      `M 166 178 Q ${Math.round(xEnd + (164 - xEnd) * 0.48)} ${Math.round(yHemBot + maxSag * 0.55)} ${Math.round(xEnd + 8)} ${Math.round(yHemBot - 10)}`,
+      `M 158 172 Q ${Math.round(xEnd + (164 - xEnd) * 0.3)} ${Math.round(yHemBot + maxSag * 0.28)} ${Math.round(xEnd + 18)} ${Math.round(yHemBot - 20)}`,
+      `M 168 182 Q ${Math.round(xEnd + (164 - xEnd) * 0.65)} ${Math.round(yHemBot + maxSag * 0.82)} ${Math.round(xEnd + 5)} ${Math.round(yHemBot - 5)}`,
+    ];
+
+    if (side === 'r') {
+      return raw.map((d) =>
+        d.replace(/(\d+(\.\d+)?)\s+(\d+(\.\d+)?)/g, (_m, x, _dec, y) => {
+          const mx = Math.round(230 + (230 - parseFloat(x)));
+          return `${mx} ${y}`;
+        })
+      );
+    }
+    return raw;
+  };
+
+  // Bottom Skirt / Pants
+  const botGeo = currentGarment === 'shirt' ? 'trouser' : geo('bottom', 'aline');
+  const lenId = currentGarment === 'shirt' ? 'floor' : (bySlot('bottomLength') || { id: 'floor' }).id;
+  const botTop = currentGarment === 'dress' ? hemY || 330 : currentGarment === 'shirt' ? 300 : 298;
+
+  const botPts = (bg: string, lg: string, topY: number) => {
+    const sk = BOT[bg] || BOT.aline;
+    const hh = LENV[lg] || 400;
+    const top = topY;
+    const scaledProfile = sk.profile.map((p) => [p[0], p[1] * fitK]);
+    const right = scaledProfile.map((p) => [STAGE_CX + p[1], top + p[0] * hh]);
+    const left = scaledProfile.map((p) => [STAGE_CX - p[1], top + p[0] * hh]).reverse();
+    const hem: number[][] = [];
+    if (sk.scallop) {
+      const hw = scaledProfile[scaledProfile.length - 1][1];
+      const y = top + hh;
+      for (let i = 1; i < 8; i++) {
+        hem.push([STAGE_CX + hw - (2 * hw * i) / 8, i % 2 ? y - 16 : y]);
+      }
+    } else if (currentGarment !== 'shirt') {
+      const hw = scaledProfile[scaledProfile.length - 1][1];
+      const y = top + hh;
+      for (let i = 1; i < 8; i++) {
+        const f = i / 8;
+        hem.push([STAGE_CX + hw - 2 * hw * f, y + Math.sin(f * Math.PI) * 8]);
+      }
+    }
+
+    // Top waist anatomical curve across the front
+    const wTop = scaledProfile[0][1];
+    const waistDip = currentGarment === 'shirt' ? 2 : 4.5;
+    const waistCurveSteps = 10;
+    const waistTopCurve: number[][] = [];
+    for (let i = 1; i < waistCurveSteps; i++) {
+      const f = i / waistCurveSteps;
+      const x = STAGE_CX - wTop + 2 * wTop * f;
+      const y = top + Math.sin(f * Math.PI) * waistDip;
+      waistTopCurve.push([x, y]);
+    }
+
+    return resample([...right, ...hem, ...left, ...waistTopCurve], 64);
+  };
+
+  const skirtFolds = () => {
+    if (currentGarment === 'shirt') return [];
+    const sk = BOT[botGeo] || BOT.aline;
+    const hh = LENV[lenId] || 400;
+    const top = botTop;
+    const hemY = top + hh;
+    const hw = sk.profile[sk.profile.length - 1][1] * fitK;
+    const wBot = 53.5 * fitK;
+    const midW = sk.profile[Math.floor(sk.profile.length / 2)][1] * fitK;
+
+    const folds: { d: string; opacity: number }[] = [];
+    const ratios = [-0.74, -0.5, -0.26, 0, 0.26, 0.5, 0.74];
+    const waistDip = 4.5;
+    const wbHeight = currentGarment === 'lehenga' ? 15 : 0;
+
+    ratios.forEach((r) => {
+      const xTop = STAGE_CX + r * wBot * 0.92;
+      const yStart = top + wbHeight + Math.cos((r * Math.PI) / 2) * waistDip;
+      const xMid = STAGE_CX + r * midW * 0.94;
+      const xBot = STAGE_CX + r * hw * 0.98;
+      const yMid = top + wbHeight + (hh - wbHeight) * 0.48;
+
+      folds.push({
+        d: `M ${xTop.toFixed(1)} ${yStart.toFixed(1)} Q ${xMid.toFixed(1)} ${yMid.toFixed(1)} ${xBot.toFixed(1)} ${hemY.toFixed(1)}`,
+        opacity: Math.abs(r) === 0 ? 0.22 : 0.16,
+      });
+    });
+
+    return folds;
+  };
+
+  const skirtTiers = () => {
+    if (currentGarment !== 'lehenga' && currentGarment !== 'dress') return [];
+    if (botGeo !== 'tiered') return [];
+    const hh = LENV[lenId] || 400;
+    const top = botTop;
+    return [top + hh * 0.34, top + hh * 0.67];
+  };
+
+  // Dupatta / Pallu Drape
+  const drapeId = geo('drape', '');
+  const pieces = drapeId && DRP[drapeId] ? DRP[drapeId].filter(Boolean).map((p) => resample(isBack ? mir(p) : p, 26)) : [];
+  const dupCat = g.cats.find((c) => c.slot === 'drape' || c.slot === 'fabric');
+  const hemBack = hemY != null ? hemY : topStyleId === 'kurta' ? 536 : topStyleId === 'shirtBody' ? 428 : 330;
+  const waistV = val('waist', -1);
+
+  // Waistband
+  const waistBand = (v: number) => {
+    const h = 14 + v * 6;
+    const y = 298;
+    const w = 52 * fitK;
+    const dip = 4.5;
+    const steps = 8;
+    const topPts: number[][] = [];
+    const botPtsList: number[][] = [];
+    for (let i = 0; i <= steps; i++) {
+      const f = i / steps;
+      const x = STAGE_CX - w + 2 * w * f;
+      topPts.push([x, y + Math.sin(f * Math.PI) * dip]);
+      botPtsList.push([x, y + h + Math.sin(f * Math.PI) * dip]);
+    }
+    const base = [...topPts, ...botPtsList.reverse()];
+    if (v >= 2) {
+      const sX = STAGE_CX + w - 4;
+      const sY = y + h;
+      return base.concat([[sX + 10, sY + 62], [sX - 14, sY + 58], [sX - 4, sY]]);
+    }
+    return base;
+  };
+
+  // 2D Game Style Linework & Details Generators
+  const skirtBorderData = () => {
+    if (currentGarment === 'shirt') return null;
+    const sk = BOT[botGeo] || BOT.aline;
+    const hh = LENV[lenId] || 400;
+    const top = botTop;
+    const hemY = top + hh;
+    const hw = sk.profile[sk.profile.length - 1][1] * fitK;
+
+    const upperPts: [number, number][] = [];
+    const midPts: [number, number][] = [];
+    const lowerPts: [number, number][] = [];
+
+    const steps = 18;
+    for (let i = 0; i <= steps; i++) {
+      const f = i / steps;
+      const x = STAGE_CX - hw * 0.98 + 2 * hw * 0.98 * f;
+      const lift = Math.sin(f * Math.PI) * 8;
+      upperPts.push([x, hemY - 26 + lift]);
+      midPts.push([x, hemY - 13 + lift]);
+      lowerPts.push([x, hemY - 3 + lift]);
+    }
+
+    const chevrons: string[] = [];
+    for (let i = 0; i < upperPts.length - 1; i++) {
+      const p1 = upperPts[i];
+      const p2 = midPts[i];
+      const p3 = upperPts[i + 1];
+      const p4 = midPts[i + 1];
+      chevrons.push(
+        `M ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} L ${((p2[0] + p4[0]) / 2).toFixed(1)} ${((p2[1] + p4[1]) / 2).toFixed(1)} L ${p3[0].toFixed(1)} ${p3[1].toFixed(1)}`
+      );
+    }
+
+    return {
+      upper: 'M ' + upperPts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L '),
+      mid: 'M ' + midPts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L '),
+      lower: 'M ' + lowerPts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L '),
+      chevrons,
+      lowerPts,
+      hw,
+      hemY,
+    };
+  };
+
+  const necklineData = () => {
+    const n = (isBack ? BACK_CUTS[geo('back', 'roundBack')] : NECK[neckId]) || NECK.round;
+    const pts = scaleX(n.pts, fitK);
+    return {
+      d: 'M ' + pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' L '),
+      pts,
+    };
+  };
+
+interface BlouseDetailsResult {
+  isBack: boolean;
+  isNotched?: boolean;
+  isPeplum?: boolean;
+  smockingLines?: { d: string; accentD: string; y: number }[];
+  smockingGathers?: string[];
+  waistSeam?: string;
+  waistFrillUpper?: string;
+  peplumFlutes?: { d: string; shadow: string | null }[];
+  hemRuffleLine?: string;
+  hemRuffleAccent?: string;
+  spine?: string;
+  tieBow?: string | null;
+  doriLeft?: string | null;
+  doriRight?: string | null;
+  latkanL?: { x: number; y: number } | null;
+  latkanR?: { x: number; y: number } | null;
+  hasLowerTie?: boolean;
+  lowerTieBow?: string;
+  lowerDoriL?: string;
+  lowerDoriR?: string;
+  lowerLatkanL?: { x: number; y: number } | null;
+  lowerLatkanR?: { x: number; y: number } | null;
+  showPotli?: boolean;
+  potliYs?: number[];
+  dartLeft?: string;
+  dartRight?: string;
+  hemBorder?: string;
+  princessLeft?: string;
+  princessRight?: string;
+  cupLeft?: string;
+  cupRight?: string;
+  underbustPatti?: string;
+  centerSeam?: string;
+  hemUpperPatti?: string;
+  hemMidPatti?: string;
+  hemLine?: string;
+}
+
+  const blouseDetails = (): BlouseDetailsResult | null => {
+    if (currentGarment !== 'lehenga' && currentGarment !== 'saree' && currentGarment !== 'dress') return null;
+    const b = TOP[topStyleId] || TOP.fitted;
+    const hem = hemY != null ? hemY : (b.right[b.right.length - 1] ? b.right[b.right.length - 1][1] : 288);
+    const n = (isBack ? BACK_CUTS[geo('back', 'roundBack')] : NECK[neckId]) || NECK.round;
+    const neckLowestY = Math.max(...n.pts.map((p) => p[1]));
+
+    // PEPLUM TOP: Smocked / Shirred Bodice with Flared Fluted Ruffled Peplum
+    if (topStyleId === 'peplum') {
+      const waistY = 270;
+      const hemY_val = hem || 345;
+      const startSmockingY = Math.max(186, neckLowestY + 2);
+
+      const smockingLines: { d: string; accentD: string; y: number }[] = [];
+      const smockingGathers: string[] = [];
+
+      const step = 7.2;
+      for (let y = startSmockingY; y <= waistY - 2; y += step) {
+        const progress = Math.max(0, Math.min(1, (y - 190) / 80));
+        const halfW = 75 - progress * 17;
+        const xL = STAGE_CX - halfW + 1;
+        const xR = STAGE_CX + halfW - 1;
+
+        let d = `M ${xL.toFixed(1)} ${y.toFixed(1)}`;
+        const waveCount = 8;
+        const wStep = (xR - xL) / waveCount;
+        for (let wi = 0; wi < waveCount; wi++) {
+          const xMid = xL + (wi + 0.5) * wStep;
+          const xNext = xL + (wi + 1) * wStep;
+          const waveAmp = wi % 2 === 0 ? 0.8 : -0.8;
+          d += ` Q ${xMid.toFixed(1)} ${(y + waveAmp).toFixed(1)} ${xNext.toFixed(1)} ${y.toFixed(1)}`;
+        }
+
+        const accentD = `M ${(xL + 2).toFixed(1)} ${(y + 1.2).toFixed(1)} Q ${STAGE_CX} ${(y + 2.2).toFixed(1)} ${(xR - 2).toFixed(1)} ${(y + 1.2).toFixed(1)}`;
+        smockingLines.push({ d, accentD, y });
+      }
+
+      for (let i = 0; i < smockingLines.length - 1; i++) {
+        const yTop = smockingLines[i].y + 1;
+        const yBot = smockingLines[i + 1].y - 1;
+        const progress = (yTop - 190) / 80;
+        const halfW = 74 - progress * 16;
+        const ticks = [-0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75];
+        ticks.forEach((t) => {
+          const x = STAGE_CX + t * (halfW - 5);
+          smockingGathers.push(`M ${x.toFixed(1)} ${yTop.toFixed(1)} Q ${(x + (t >= 0 ? 0.9 : -0.9)).toFixed(1)} ${((yTop + yBot) / 2).toFixed(1)} ${x.toFixed(1)} ${yBot.toFixed(1)}`);
+        });
+      }
+
+      const waistSeam = `M ${STAGE_CX - 58} ${waistY} Q ${STAGE_CX} ${waistY + 3.5} ${STAGE_CX + 58} ${waistY}`;
+      const waistFrillUpper = `M ${STAGE_CX - 57} ${waistY - 2.5} Q ${STAGE_CX} ${waistY + 1} ${STAGE_CX + 57} ${waistY - 2.5}`;
+
+      const peplumFlutes = [
+        { d: `M ${STAGE_CX - 52} ${waistY + 1} C ${STAGE_CX - 68} 295 ${STAGE_CX - 88} 320 ${STAGE_CX - 96} ${hemY_val - 2}`, shadow: `M ${STAGE_CX - 52} ${waistY + 1} C ${STAGE_CX - 68} 295 ${STAGE_CX - 88} 320 ${STAGE_CX - 96} ${hemY_val - 2} L ${STAGE_CX - 90} ${hemY_val - 1} C ${STAGE_CX - 82} 320 ${STAGE_CX - 64} 295 ${STAGE_CX - 50} ${waistY + 1} Z` },
+        { d: `M ${STAGE_CX - 38} ${waistY + 2} C ${STAGE_CX - 48} 296 ${STAGE_CX - 62} 322 ${STAGE_CX - 72} ${hemY_val - 1}`, shadow: `M ${STAGE_CX - 38} ${waistY + 2} C ${STAGE_CX - 48} 296 ${STAGE_CX - 62} 322 ${STAGE_CX - 72} ${hemY_val - 1} L ${STAGE_CX - 66} ${hemY_val} C ${STAGE_CX - 56} 322 ${STAGE_CX - 44} 296 ${STAGE_CX - 36} ${waistY + 2} Z` },
+        { d: `M ${STAGE_CX - 24} ${waistY + 2.5} C ${STAGE_CX - 30} 297 ${STAGE_CX - 38} 323 ${STAGE_CX - 44} ${hemY_val}`, shadow: `M ${STAGE_CX - 24} ${waistY + 2.5} C ${STAGE_CX - 30} 297 ${STAGE_CX - 38} 323 ${STAGE_CX - 44} ${hemY_val} L ${STAGE_CX - 38} ${hemY_val + 1} C ${STAGE_CX - 32} 323 ${STAGE_CX - 26} 297 ${STAGE_CX - 22} ${waistY + 2.5} Z` },
+        { d: `M ${STAGE_CX - 11} ${waistY + 3} C ${STAGE_CX - 13} 298 ${STAGE_CX - 16} 324 ${STAGE_CX - 18} ${hemY_val + 2}`, shadow: null },
+        { d: `M ${STAGE_CX} ${waistY + 3.5} C ${STAGE_CX} 298 ${STAGE_CX} 324 ${STAGE_CX} ${hemY_val + 3}`, shadow: null },
+        { d: `M ${STAGE_CX + 11} ${waistY + 3} C ${STAGE_CX + 13} 298 ${STAGE_CX + 16} 324 ${STAGE_CX + 18} ${hemY_val + 2}`, shadow: null },
+        { d: `M ${STAGE_CX + 24} ${waistY + 2.5} C ${STAGE_CX + 30} 297 ${STAGE_CX + 38} 323 ${STAGE_CX + 44} ${hemY_val}`, shadow: `M ${STAGE_CX + 24} ${waistY + 2.5} C ${STAGE_CX + 30} 297 ${STAGE_CX + 38} 323 ${STAGE_CX + 44} ${hemY_val} L ${STAGE_CX + 38} ${hemY_val + 1} C ${STAGE_CX + 32} 323 ${STAGE_CX + 26} 297 ${STAGE_CX + 22} ${waistY + 2.5} Z` },
+        { d: `M ${STAGE_CX + 38} ${waistY + 2} C ${STAGE_CX + 48} 296 ${STAGE_CX + 62} 322 ${STAGE_CX + 72} ${hemY_val - 1}`, shadow: `M ${STAGE_CX + 38} ${waistY + 2} C ${STAGE_CX + 48} 296 ${STAGE_CX + 62} 322 ${STAGE_CX + 72} ${hemY_val - 1} L ${STAGE_CX + 66} ${hemY_val} C ${STAGE_CX + 56} 322 ${STAGE_CX + 44} 296 ${STAGE_CX + 36} ${waistY + 2} Z` },
+        { d: `M ${STAGE_CX + 52} ${waistY + 1} C ${STAGE_CX + 68} 295 ${STAGE_CX + 88} 320 ${STAGE_CX + 96} ${hemY_val - 2}`, shadow: `M ${STAGE_CX + 52} ${waistY + 1} C ${STAGE_CX + 68} 295 ${STAGE_CX + 88} 320 ${STAGE_CX + 96} ${hemY_val - 2} L ${STAGE_CX + 90} ${hemY_val - 1} C ${STAGE_CX + 82} 320 ${STAGE_CX + 64} 295 ${STAGE_CX + 50} ${waistY + 1} Z` },
+      ];
+
+      const hemRuffleLine = `M ${STAGE_CX - 108} ${hemY_val - 2} Q ${STAGE_CX - 85} ${hemY_val + 3} ${STAGE_CX - 62} ${hemY_val - 2} Q ${STAGE_CX - 35} ${hemY_val + 4} ${STAGE_CX} ${hemY_val + 1} Q ${STAGE_CX + 35} ${hemY_val + 4} ${STAGE_CX + 62} ${hemY_val - 2} Q ${STAGE_CX + 85} ${hemY_val + 3} ${STAGE_CX + 108} ${hemY_val - 2}`;
+      const hemRuffleAccent = `M ${STAGE_CX - 106} ${hemY_val - 0.5} Q ${STAGE_CX - 85} ${hemY_val + 4.5} ${STAGE_CX - 62} ${hemY_val - 0.5} Q ${STAGE_CX - 35} ${hemY_val + 5.5} ${STAGE_CX} ${hemY_val + 2.5} Q ${STAGE_CX + 35} ${hemY_val + 5.5} ${STAGE_CX + 62} ${hemY_val - 0.5} Q ${STAGE_CX + 85} ${hemY_val + 4.5} ${STAGE_CX + 106} ${hemY_val - 0.5}`;
+
+      const tieY = Math.min(neckLowestY + 12, 185);
+
+      return {
+        isBack,
+        isPeplum: true,
+        smockingLines,
+        smockingGathers,
+        waistSeam,
+        waistFrillUpper,
+        peplumFlutes,
+        hemRuffleLine,
+        hemRuffleAccent,
+        tieBow: isBack ? `M ${STAGE_CX - 12} ${tieY - 4} C ${STAGE_CX - 5} ${tieY - 8} ${STAGE_CX} ${tieY} C ${STAGE_CX + 5} ${tieY - 8} ${STAGE_CX + 12} ${tieY - 4}` : null,
+        doriLeft: isBack ? `M ${STAGE_CX - 3} ${tieY} C ${STAGE_CX - 12} ${tieY + 20} ${STAGE_CX - 24} ${tieY + 44} ${STAGE_CX - 18} ${tieY + 68}` : null,
+        doriRight: isBack ? `M ${STAGE_CX + 3} ${tieY} C ${STAGE_CX + 12} ${tieY + 20} ${STAGE_CX + 24} ${tieY + 44} ${STAGE_CX + 18} ${tieY + 68}` : null,
+        latkanL: isBack ? { x: STAGE_CX - 18, y: tieY + 68 } : null,
+        latkanR: isBack ? { x: STAGE_CX + 18, y: tieY + 68 } : null,
+      };
+    }
+
+    if (isBack) {
+      const backStyle = geo('back', 'roundBack');
+      const tieY = Math.min(neckLowestY + 12, 185);
+      const hasLowerTie = backStyle === 'tieBack' || backStyle === 'deepBack' || backStyle === 'cutOut';
+      const showPotli = !hasLowerTie && (backStyle === 'roundBack' || backStyle === 'squareBack' || backStyle === 'keyholeBack');
+      const potliYs = [182, 202, 222, 242, 262].filter((y) => y > neckLowestY + 4 && y < hem - 8);
+
+      const lowerTieY = hem - 10;
+
+      return {
+        isBack: true,
+        spine: `M ${STAGE_CX} ${neckLowestY + 1} L ${STAGE_CX} ${hem}`,
+        // Upper Nape Tie Dori
+        tieBow: `M ${STAGE_CX - 12} ${tieY - 4} C ${STAGE_CX - 5} ${tieY - 8} ${STAGE_CX} ${tieY} C ${STAGE_CX + 5} ${tieY - 8} ${STAGE_CX + 12} ${tieY - 4}`,
+        doriLeft: `M ${STAGE_CX - 3} ${tieY} C ${STAGE_CX - 12} ${tieY + 20} ${STAGE_CX - 24} ${tieY + 44} ${STAGE_CX - 18} ${tieY + 68}`,
+        doriRight: `M ${STAGE_CX + 3} ${tieY} C ${STAGE_CX + 12} ${tieY + 20} ${STAGE_CX + 24} ${tieY + 44} ${STAGE_CX + 18} ${tieY + 68}`,
+        latkanL: { x: STAGE_CX - 18, y: tieY + 68 },
+        latkanR: { x: STAGE_CX + 18, y: tieY + 68 },
+        // Lower Waist Tie Dori
+        hasLowerTie,
+        lowerTieBow: `M ${STAGE_CX - 10} ${lowerTieY - 3} C ${STAGE_CX - 4} ${lowerTieY - 6} ${STAGE_CX} ${lowerTieY} C ${STAGE_CX + 4} ${lowerTieY - 6} ${STAGE_CX + 10} ${lowerTieY - 3}`,
+        lowerDoriL: `M ${STAGE_CX - 2} ${lowerTieY} C ${STAGE_CX - 10} ${lowerTieY + 16} ${STAGE_CX - 18} ${lowerTieY + 32} ${STAGE_CX - 14} ${lowerTieY + 48}`,
+        lowerDoriR: `M ${STAGE_CX + 2} ${lowerTieY} C ${STAGE_CX + 10} ${lowerTieY + 16} ${STAGE_CX + 18} ${lowerTieY + 32} ${STAGE_CX + 14} ${lowerTieY + 48}`,
+        lowerLatkanL: { x: STAGE_CX - 14, y: lowerTieY + 48 },
+        lowerLatkanR: { x: STAGE_CX + 14, y: lowerTieY + 48 },
+        // Potli buttons
+        showPotli,
+        potliYs,
+        // Tailored Back Darts
+        dartLeft: `M ${STAGE_CX - 34} ${Math.max(170, neckLowestY)} Q ${STAGE_CX - 30} 230 ${STAGE_CX - 26} ${hem}`,
+        dartRight: `M ${STAGE_CX + 34} ${Math.max(170, neckLowestY)} Q ${STAGE_CX + 28} 230 ${STAGE_CX + 24} ${hem}`,
+        hemBorder: `M ${STAGE_CX - 58} ${hem} Q ${STAGE_CX} ${hem - 3} ${STAGE_CX + 58} ${hem}`,
+      };
+    }
+
+    // FRONT VIEW:
+    if (neckId === 'notched') {
+      return {
+        isBack: false,
+        isNotched: true,
+        princessLeft: `M ${STAGE_CX - 14} 194 L ${STAGE_CX - 14} ${hem}`,
+        princessRight: `M ${STAGE_CX + 14} 194 L ${STAGE_CX + 14} ${hem}`,
+        hemLine: `M ${STAGE_CX - 60} ${hem} Q ${STAGE_CX} ${hem - 4} ${STAGE_CX + 60} ${hem}`,
+      };
+    }
+
+    // 1. Sculpted Princess Seams
+    const princessLeft = `M ${STAGE_CX - 60} 186 C ${STAGE_CX - 40} 206 ${STAGE_CX - 36} 230 ${STAGE_CX - 33} 256 C ${STAGE_CX - 32} 268 ${STAGE_CX - 33} 278 ${STAGE_CX - 34} ${hem}`;
+    const princessRight = `M ${STAGE_CX + 60} 186 C ${STAGE_CX + 40} 206 ${STAGE_CX + 36} 230 ${STAGE_CX + 33} 256 C ${STAGE_CX + 32} 268 ${STAGE_CX + 33} 278 ${STAGE_CX + 34} ${hem}`;
+
+    // 2. Sculpted Bustier Cups & Underbust Arch
+    const cupLeft = `M ${STAGE_CX - 50} 252 Q ${STAGE_CX - 25} 263 ${STAGE_CX} 256`;
+    const cupRight = `M ${STAGE_CX} 256 Q ${STAGE_CX + 25} 263 ${STAGE_CX + 50} 252`;
+    const underbustPatti = `M ${STAGE_CX - 48} 261 Q ${STAGE_CX} 268 ${STAGE_CX + 48} 261`;
+
+    // 3. Center Front Seam
+    const centerSeam = `M ${STAGE_CX} ${neckLowestY} L ${STAGE_CX} ${hem}`;
+
+    // 4. Structured Waistband Patti (Hem Border)
+    const hemUpperPatti = `M ${STAGE_CX - 58} ${hem - 8} Q ${STAGE_CX} ${hem - 12} ${STAGE_CX + 58} ${hem - 8}`;
+    const hemMidPatti = `M ${STAGE_CX - 59} ${hem - 4} Q ${STAGE_CX} ${hem - 8} ${STAGE_CX + 59} ${hem - 4}`;
+    const hemLine = `M ${STAGE_CX - 60} ${hem} Q ${STAGE_CX} ${hem - 4} ${STAGE_CX + 60} ${hem}`;
+
+    return {
+      isBack: false,
+      princessLeft,
+      princessRight,
+      cupLeft,
+      cupRight,
+      underbustPatti,
+      centerSeam,
+      hemUpperPatti,
+      hemMidPatti,
+      hemLine,
+    };
+  };
+
+  const drapePleatLines = (pts: number[][]) => {
+    if (pts.length < 6) return [];
+    const n = Math.floor(pts.length / 2);
+    const leftSide = pts.slice(0, n);
+    const rightSide = pts.slice(n).reverse();
+    const len = Math.min(leftSide.length, rightSide.length);
+    if (len < 3) return [];
+
+    const lines: string[] = [];
+    [0.35, 0.65].forEach((ratio) => {
+      const p1 = [leftSide[0][0] * (1 - ratio) + rightSide[0][0] * ratio, leftSide[0][1] * (1 - ratio) + rightSide[0][1] * ratio];
+      const pMid = [leftSide[Math.floor(len / 2)][0] * (1 - ratio) + rightSide[Math.floor(len / 2)][0] * ratio, leftSide[Math.floor(len / 2)][1] * (1 - ratio) + rightSide[Math.floor(len / 2)][1] * ratio];
+      const pEnd = [leftSide[len - 1][0] * (1 - ratio) + rightSide[len - 1][0] * ratio, leftSide[len - 1][1] * (1 - ratio) + rightSide[len - 1][1] * ratio];
+      lines.push(`M ${p1[0].toFixed(1)} ${p1[1].toFixed(1)} Q ${pMid[0].toFixed(1)} ${pMid[1].toFixed(1)} ${pEnd[0].toFixed(1)} ${pEnd[1].toFixed(1)}`);
+    });
+    return lines;
+  };
+
+  // Focus & Camera Zoom
+  const f = FOCUS[activeCategory.slot] || FOCUS.topStyle;
+  const isDetail = viewMode === 'detail';
+  const fade = isDetail && ['neckline', 'collar', 'topStyle', 'sleeves', 'back', 'texture', 'cuff'].includes(activeCategory.slot) ? 0.65 : 1;
+  const k = isDetail ? f.z : isBack ? 0.66 : (armPose === 'stretched' ? 0.52 : BASE_ZOOM);
+  const fy = isDetail ? f.cy : isBack ? 320 : 395;
+
+  // Active layer loading effect
+  const isLayerLoading = (slotShort: string) => loadingSlot.toLowerCase() === slotShort.toLowerCase();
+
+  return (
+    <div className="flex-1 relative overflow-hidden min-h-0 bg-[#f7f4ef]">
+      {/* Zoomable Stage Container */}
+      <div
+        id="mannequin-stage"
+        className="absolute left-1/2 top-1/2 transition-transform duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] origin-center"
+        style={{
+          width: `${STAGE_W}px`,
+          height: `${STAGE_H}px`,
+          marginLeft: `-${STAGE_W / 2}px`,
+          marginTop: `-${STAGE_H / 2}px`,
+          transform: `scale(${k}) translate(0px, ${410 - fy}px)`,
+        }}
+      >
+        {/* Floor Shadow */}
+        <div className="absolute left-[50px] top-[764px] w-[360px] h-[36px] rounded-full bg-[radial-gradient(ellipse_at_50%_50%,rgba(146,114,88,0.22),rgba(146,114,88,0)_72%)]" />
+
+        {/* Avatar Body Form (Torso, Hips & Human Legs) */}
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-[#faecd8] via-[#eed3ba] to-[#dfba98]"
+          style={{ clipPath: poly(scaleX(BODY, fitK)) }}
+        />
+        {/* Soft Natural Waist & Navel Accent */}
+        {!isBack && (
+          <div className="absolute left-[228px] top-[316px] w-[5px] h-[7px] rounded-full bg-[#ba8066]/35 shadow-inner pointer-events-none" />
+        )}
+
+        {/* Atelier Drape Stand */}
+        <div
+          className="absolute top-[256px] w-[100px] h-[470px] transition-all duration-500"
+          style={{ left: isBack ? '12px' : '352px' }}
+        >
+          {/* Hanging sample cloth on the atelier rack */}
+          <div
+            className="absolute left-[16px] top-[6px] w-[68px] h-[310px] rounded-b-[4px] opacity-85 pointer-events-none"
+            style={{
+              background: 'linear-gradient(90deg, #dfd2c0 0%, #f7f1e6 30%, #ece1d1 60%, #ded0bd 100%)',
+              boxShadow: '0 4px 12px rgba(100,75,50,0.08)',
+            }}
+          >
+            {/* Vertical fold creases */}
+            <div className="absolute left-[20px] top-0 w-[1px] h-full bg-[#c8b59e]/50" />
+            <div className="absolute left-[44px] top-0 w-[1px] h-full bg-[#c8b59e]/50" />
+            <div className="absolute left-0 bottom-0 w-full h-[6px] border-b-[2px] border-dashed border-[#b39e85]/60" />
+          </div>
+
+          <div className="absolute left-0 top-0 w-[100px] h-[9px] rounded-[5px] bg-gradient-to-b from-[#cfa46c] to-[#a97f4c]" />
+          <div className="absolute -left-[5px] -top-[3px] w-[15px] h-[15px] rounded-full bg-gradient-to-br from-[#d3aa74] to-[#a97f4c]" />
+          <div className="absolute left-[90px] -top-[3px] w-[15px] h-[15px] rounded-full bg-gradient-to-br from-[#d3aa74] to-[#a97f4c]" />
+          <div className="absolute left-[46px] top-[8px] w-[9px] h-[436px] rounded-[5px] bg-gradient-to-r from-[#b98d57] via-[#cfa46c] to-[#9b7343]" />
+          <div className="absolute left-[14px] top-[440px] w-[72px] h-[13px] rounded-[7px] bg-gradient-to-b from-[#c79a63] to-[#a1784a]" />
+          <div className="absolute left-[6px] top-[450px] w-[88px] h-[14px] rounded-full bg-[radial-gradient(ellipse_at_50%_50%,rgba(146,114,88,0.2),transparent_72%)]" />
+        </div>
+
+        {/* Layer 1: Skirt / Bottom */}
+        <div
+          className={`absolute inset-0 transition-all duration-500 ${
+            isLayerLoading('skirt') || isLayerLoading('saree') || isLayerLoading('shape') ? 'animate-shim' : ''
+          }`}
+          style={{
+            background: currentGarment === 'shirt' ? bodyFill : botFill,
+            opacity: currentGarment === 'shirt' ? 0.85 : 1,
+            clipPath:
+              currentGarment === 'shirt'
+                ? poly(botPts('trouser', 'floor', 300))
+                : poly(botPts(botGeo, lenId, botTop)),
+          }}
+        />
+
+        {/* Layer 2: Waistband */}
+        {waistV > 0 && (
+          <div
+            className="absolute inset-0 transition-all duration-500"
+            style={{
+              background: fillGradient(fab.c, 'sheer', 2),
+              opacity: 0.95,
+              clipPath: poly(waistBand(waistV)),
+            }}
+          />
+        )}
+
+        {/* Layer 2.5: Arms & Hands Base Mannequin (Rendered ON TOP of Skirt/Lehenga & Waistband for clear visibility) */}
+        <div
+          id="mannequin-arms-hands-layer"
+          className="absolute inset-0 transition-all duration-500 pointer-events-none"
+          style={{
+            filter: 'drop-shadow(0 4px 6px rgba(43, 31, 24, 0.18))',
+          }}
+        >
+          {armPose === 'resting' ? (
+            <>
+              {/* Left Arm Base & Canvas Texture */}
+              <div
+                className="absolute inset-0 bg-gradient-to-br from-[#f6e2ce] via-[#eed3ba] to-[#e0bd9c]"
+                style={{ clipPath: poly(scaleX(ARM_L, fitK)) }}
+              />
+              <div
+                className="absolute inset-0 opacity-40"
+                style={{
+                  clipPath: poly(scaleX(ARM_L, fitK)),
+                  backgroundImage:
+                    'repeating-linear-gradient(46deg, rgba(196,146,112,0.12) 0 1px, transparent 1px 8px), repeating-linear-gradient(-46deg, rgba(196,146,112,0.1) 0 1px, transparent 1px 8px)',
+                }}
+              />
+              {/* Right Arm Base & Canvas Texture */}
+              <div
+                className="absolute inset-0 bg-gradient-to-bl from-[#f6e2ce] via-[#eed3ba] to-[#e0bd9c]"
+                style={{ clipPath: poly(scaleX(ARM_R, fitK)) }}
+              />
+              <div
+                className="absolute inset-0 opacity-40"
+                style={{
+                  clipPath: poly(scaleX(ARM_R, fitK)),
+                  backgroundImage:
+                    'repeating-linear-gradient(-46deg, rgba(196,146,112,0.12) 0 1px, transparent 1px 8px), repeating-linear-gradient(46deg, rgba(196,146,112,0.1) 0 1px, transparent 1px 8px)',
+                }}
+              />
+            </>
+          ) : (
+            <>
+              {/* Outstretched Arms Base */}
+              <div
+                className="absolute inset-0 bg-gradient-to-r from-[#f6e2ce] via-[#eed3ba] to-[#e0bd9c]"
+                style={{ clipPath: poly(scaleX(ARM_OUT_L, fitK)) }}
+              />
+              <div
+                className="absolute inset-0 opacity-40"
+                style={{
+                  clipPath: poly(scaleX(ARM_OUT_L, fitK)),
+                  backgroundImage:
+                    'repeating-linear-gradient(46deg, rgba(196,146,112,0.12) 0 1px, transparent 1px 8px), repeating-linear-gradient(-46deg, rgba(196,146,112,0.1) 0 1px, transparent 1px 8px)',
+                }}
+              />
+              <div
+                className="absolute inset-0 bg-gradient-to-l from-[#f6e2ce] via-[#eed3ba] to-[#e0bd9c]"
+                style={{ clipPath: poly(scaleX(ARM_OUT_R, fitK)) }}
+              />
+              <div
+                className="absolute inset-0 opacity-40"
+                style={{
+                  clipPath: poly(scaleX(ARM_OUT_R, fitK)),
+                  backgroundImage:
+                    'repeating-linear-gradient(-46deg, rgba(196,146,112,0.12) 0 1px, transparent 1px 8px), repeating-linear-gradient(46deg, rgba(196,146,112,0.1) 0 1px, transparent 1px 8px)',
+                }}
+              />
+              {/* Outstretched Couture Seam Lines */}
+              <div className="absolute left-[96px] top-[152px] w-0 h-[24px] border-l border-dashed border-[#ba8066]/40" />
+              <div className="absolute left-[364px] top-[152px] w-0 h-[24px] border-l border-dashed border-[#ba8066]/40" />
+            </>
+          )}
+        </div>
+
+        {/* Layer 3: Top / Blouse / Bodice & Sleeves (Unified Connected Garment) */}
+        <div
+          className={`absolute inset-0 transition-all duration-500 ${
+            isLayerLoading('blouse') || isLayerLoading('bodice') || isLayerLoading('front') || isLayerLoading('sleeve') ? 'animate-shim' : ''
+          }`}
+          style={{
+            background: topFill,
+            clipPath: poly(topPts()),
+          }}
+        />
+
+        {/* Layer 6 & 7: Cuffs */}
+        {cuffPts('l') && (
+          <div
+            className="absolute inset-0 transition-all duration-500"
+            style={{
+              background: fillGradient(FABRIC, 'plain', -16),
+              clipPath: poly(cuffPts('l')!),
+            }}
+          />
+        )}
+        {cuffPts('r') && (
+          <div
+            className="absolute inset-0 transition-all duration-500"
+            style={{
+              background: fillGradient(FABRIC, 'plain', -16),
+              clipPath: poly(cuffPts('r')!),
+            }}
+          />
+        )}
+
+        {/* Layer 8: Shirt Collar */}
+        {currentGarment === 'shirt' && !isBack && (
+          <div
+            className="absolute inset-0 transition-all duration-500"
+            style={{
+              background: fillGradient(FABRIC, 'plain', -13),
+              clipPath: poly(COLLAR[geo('collar', 'classic')] || COLLAR.classic),
+            }}
+          />
+        )}
+
+        {/* Layer 9 & 10: Dupatta / Drape Pieces */}
+        {pieces[0] && (
+          <div
+            className={`absolute inset-0 transition-all duration-500 ${
+              isLayerLoading('dupatta') || isLayerLoading('drape') ? 'animate-shim' : ''
+            }`}
+            style={{
+              background: currentGarment === 'shirt' ? fillGradient(fab.c, 'sheer', -6) : fabTheme.drapeColor,
+              opacity: Math.min(1, fabTheme.drapeOpacity + 0.05) * fade,
+              clipPath: poly(pieces[0]),
+            }}
+          />
+        )}
+        {pieces[1] && (
+          <div
+            className="absolute inset-0 transition-all duration-500"
+            style={{
+              background: currentGarment === 'shirt' ? fillGradient(fab.c, 'sheer', -6) : fabTheme.drapeColor,
+              opacity: Math.min(1, fabTheme.drapeOpacity + 0.05) * fade,
+              clipPath: poly(pieces[1]),
+            }}
+          />
+        )}
+
+        {/* SVG Overlay for Textures, 2D Game Linework, and Fabric Borders */}
+        <svg className="absolute inset-0 pointer-events-none" width={STAGE_W} height={STAGE_H}>
+          <defs>
+            <radialGradient id="bust-highlight-l" cx="45%" cy="40%" r="55%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.25" />
+              <stop offset="60%" stopColor="#ffffff" stopOpacity="0.06" />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="bust-highlight-r" cx="55%" cy="40%" r="55%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.25" />
+              <stop offset="60%" stopColor="#ffffff" stopOpacity="0.06" />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+            </radialGradient>
+            <pattern id="net-mesh" width="8" height="8" patternUnits="userSpaceOnUse">
+              <circle cx="2" cy="2" r="1.5" fill="rgba(255,255,255,0.4)" />
+              <circle cx="6" cy="6" r="1.5" fill="rgba(255,255,255,0.4)" />
+            </pattern>
+            <pattern id="banarasi-butis" width="24" height="24" patternUnits="userSpaceOnUse">
+              <path d="M12,4 C14,8 18,10 12,16 C6,10 10,8 12,4 Z" fill={GOLD} opacity="0.6" />
+              <circle cx="12" cy="18" r="2" fill={GOLD} opacity="0.5" />
+            </pattern>
+            <linearGradient id="wood-joint-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#eed0ab" />
+              <stop offset="45%" stopColor="#d5a87e" />
+              <stop offset="100%" stopColor="#b38258" />
+            </linearGradient>
+            {/* Avatar 2D Fashion Character Gradients */}
+            <linearGradient id="avatar-skin-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#faecd8" />
+              <stop offset="45%" stopColor="#f3d8bc" />
+              <stop offset="100%" stopColor="#e3be99" />
+            </linearGradient>
+            <linearGradient id="hair-dark-grad" x1="15%" y1="0%" x2="85%" y2="100%">
+              <stop offset="0%" stopColor="#282226" />
+              <stop offset="35%" stopColor="#181518" />
+              <stop offset="70%" stopColor="#0f0c0f" />
+              <stop offset="100%" stopColor="#070607" />
+            </linearGradient>
+            <radialGradient id="iris-grad" cx="45%" cy="40%" r="55%">
+              <stop offset="0%" stopColor="#5d3921" />
+              <stop offset="60%" stopColor="#382010" />
+              <stop offset="100%" stopColor="#170c05" />
+            </radialGradient>
+            <radialGradient id="blush-l" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#e27373" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#e27373" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="blush-r" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#e27373" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#e27373" stopOpacity="0" />
+            </radialGradient>
+            {/* Mannequin Arm Opaque Canvas Texture Gradients & Shadow Filter */}
+            <linearGradient id="mannequin-arm-l" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#f8e5d3" />
+              <stop offset="50%" stopColor="#eed3ba" />
+              <stop offset="100%" stopColor="#dfba98" />
+            </linearGradient>
+            <linearGradient id="mannequin-arm-r" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#f8e5d3" />
+              <stop offset="50%" stopColor="#eed3ba" />
+              <stop offset="100%" stopColor="#dfba98" />
+            </linearGradient>
+            <pattern id="mannequin-canvas-texture" width="8" height="8" patternUnits="userSpaceOnUse">
+              <path d="M 0 0 L 8 8 M 8 0 L 0 8" stroke="rgba(196,146,112,0.12)" strokeWidth="0.75" />
+            </pattern>
+            <filter id="arm-shadow" x="-20%" y="-10%" width="140%" height="120%">
+              <feDropShadow dx="0" dy="2.5" stdDeviation="2.5" floodColor="#2b1f18" floodOpacity="0.14" />
+            </filter>
+            <linearGradient id="top-fabric-grad" x1="20%" y1="0%" x2="80%" y2="100%">
+              <stop offset="0%" stopColor={topGradColors.start} />
+              <stop offset="55%" stopColor={topGradColors.mid} />
+              <stop offset="100%" stopColor={topGradColors.end} />
+            </linearGradient>
+            <linearGradient id="peplum-flare-depth" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#000000" stopOpacity="0.0" />
+              <stop offset="45%" stopColor="#000000" stopOpacity="0.08" />
+              <stop offset="100%" stopColor="#000000" stopOpacity="0.22" />
+            </linearGradient>
+            <linearGradient id="bot-fabric-grad" x1="20%" y1="0%" x2="80%" y2="100%">
+              <stop offset="0%" stopColor={botGradColors.start} />
+              <stop offset="55%" stopColor={botGradColors.mid} />
+              <stop offset="100%" stopColor={botGradColors.end} />
+            </linearGradient>
+            <clipPath id="skirt-clip">
+              <path d={svgPath(currentGarment === 'shirt' ? botPts('trouser', 'floor', 300) : botPts(botGeo, lenId, botTop))} />
+            </clipPath>
+            <clipPath id="top-clip">
+              <path d={svgPath(topPts())} />
+            </clipPath>
+            {sleevePts('l') && (
+              <clipPath id="sleeve-clip-l">
+                <path d={svgPath(sleevePts('l')!)} />
+              </clipPath>
+            )}
+            {sleevePts('r') && (
+              <clipPath id="sleeve-clip-r">
+                <path d={svgPath(sleevePts('r')!)} />
+              </clipPath>
+            )}
+          </defs>
+
+          {/* Avatar Rear Hair (Layer Behind Shoulders & Torso) */}
+          <AvatarRenderer viewMode={viewMode} layer="rearHair" />
+
+          {/* Avatar Anatomy & 2D Game Cel Linework */}
+          <g id="mannequin-linework">
+            {/* Clavicle / Collarbones */}
+            {!isBack && (
+              <>
+                <path d="M 196 148 Q 212 155 226 153" fill="none" stroke="#2a1f18" strokeWidth="1.15" opacity="0.45" strokeLinecap="round" />
+                <path d="M 264 148 Q 248 155 234 153" fill="none" stroke="#2a1f18" strokeWidth="1.15" opacity="0.45" strokeLinecap="round" />
+              </>
+            )}
+
+            {/* Avatar 2D Fashion Game Character Head, Face & Jewelry */}
+            <AvatarRenderer viewMode={viewMode} layer={isBack ? 'backHead' : 'face'} />
+
+            {/* Clean 2D Stylized Mannequin Legs */}
+            <g id="mannequin-legs">
+              {/* Subtle 2D Ground Shadow under feet */}
+              <ellipse
+                cx={scaleX([[190, 794]], fitK)[0][0]}
+                cy={795}
+                rx={14 * fitK}
+                ry={2.5}
+                fill="rgba(43,31,24,0.22)"
+              />
+              <ellipse
+                cx={STAGE_W - scaleX([[190, 794]], fitK)[0][0]}
+                cy={795}
+                rx={14 * fitK}
+                ry={2.5}
+                fill="rgba(43,31,24,0.22)"
+              />
+
+              {/* Left Leg: Flat 2D Linen Fill, Subtle Canvas Texture & Crisp Outline */}
+              <path d={svgPath(scaleX(LEG_L, fitK))} fill="#eed3ba" />
+              <path d={svgPath(scaleX(LEG_L, fitK))} fill="url(#mannequin-canvas-texture)" opacity="0.35" />
+              <path
+                d={svgPath(scaleX(LEG_L, fitK))}
+                fill="none"
+                stroke="#2a1f18"
+                strokeWidth="1.25"
+                strokeLinejoin="round"
+                opacity="0.8"
+              />
+
+              {/* Right Leg: Flat 2D Linen Fill, Subtle Canvas Texture & Crisp Outline */}
+              <path d={svgPath(scaleX(LEG_R, fitK))} fill="#eed3ba" />
+              <path d={svgPath(scaleX(LEG_R, fitK))} fill="url(#mannequin-canvas-texture)" opacity="0.35" />
+              <path
+                d={svgPath(scaleX(LEG_R, fitK))}
+                fill="none"
+                stroke="#2a1f18"
+                strokeWidth="1.25"
+                strokeLinejoin="round"
+                opacity="0.8"
+              />
+
+              {/* Minimal 2D Fashion Croquis Knee Accent */}
+              {(() => {
+                const xLK = scaleX([[181, 606]], fitK)[0][0];
+                const xRK = STAGE_W - xLK;
+                return (
+                  <g id="minimal-2d-knees" opacity="0.45">
+                    {/* Left Knee minimal 2D mark */}
+                    <path
+                      d={`M ${xLK - 6} 606 Q ${xLK} 604 ${xLK + 6} 606`}
+                      fill="none"
+                      stroke="#2a1f18"
+                      strokeWidth="0.9"
+                      strokeLinecap="round"
+                    />
+                    {/* Right Knee minimal 2D mark */}
+                    <path
+                      d={`M ${xRK - 6} 606 Q ${xRK} 604 ${xRK + 6} 606`}
+                      fill="none"
+                      stroke="#2a1f18"
+                      strokeWidth="0.9"
+                      strokeLinecap="round"
+                    />
+                  </g>
+                );
+              })()}
+            </g>
+          </g>
+
+          {/* Skirt Texture & Fill Overlay */}
+          <g clipPath="url(#skirt-clip)">
+            <path
+              d={svgPath(currentGarment === 'shirt' ? botPts('trouser', 'floor', 300) : botPts(botGeo, lenId, botTop))}
+              fill="url(#bot-fabric-grad)"
+              opacity={fab.op}
+            />
+            {texKey === 'net' && <rect width={STAGE_W} height={STAGE_H} fill="url(#net-mesh)" />}
+            {texKey === 'banarasi' && <rect width={STAGE_W} height={STAGE_H} fill="url(#banarasi-butis)" />}
+            {texKey === 'velvet' && (
+              <rect width={STAGE_W} height={STAGE_H} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="6" />
+            )}
+            {texKey === 'organza' && <rect width={STAGE_W} height={STAGE_H} fill="rgba(255,255,255,0.15)" />}
+          </g>
+
+          {/* Skirt 2D Game Linework: Kali Seams, Folds & Tiers */}
+          <g id="skirt-linework">
+            {/* Vertical Kali Panel Seams */}
+            {skirtFolds().map((fold, idx) => (
+              <g key={`skirt-fold-${idx}`}>
+                {/* Dark ink line */}
+                <path
+                  d={fold.d}
+                  fill="none"
+                  stroke={fabTheme.outlineColor}
+                  strokeWidth={botGeo === 'panelled' ? 1.4 : 1.15}
+                  strokeDasharray={botGeo === 'panelled' ? '5 3' : undefined}
+                  opacity={fabTheme.seamOpacity}
+                  strokeLinecap="round"
+                />
+                {/* Companion gold thread line for Banarasi */}
+                {fabId === 'banarasi' && (
+                  <path
+                    d={fold.d}
+                    fill="none"
+                    stroke={fabTheme.accentColor}
+                    strokeWidth="0.8"
+                    opacity="0.7"
+                    transform="translate(1.2, 0)"
+                  />
+                )}
+              </g>
+            ))}
+
+            {/* Skirt Horizontal Tier Lines */}
+            {skirtTiers().map((ty, idx) => (
+              <g key={`skirt-tier-${idx}`}>
+                <line
+                  x1={STAGE_CX - 210}
+                  y1={ty}
+                  x2={STAGE_CX + 210}
+                  y2={ty}
+                  stroke={fabTheme.outlineColor}
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                />
+                <line
+                  x1={STAGE_CX - 210}
+                  y1={ty + 2}
+                  x2={STAGE_CX + 210}
+                  y2={ty + 2}
+                  stroke={fabTheme.accentColor}
+                  strokeWidth="0.9"
+                  strokeDasharray={fabId === 'banarasi' ? '3 2' : undefined}
+                  opacity="0.8"
+                />
+              </g>
+            ))}
+
+            {/* 2D Game Hem Gotapatti / Zari Border Artwork */}
+            {(() => {
+              const border = skirtBorderData();
+              if (!border) return null;
+              return (
+                <g id="skirt-hem-border">
+                  {/* Upper Border Outline */}
+                  <path
+                    d={border.upper}
+                    fill="none"
+                    stroke={fabTheme.outlineColor}
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                  />
+                  {/* Mid Accent Line (Piping / Zari) */}
+                  <path
+                    d={border.mid}
+                    fill="none"
+                    stroke={fabTheme.accentColor}
+                    strokeWidth={fabTheme.borderStyle === 'velvet' ? '2.4' : '1.15'}
+                    strokeDasharray={fabId === 'banarasi' ? '4 2' : fabTheme.borderStyle === 'classic' ? '4 2' : undefined}
+                    opacity="0.85"
+                  />
+                  {/* Lower Hem Inner Outline */}
+                  <path
+                    d={border.lower}
+                    fill="none"
+                    stroke={fabTheme.outlineColor}
+                    strokeWidth="1.1"
+                    strokeLinecap="round"
+                  />
+                  {/* Banarasi Gotapatti Chevron Embroidery & Scallop Beads */}
+                  {fabTheme.borderStyle === 'gotapatti' && (
+                    <>
+                      {border.chevrons.map((chD, i) => (
+                        <path key={`ch-${i}`} d={chD} fill="none" stroke={fabTheme.accentColor} strokeWidth="1.1" />
+                      ))}
+                      {border.lowerPts.map((p, i) => (
+                        <circle
+                          key={`hb-${i}`}
+                          cx={p[0]}
+                          cy={p[1] + 1.5}
+                          r="2.2"
+                          fill={fabTheme.accentColor}
+                          stroke={fabTheme.outlineColor}
+                          strokeWidth="0.8"
+                        />
+                      ))}
+                    </>
+                  )}
+                  {/* Net Scalloped Lace Loops */}
+                  {fabTheme.borderStyle === 'lace' &&
+                    border.lowerPts.map((p, i) => (
+                      <path
+                        key={`lace-${i}`}
+                        d={`M ${p[0] - 6} ${p[1]} Q ${p[0]} ${p[1] + 5} ${p[0] + 6} ${p[1]}`}
+                        fill="none"
+                        stroke={fabTheme.outlineColor}
+                        strokeWidth="1"
+                        opacity="0.75"
+                      />
+                    ))}
+                  {/* Organza Ruffled Lettuce-Edge Wire Effect */}
+                  {fabTheme.borderStyle === 'wire' && (
+                    <path
+                      d={border.lower}
+                      fill="none"
+                      stroke={fabTheme.accentColor}
+                      strokeWidth="0.9"
+                      strokeDasharray="5 3"
+                    />
+                  )}
+                </g>
+              );
+            })()}
+
+            {/* Skirt Outer Silhouette Thin Outline */}
+            <path 
+              d={svgPath(currentGarment === 'shirt' ? botPts('trouser', 'floor', 300) : botPts(botGeo, lenId, botTop))}
+              fill="none"
+              stroke={fabTheme.outlineColor}
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+
+            {/* Lehenga Waistband & Hanging Dori / Latkan */}
+            {currentGarment === 'lehenga' && (() => {
+              const wTop = 51.5 * fitK;
+              const wBot = 53.5 * fitK;
+              const yTop = 298;
+              const yBot = 313;
+              const dip = 4.5;
+              const xLTop = STAGE_CX - wTop;
+              const xRTop = STAGE_CX + wTop;
+              const xLBot = STAGE_CX - wBot;
+              const xRBot = STAGE_CX + wBot;
+
+              // Top curve: left to right
+              const topCurve = `M ${xLTop.toFixed(1)} ${yTop} Q ${STAGE_CX} ${(yTop + dip).toFixed(1)} ${xRTop.toFixed(1)} ${yTop}`;
+              // Bottom curve: right to left
+              const botCurveReverse = `L ${xRBot.toFixed(1)} ${yBot} Q ${STAGE_CX} ${(yBot + dip).toFixed(1)} ${xLBot.toFixed(1)} ${yBot} Z`;
+              const waistbandD = `${topCurve} ${botCurveReverse}`;
+
+              // Mid embroidery track curve
+              const yMid = yTop + 7.5;
+              const midD = `M ${(xLTop + 1.5).toFixed(1)} ${yMid} Q ${STAGE_CX} ${(yMid + dip).toFixed(1)} ${(xRTop - 1.5).toFixed(1)} ${yMid}`;
+              // Top piping curve
+              const yTopPipe = yTop + 2;
+              const topPipeD = `M ${(xLTop + 1).toFixed(1)} ${yTopPipe} Q ${STAGE_CX} ${(yTopPipe + dip).toFixed(1)} ${(xRTop - 1).toFixed(1)} ${yTopPipe}`;
+              // Bottom seam curve
+              const botSeamD = `M ${xLBot.toFixed(1)} ${yBot} Q ${STAGE_CX} ${(yBot + dip).toFixed(1)} ${xRBot.toFixed(1)} ${yBot}`;
+
+              // Tie point for Dori
+              const xTie = xLBot + 2;
+              const yTie = yBot - 1;
+
+              // Micro-pleats / gather tick marks along the bottom seam
+              const pleatTicks: { x1: number; y1: number; x2: number; y2: number }[] = [];
+              const pleatRatios = [-0.82, -0.68, -0.54, -0.4, -0.26, -0.12, 0.02, 0.16, 0.3, 0.44, 0.58, 0.72, 0.84];
+              pleatRatios.forEach((r) => {
+                const px = STAGE_CX + r * wBot * 0.94;
+                const py = yBot + Math.cos((r * Math.PI) / 2) * dip;
+                pleatTicks.push({
+                  x1: px,
+                  y1: py,
+                  x2: px + r * 1.5,
+                  y2: py + 4,
+                });
+              });
+
+              return (
+                <g id="lehenga-waistband-and-latkan">
+                  {/* Waistband Base Fabric Fill */}
+                  <path
+                    d={waistbandD}
+                    fill={fabTheme.baseColor}
+                    stroke={fabTheme.outlineColor}
+                    strokeWidth="1.4"
+                    strokeLinejoin="round"
+                  />
+                  {/* Waistband Surface Texture / Luster */}
+                  <path
+                    d={waistbandD}
+                    fill="url(#top-fabric-grad)"
+                    opacity="0.32"
+                  />
+                  {/* Subtle lower depth shadow on waistband */}
+                  <path
+                    d={waistbandD}
+                    fill="rgba(0,0,0,0.06)"
+                  />
+
+                  {/* Top Fine Zari Piping */}
+                  <path
+                    d={topPipeD}
+                    fill="none"
+                    stroke={fabTheme.accentColor}
+                    strokeWidth="0.9"
+                    opacity={beltLatkan === 'none' ? '0.4' : '0.85'}
+                  />
+
+                  {/* Waistband Mid Embroidery Track (Gotapatti / Zari) */}
+                  {beltLatkan !== 'none' && (
+                    <path
+                      d={midD}
+                      fill="none"
+                      stroke={fabTheme.accentColor}
+                      strokeWidth={beltLatkan === 'heavy' ? (fabTheme.borderStyle === 'gotapatti' ? 1.8 : 1.3) : 0.9}
+                      strokeDasharray={fabId === 'banarasi' ? '3 2' : fabTheme.borderStyle === 'gotapatti' ? '5 3' : '4 2'}
+                      opacity="0.9"
+                    />
+                  )}
+
+                  {/* Heavy Bridal Waistband Center Medallion Buckle */}
+                  {beltLatkan === 'heavy' && (
+                    <g id="waistband-heavy-center-buckle">
+                      <ellipse
+                        cx={STAGE_CX}
+                        cy={yMid + dip}
+                        rx={6.5}
+                        ry={4.2}
+                        fill={fabTheme.accentColor}
+                        stroke={fabTheme.outlineColor}
+                        strokeWidth="1.1"
+                      />
+                      <circle cx={STAGE_CX} cy={yMid + dip} r={2.2} fill="#ffffff" opacity="0.85" />
+                    </g>
+                  )}
+
+                  {/* Bottom Waistband Seam Line */}
+                  <path
+                    d={botSeamD}
+                    fill="none"
+                    stroke={fabTheme.outlineColor}
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                  />
+                  {/* Bottom Seam Accent Thread */}
+                  <path
+                    d={botSeamD}
+                    fill="none"
+                    stroke={fabTheme.accentColor}
+                    strokeWidth="0.8"
+                    strokeDasharray="2 3"
+                    opacity="0.75"
+                  />
+
+                  {/* Gathered Pleat Ticks where skirt kalis attach to the nefa */}
+                  {pleatTicks.map((tick, i) => (
+                    <line
+                      key={`pt-${i}`}
+                      x1={tick.x1}
+                      y1={tick.y1}
+                      x2={tick.x2}
+                      y2={tick.y2}
+                      stroke={fabTheme.outlineColor}
+                      strokeWidth="1.0"
+                      strokeLinecap="round"
+                      opacity="0.6"
+                    />
+                  ))}
+
+                  {/* Left Side Hanging Dori / Latkan (Rendered if light or heavy, hidden if none) */}
+                  {beltLatkan !== 'none' && (
+                    <g id="waist-latkan" className="transition-opacity duration-300">
+                      {/* Waistband tie knot loop */}
+                      <ellipse
+                        cx={xTie + 2}
+                        cy={yTie}
+                        rx={beltLatkan === 'heavy' ? 4 : 3}
+                        ry={beltLatkan === 'heavy' ? 2.8 : 2}
+                        fill={fabTheme.accentColor}
+                        stroke={fabTheme.outlineColor}
+                        strokeWidth="1.1"
+                        transform={`rotate(-15 ${xTie + 2} ${yTie})`}
+                      />
+                      <circle
+                        cx={xTie + 1}
+                        cy={yTie + 2}
+                        r={beltLatkan === 'heavy' ? 2.2 : 1.5}
+                        fill={fabTheme.accentColor}
+                      />
+
+                      {/* Primary Dori Cord (Delicate single cord for light, long primary cord for heavy) */}
+                      <path
+                        d={
+                          beltLatkan === 'heavy'
+                            ? `M ${xTie} ${yTie + 2} C ${xTie - 8} ${yTie + 28} ${xTie - 12} ${yTie + 65} ${xTie - 6} ${yTie + 95} C ${xTie - 2} ${yTie + 115} ${xTie - 8} ${yTie + 130} ${xTie - 10} 448`
+                            : `M ${xTie} ${yTie + 2} C ${xTie - 6} ${yTie + 26} ${xTie - 8} ${yTie + 58} ${xTie - 4} ${yTie + 88} C ${xTie - 1} 410 ${xTie - 4} 420 ${xTie - 5} 426`
+                        }
+                        fill="none"
+                        stroke={fabTheme.outlineColor}
+                        strokeWidth={beltLatkan === 'heavy' ? '1.3' : '1.1'}
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d={
+                          beltLatkan === 'heavy'
+                            ? `M ${xTie} ${yTie + 2} C ${xTie - 8} ${yTie + 28} ${xTie - 12} ${yTie + 65} ${xTie - 6} ${yTie + 95} C ${xTie - 2} ${yTie + 115} ${xTie - 8} ${yTie + 130} ${xTie - 10} 448`
+                            : `M ${xTie} ${yTie + 2} C ${xTie - 6} ${yTie + 26} ${xTie - 8} ${yTie + 58} ${xTie - 4} ${yTie + 88} C ${xTie - 1} 410 ${xTie - 4} 420 ${xTie - 5} 426`
+                        }
+                        fill="none"
+                        stroke={fabTheme.accentColor}
+                        strokeWidth="0.8"
+                        strokeDasharray="2 3"
+                        opacity="0.9"
+                      />
+
+                      {/* Secondary Dori Cord (Heavy Statement Latkan only) */}
+                      {beltLatkan === 'heavy' && (
+                        <>
+                          <path
+                            d={`M ${xTie + 2} ${yTie + 3} C ${xTie - 3} ${yTie + 25} ${xTie - 6} ${yTie + 55} ${xTie - 2} ${yTie + 75} C ${xTie + 2} ${yTie + 90} ${xTie - 2} ${yTie + 105} ${xTie - 4} 416`}
+                            fill="none"
+                            stroke={fabTheme.outlineColor}
+                            strokeWidth="1.2"
+                            strokeLinecap="round"
+                          />
+                          <path
+                            d={`M ${xTie + 2} ${yTie + 3} C ${xTie - 3} ${yTie + 25} ${xTie - 6} ${yTie + 55} ${xTie - 2} ${yTie + 75} C ${xTie + 2} ${yTie + 90} ${xTie - 2} ${yTie + 105} ${xTie - 4} 416`}
+                            fill="none"
+                            stroke={fabTheme.accentColor}
+                            strokeWidth="0.75"
+                            strokeDasharray="2 3"
+                            opacity="0.85"
+                          />
+                          {/* Upper decorative metallic bead on Cord 2 */}
+                          <circle cx={xTie - 2} cy={372} r="2.5" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.9" />
+                          {/* Latkan 2 (Shorter Cord Tassel Bell) */}
+                          <g id="latkan-bell-short">
+                            <path
+                              d={`M ${xTie - 7} 416 L ${xTie - 1} 416 L ${xTie - 4} 412 Z`}
+                              fill={fabTheme.accentColor}
+                              stroke={fabTheme.outlineColor}
+                              strokeWidth="1"
+                            />
+                            <path
+                              d={`M ${xTie - 9} 428 L ${xTie + 1} 428 L ${xTie - 4} 416 Z`}
+                              fill={fabTheme.baseColor}
+                              stroke={fabTheme.outlineColor}
+                              strokeWidth="1.1"
+                              strokeLinejoin="round"
+                            />
+                            <line x1={xTie - 7} y1={428} x2={xTie - 9} y2={434} stroke={fabTheme.accentColor} strokeWidth="0.9" strokeLinecap="round" />
+                            <line x1={xTie - 4} y1={428} x2={xTie - 4} y2={435} stroke={fabTheme.accentColor} strokeWidth="1.0" strokeLinecap="round" />
+                            <line x1={xTie - 1} y1={428} x2={xTie + 1} y2={434} stroke={fabTheme.accentColor} strokeWidth="0.9" strokeLinecap="round" />
+                          </g>
+                        </>
+                      )}
+
+                      {/* Beads on Primary Cord */}
+                      {beltLatkan === 'heavy' ? (
+                        <>
+                          <circle cx={xTie - 6} cy={390} r="3" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="1" />
+                          <circle cx={xTie - 8} cy={422} r="2.6" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="1" />
+                        </>
+                      ) : (
+                        /* Delicate single gold bead for Light size */
+                        <circle cx={xTie - 3} cy={396} r="2.2" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
+                      )}
+
+                      {/* Primary Tassel Bell */}
+                      {beltLatkan === 'heavy' ? (
+                        /* Heavy Statement Primary Bell (Long Double-Tiered) */
+                        <g id="latkan-bell-long">
+                          {/* Gold bell cap */}
+                          <path
+                            d={`M ${xTie - 14} 448 L ${xTie - 6} 448 L ${xTie - 10} 443 Z`}
+                            fill={fabTheme.accentColor}
+                            stroke={fabTheme.outlineColor}
+                            strokeWidth="1.1"
+                          />
+                          {/* Conical tassel bell body */}
+                          <path
+                            d={`M ${xTie - 16} 464 L ${xTie - 4} 464 L ${xTie - 10} 448 Z`}
+                            fill={fabTheme.baseColor}
+                            stroke={fabTheme.outlineColor}
+                            strokeWidth="1.2"
+                            strokeLinejoin="round"
+                          />
+                          {/* Inner accent ring */}
+                          <line x1={xTie - 14} y1={458} x2={xTie - 6} y2={458} stroke={fabTheme.accentColor} strokeWidth="1" opacity="0.8" />
+                          {/* Silk fringe tassels */}
+                          <line x1={xTie - 14} y1={464} x2={xTie - 16} y2={472} stroke={fabTheme.outlineColor} strokeWidth="1" strokeLinecap="round" />
+                          <line x1={xTie - 12} y1={464} x2={xTie - 13} y2={474} stroke={fabTheme.accentColor} strokeWidth="1" strokeLinecap="round" />
+                          <line x1={xTie - 10} y1={464} x2={xTie - 10} y2={475} stroke={fabTheme.accentColor} strokeWidth="1.2" strokeLinecap="round" />
+                          <line x1={xTie - 8} y1={464} x2={xTie - 7} y2={474} stroke={fabTheme.accentColor} strokeWidth="1" strokeLinecap="round" />
+                          <line x1={xTie - 6} y1={464} x2={xTie - 4} y2={472} stroke={fabTheme.outlineColor} strokeWidth="1" strokeLinecap="round" />
+                        </g>
+                      ) : (
+                        /* Light Delicate Single Bell */
+                        <g id="latkan-bell-light">
+                          <path
+                            d={`M ${xTie - 8} 426 L ${xTie - 2} 426 L ${xTie - 5} 422 Z`}
+                            fill={fabTheme.accentColor}
+                            stroke={fabTheme.outlineColor}
+                            strokeWidth="0.9"
+                          />
+                          <path
+                            d={`M ${xTie - 9} 435 L ${xTie - 1} 435 L ${xTie - 5} 426 Z`}
+                            fill={fabTheme.baseColor}
+                            stroke={fabTheme.outlineColor}
+                            strokeWidth="1"
+                            strokeLinejoin="round"
+                          />
+                          <line x1={xTie - 8} y1={435} x2={xTie - 9} y2={440} stroke={fabTheme.accentColor} strokeWidth="0.8" strokeLinecap="round" />
+                          <line x1={xTie - 5} y1={435} x2={xTie - 5} y2={441} stroke={fabTheme.accentColor} strokeWidth="0.9" strokeLinecap="round" />
+                          <line x1={xTie - 2} y1={435} x2={xTie - 1} y2={440} stroke={fabTheme.accentColor} strokeWidth="0.8" strokeLinecap="round" />
+                        </g>
+                      )}
+                    </g>
+                  )}
+                </g>
+              );
+            })()}
+
+            {/* Saree & Dress Kamarbandh / Waist Belt (when beltLatkan is light or heavy) */}
+            {(currentGarment === 'saree' || currentGarment === 'dress') && beltLatkan !== 'none' && (() => {
+              const w = 50 * fitK;
+              const yTop = 301;
+              const h = beltLatkan === 'heavy' ? 12 : 6;
+              const dip = 4.5;
+              const xL = STAGE_CX - w;
+              const xR = STAGE_CX + w;
+              const beltD = `M ${xL.toFixed(1)} ${yTop} Q ${STAGE_CX} ${(yTop + dip).toFixed(1)} ${xR.toFixed(1)} ${yTop} L ${xR.toFixed(1)} ${yTop + h} Q ${STAGE_CX} ${(yTop + h + dip).toFixed(1)} ${xL.toFixed(1)} ${yTop + h} Z`;
+              const xTie = xL + 4;
+              const yTie = yTop + h;
+
+              return (
+                <g id="saree-kamarbandh-belt-and-latkan">
+                  {/* Belt Base */}
+                  <path
+                    d={beltD}
+                    fill={beltLatkan === 'heavy' ? fabTheme.accentColor : fabTheme.baseColor}
+                    stroke={fabTheme.outlineColor}
+                    strokeWidth={beltLatkan === 'heavy' ? '1.4' : '1.1'}
+                  />
+                  <path
+                    d={beltD}
+                    fill="url(#top-fabric-grad)"
+                    opacity="0.3"
+                  />
+                  {beltLatkan === 'heavy' && (
+                    <>
+                      <path
+                        d={`M ${(xL + 2).toFixed(1)} ${yTop + h / 2} Q ${STAGE_CX} ${(yTop + h / 2 + dip).toFixed(1)} ${(xR - 2).toFixed(1)} ${yTop + h / 2}`}
+                        fill="none"
+                        stroke="#ffffff"
+                        strokeWidth="1.2"
+                        strokeDasharray="3 2"
+                        opacity="0.85"
+                      />
+                      <circle cx={STAGE_CX} cy={yTop + h / 2 + dip} r={4.5} fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="1" />
+                      <circle cx={STAGE_CX} cy={yTop + h / 2 + dip} r={1.8} fill="#ffffff" />
+                    </>
+                  )}
+                  {/* Hanging Latkan on Hip */}
+                  <g id="saree-hip-latkan">
+                    <circle cx={xTie} cy={yTie} r={2} fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
+                    <path
+                      d={`M ${xTie} ${yTie} C ${xTie - 6} ${yTie + 20} ${xTie - 8} ${yTie + 45} ${xTie - 4} ${yTie + 70}`}
+                      fill="none"
+                      stroke={fabTheme.outlineColor}
+                      strokeWidth="1.1"
+                    />
+                    <circle cx={xTie - 6} cy={yTie + 50} r={2.2} fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
+                    <path
+                      d={`M ${xTie - 8} ${yTie + 70} L ${xTie} ${yTie + 70} L ${xTie - 4} ${yTie + 65} Z`}
+                      fill={fabTheme.accentColor}
+                      stroke={fabTheme.outlineColor}
+                      strokeWidth="0.9"
+                    />
+                    <path
+                      d={`M ${xTie - 9} ${yTie + 80} L ${xTie + 1} ${yTie + 80} L ${xTie - 4} ${yTie + 70} Z`}
+                      fill={fabTheme.baseColor}
+                      stroke={fabTheme.outlineColor}
+                      strokeWidth="1"
+                    />
+                    <line x1={xTie - 7} y1={yTie + 80} x2={xTie - 8} y2={yTie + 86} stroke={fabTheme.accentColor} strokeWidth="0.8" strokeLinecap="round" />
+                    <line x1={xTie - 4} y1={yTie + 80} x2={xTie - 4} y2={yTie + 87} stroke={fabTheme.accentColor} strokeWidth="0.9" strokeLinecap="round" />
+                    <line x1={xTie - 1} y1={yTie + 80} x2={xTie} y2={yTie + 86} stroke={fabTheme.accentColor} strokeWidth="0.8" strokeLinecap="round" />
+                    {beltLatkan === 'heavy' && (
+                      <>
+                        <path
+                          d={`M ${xTie + 2} ${yTie + 1} C ${xTie - 2} ${yTie + 22} ${xTie - 4} ${yTie + 50} ${xTie - 8} ${yTie + 88}`}
+                          fill="none"
+                          stroke={fabTheme.outlineColor}
+                          strokeWidth="1.1"
+                        />
+                        <circle cx={xTie - 4} cy={yTie + 65} r={2} fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
+                        <path
+                          d={`M ${xTie - 12} ${yTie + 98} L ${xTie - 4} ${yTie + 98} L ${xTie - 8} ${yTie + 88} Z`}
+                          fill={fabTheme.baseColor}
+                          stroke={fabTheme.outlineColor}
+                          strokeWidth="1"
+                        />
+                        <line x1={xTie - 10} y1={yTie + 98} x2={xTie - 11} y2={yTie + 104} stroke={fabTheme.accentColor} strokeWidth="0.8" strokeLinecap="round" />
+                        <line x1={xTie - 8} y1={yTie + 98} x2={xTie - 8} y2={yTie + 105} stroke={fabTheme.accentColor} strokeWidth="0.9" strokeLinecap="round" />
+                        <line x1={xTie - 6} y1={yTie + 98} x2={xTie - 5} y2={yTie + 104} stroke={fabTheme.accentColor} strokeWidth="0.8" strokeLinecap="round" />
+                      </>
+                    )}
+                  </g>
+                </g>
+              );
+            })()}
+          </g>
+
+          {/* Mannequin Arms & Hands (Rendered ON TOP of Skirt/Lehenga - Fully Opaque so no skirt linework shows through) */}
+          <g id="arms-and-hands-linework">
+            {armPose === 'resting' ? (
+              <g id="resting-arms-top" filter="url(#arm-shadow)">
+                {/* Left Arm Opaque Linen Base & Texture (Hides underlying skirt pleats & linework) */}
+                <path
+                  d={svgPath(scaleX(ARM_L, fitK))}
+                  fill="#eed3ba"
+                />
+                <path
+                  d={svgPath(scaleX(ARM_L, fitK))}
+                  fill="url(#mannequin-arm-l)"
+                />
+                <path
+                  d={svgPath(scaleX(ARM_L, fitK))}
+                  fill="url(#mannequin-canvas-texture)"
+                  opacity="0.45"
+                />
+
+                {/* Right Arm Opaque Linen Base & Texture (Hides underlying skirt pleats & linework) */}
+                <path
+                  d={svgPath(scaleX(ARM_R, fitK))}
+                  fill="#eed3ba"
+                />
+                <path
+                  d={svgPath(scaleX(ARM_R, fitK))}
+                  fill="url(#mannequin-arm-r)"
+                />
+                <path
+                  d={svgPath(scaleX(ARM_R, fitK))}
+                  fill="url(#mannequin-canvas-texture)"
+                  opacity="0.45"
+                />
+
+                {/* Left and Right Arm Outlines */}
+                <path
+                  d={svgPath(scaleX(ARM_L, fitK))}
+                  fill="none"
+                  stroke="#2a1f18"
+                  strokeWidth="1.25"
+                  opacity="0.8"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d={svgPath(scaleX(ARM_R, fitK))}
+                  fill="none"
+                  stroke="#2a1f18"
+                  strokeWidth="1.25"
+                  opacity="0.8"
+                  strokeLinejoin="round"
+                />
+
+                {/* Left Hand Form: Thumb & Finger Creases */}
+                <path
+                  d={`M ${scaleX([[137, 432]], fitK)[0][0]} 432 C ${scaleX([[140, 438]], fitK)[0][0]} 438 ${scaleX([[143, 442]], fitK)[0][0]} 442 ${scaleX([[147, 444]], fitK)[0][0]} 444`}
+                  fill="none"
+                  stroke="#2b241e"
+                  strokeWidth="1.0"
+                  strokeLinecap="round"
+                  opacity="0.65"
+                />
+                <path
+                  d={`M ${scaleX([[142, 444]], fitK)[0][0]} 444 L ${scaleX([[142, 465]], fitK)[0][0]} 465`}
+                  fill="none"
+                  stroke="#2b241e"
+                  strokeWidth="0.9"
+                  strokeLinecap="round"
+                  opacity="0.55"
+                />
+
+                {/* Right Hand Form: Thumb & Finger Creases */}
+                <path
+                  d={`M ${scaleX([[STAGE_W - 137, 432]], fitK)[0][0]} 432 C ${scaleX([[STAGE_W - 140, 438]], fitK)[0][0]} 438 ${scaleX([[STAGE_W - 143, 442]], fitK)[0][0]} 442 ${scaleX([[STAGE_W - 147, 444]], fitK)[0][0]} 444`}
+                  fill="none"
+                  stroke="#2b241e"
+                  strokeWidth="1.0"
+                  strokeLinecap="round"
+                  opacity="0.65"
+                />
+                <path
+                  d={`M ${scaleX([[STAGE_W - 142, 444]], fitK)[0][0]} 444 L ${scaleX([[STAGE_W - 142, 465]], fitK)[0][0]} 465`}
+                  fill="none"
+                  stroke="#2b241e"
+                  strokeWidth="0.9"
+                  strokeLinecap="round"
+                  opacity="0.55"
+                />
+
+                {/* Traditional Gold Bangles (Churi) on Wrists */}
+                <g id="wrist-bangles-resting" opacity="0.92">
+                  <path d={`M ${scaleX([[134, 420]], fitK)[0][0]} 420 Q ${scaleX([[142, 423]], fitK)[0][0]} 423 ${scaleX([[148, 420]], fitK)[0][0]} 420`} fill="none" stroke="#C7A66A" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d={`M ${scaleX([[135, 424]], fitK)[0][0]} 424 Q ${scaleX([[142, 427]], fitK)[0][0]} 427 ${scaleX([[148, 424]], fitK)[0][0]} 424`} fill="none" stroke="#b58d44" strokeWidth="1.3" strokeLinecap="round" />
+                  <path d={`M ${scaleX([[STAGE_W - 148, 420]], fitK)[0][0]} 420 Q ${scaleX([[STAGE_W - 142, 423]], fitK)[0][0]} 423 ${scaleX([[STAGE_W - 134, 420]], fitK)[0][0]} 420`} fill="none" stroke="#C7A66A" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d={`M ${scaleX([[STAGE_W - 148, 424]], fitK)[0][0]} 424 Q ${scaleX([[STAGE_W - 142, 427]], fitK)[0][0]} 427 ${scaleX([[STAGE_W - 135, 424]], fitK)[0][0]} 424`} fill="none" stroke="#b58d44" strokeWidth="1.3" strokeLinecap="round" />
+                </g>
+              </g>
+            ) : (
+              <g id="outstretched-arms-linework" filter="url(#arm-shadow)">
+                {/* Outstretched Arms Opaque Fills (Hides underlying background / linework) */}
+                <path
+                  d={svgPath(scaleX(ARM_OUT_L, fitK))}
+                  fill="#eed3ba"
+                />
+                <path
+                  d={svgPath(scaleX(ARM_OUT_L, fitK))}
+                  fill="url(#mannequin-arm-l)"
+                />
+                <path
+                  d={svgPath(scaleX(ARM_OUT_L, fitK))}
+                  fill="url(#mannequin-canvas-texture)"
+                  opacity="0.45"
+                />
+                <path
+                  d={svgPath(scaleX(ARM_OUT_R, fitK))}
+                  fill="#eed3ba"
+                />
+                <path
+                  d={svgPath(scaleX(ARM_OUT_R, fitK))}
+                  fill="url(#mannequin-arm-r)"
+                />
+                <path
+                  d={svgPath(scaleX(ARM_OUT_R, fitK))}
+                  fill="url(#mannequin-canvas-texture)"
+                  opacity="0.45"
+                />
+
+                <path d={svgPath(scaleX(ARM_OUT_L, fitK))} fill="none" stroke="#2a1f18" strokeWidth="1.25" opacity="0.8" strokeLinejoin="round" />
+                <path d={svgPath(scaleX(ARM_OUT_R, fitK))} fill="none" stroke="#2a1f18" strokeWidth="1.25" opacity="0.8" strokeLinejoin="round" />
+
+                {/* Gold Bangles (Churi) for Outstretched Arms */}
+                <g id="wrist-bangles-stretched" opacity="0.92">
+                  <path d={`M ${scaleX([[108, 418]], fitK)[0][0]} 418 Q ${scaleX([[114, 421]], fitK)[0][0]} 421 ${scaleX([[120, 418]], fitK)[0][0]} 418`} fill="none" stroke="#C7A66A" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d={`M ${scaleX([[109, 422]], fitK)[0][0]} 422 Q ${scaleX([[114, 425]], fitK)[0][0]} 425 ${scaleX([[120, 422]], fitK)[0][0]} 422`} fill="none" stroke="#b58d44" strokeWidth="1.3" strokeLinecap="round" />
+                  <path d={`M ${scaleX([[STAGE_W - 120, 418]], fitK)[0][0]} 418 Q ${scaleX([[STAGE_W - 114, 421]], fitK)[0][0]} 421 ${scaleX([[STAGE_W - 108, 418]], fitK)[0][0]} 418`} fill="none" stroke="#C7A66A" strokeWidth="1.6" strokeLinecap="round" />
+                  <path d={`M ${scaleX([[STAGE_W - 120, 422]], fitK)[0][0]} 422 Q ${scaleX([[STAGE_W - 114, 425]], fitK)[0][0]} 425 ${scaleX([[STAGE_W - 109, 422]], fitK)[0][0]} 422`} fill="none" stroke="#b58d44" strokeWidth="1.3" strokeLinecap="round" />
+                </g>
+
+                {/* Underarm Joint Peeks */}
+                <path d="M 166 182 Q 170 185 174 182" fill="none" stroke="#2b241e" strokeWidth="1.2" />
+                <path d="M 294 182 Q 290 185 286 182" fill="none" stroke="#2b241e" strokeWidth="1.2" />
+              </g>
+            )}
+          </g>
+
+          {/* Peplum Flounce Drop Shadow on Skirt */}
+          {topStyleId === 'peplum' && (
+            <path
+              d={`M 118 346 Q ${STAGE_CX} 358 342 346 Q ${STAGE_CX} 363 118 346 Z`}
+              fill="rgba(0,0,0,0.18)"
+              opacity="0.85"
+            />
+          )}
+
+          {/* Blouse Fabric Base, Texture & Cel Shading Overlay */}
+          <path d={svgPath(topPts())} fill="url(#top-fabric-grad)" />
+          <g clipPath="url(#top-clip)">
+            {texKey === 'net' && <rect width={STAGE_W} height={STAGE_H} fill="url(#net-mesh)" />}
+            {texKey === 'banarasi' && <rect width={STAGE_W} height={STAGE_H} fill="url(#banarasi-butis)" />}
+            {texKey === 'velvet' && (
+              <rect width={STAGE_W} height={STAGE_H} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="6" />
+            )}
+            {texKey === 'organza' && <rect width={STAGE_W} height={STAGE_H} fill="rgba(255,255,255,0.15)" />}
+
+            {/* Blouse 2D Cel Shading & Volume Highlights */}
+            {!isBack && currentGarment !== 'shirt' && (
+              <>
+                <ellipse cx="204" cy="226" rx="23" ry="18" fill="url(#bust-highlight-l)" />
+                <ellipse cx="256" cy="226" rx="23" ry="18" fill="url(#bust-highlight-r)" />
+                {topStyleId !== 'peplum' ? (
+                  <path d="M 180 258 Q 230 266 280 258 L 280 263 Q 230 271 180 263 Z" fill="rgba(0,0,0,0.14)" />
+                ) : (
+                  <>
+                    {/* Soft waist cinch shadow */}
+                    <path d="M 172 268 Q 230 273 288 268 L 288 273 Q 230 278 172 273 Z" fill="rgba(0,0,0,0.14)" />
+                    {/* Fluted fold depth gradient across peplum flare */}
+                    <path d="M 160 272 C 140 300 120 330 126 345 Q 230 354 334 345 C 340 330 320 300 300 272 Z" fill="url(#peplum-flare-depth)" opacity="0.32" />
+                  </>
+                )}
+              </>
+            )}
+            {isBack && currentGarment !== 'shirt' && (
+              <rect x="228" y="150" width="4" height="140" fill="rgba(0,0,0,0.12)" />
+            )}
+          </g>
+
+          {/* Blouse 2D Game Linework: Silhouette, Neckline, Seams & Darts */}
+          <g id="blouse-linework">
+            {/* Blouse Clickable Hit Area */}
+            {onSelectCategorySlot && (
+              <path
+                d={svgPath(topPts())}
+                fill="transparent"
+                className="pointer-events-auto cursor-pointer"
+                onClick={() => onSelectCategorySlot('topStyle')}
+              >
+                <title>Blouse Bodice: Click to customize blouse style</title>
+              </path>
+            )}
+
+            {/* Blouse Outer Silhouette Thin Black Outline */}
+            <path 
+              d={svgPath(topPts())}
+              fill="none"
+              stroke={fabTheme.outlineColor}
+              strokeWidth="1.55"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+
+            {/* Inner Neckline Linework, Piping & Scalloped Moti Beads */}
+            {(() => {
+              const neck = necklineData();
+              return (
+                <g id="neckline-linework">
+                  <path
+                    d={neck.d}
+                    fill="none"
+                    stroke={fabTheme.outlineColor}
+                    strokeWidth="1.55"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d={neck.d}
+                    fill="none"
+                    stroke={fabTheme.accentColor}
+                    strokeWidth="1.05"
+                    opacity="0.9"
+                    transform="translate(0, 1.2)"
+                  />
+                </g>
+              );
+            })()}
+
+            {/* Haute Couture Tailoring Details */}
+            {(() => {
+              const bDet = blouseDetails();
+              if (!bDet) return null;
+              if (bDet.isPeplum) {
+                return (
+                  <g id="blouse-peplum-details">
+                    {/* Flute Valley Shadows */}
+                    {bDet.peplumFlutes && bDet.peplumFlutes.map((f, idx) => f.shadow ? (
+                      <path key={`peplum-flute-sh-${idx}`} d={f.shadow} fill="rgba(0,0,0,0.12)" />
+                    ) : null)}
+
+                    {/* Fluted Crease Lines & Highlight Ridges */}
+                    {bDet.peplumFlutes && bDet.peplumFlutes.map((f, idx) => (
+                      <g key={`peplum-flute-line-${idx}`}>
+                        <path d={f.d} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.15" opacity="0.8" strokeLinecap="round" />
+                        <path d={f.d} fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.75" transform="translate(0.8, 0)" />
+                      </g>
+                    ))}
+
+                    {/* Cinched Waist Seam & Micro Frill */}
+                    {bDet.waistSeam && (
+                      <path d={bDet.waistSeam} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.4" strokeLinecap="round" />
+                    )}
+                    {bDet.waistFrillUpper && (
+                      <path d={bDet.waistFrillUpper} fill="none" stroke={fabTheme.accentColor} strokeWidth="1.0" strokeDasharray="3 2" opacity="0.85" strokeLinecap="round" />
+                    )}
+
+                    {/* Smocking Horizontal Elastic Shirring Rows */}
+                    {bDet.smockingLines && bDet.smockingLines.map((line, idx) => (
+                      <g key={`smock-row-${idx}`}>
+                        <path d={line.d} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.9" opacity="0.7" strokeLinecap="round" />
+                        <path d={line.accentD} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.65" opacity="0.55" strokeLinecap="round" />
+                      </g>
+                    ))}
+
+                    {/* Smocking Vertical Micro-Gathering Puckers */}
+                    {bDet.smockingGathers && bDet.smockingGathers.map((gD, idx) => (
+                      <path key={`smock-gather-${idx}`} d={gD} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.7" opacity="0.4" strokeLinecap="round" />
+                    ))}
+
+                    {/* Undulating Lettuce Hem Ruffle Border */}
+                    {bDet.hemRuffleLine && (
+                      <path d={bDet.hemRuffleLine} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.4" strokeLinecap="round" />
+                    )}
+                    {bDet.hemRuffleAccent && (
+                      <path d={bDet.hemRuffleAccent} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.95" opacity="0.85" strokeLinecap="round" />
+                    )}
+
+                    {/* If Back View: Upper Nape Tie Dori & Latkans */}
+                    {bDet.isBack && (
+                      <g id="peplum-back-ties">
+                        {bDet.tieBow && <path d={bDet.tieBow} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />}
+                        {bDet.doriLeft && <path d={bDet.doriLeft} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
+                        {bDet.doriRight && <path d={bDet.doriRight} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
+                        {bDet.latkanL && (
+                          <g id="peplum-latkan-l">
+                            <circle cx={bDet.latkanL.x} cy={bDet.latkanL.y} r="2.2" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
+                            <path
+                              d={`M ${bDet.latkanL.x} ${bDet.latkanL.y + 2} L ${bDet.latkanL.x - 5} ${bDet.latkanL.y + 12} Q ${bDet.latkanL.x} ${bDet.latkanL.y + 14} ${bDet.latkanL.x + 5} ${bDet.latkanL.y + 12} Z`}
+                              fill={fabTheme.baseColor}
+                              stroke={fabTheme.outlineColor}
+                              strokeWidth="1.1"
+                              strokeLinejoin="round"
+                            />
+                          </g>
+                        )}
+                        {bDet.latkanR && (
+                          <g id="peplum-latkan-r">
+                            <circle cx={bDet.latkanR.x} cy={bDet.latkanR.y} r="2.2" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
+                            <path
+                              d={`M ${bDet.latkanR.x} ${bDet.latkanR.y + 2} L ${bDet.latkanR.x - 5} ${bDet.latkanR.y + 12} Q ${bDet.latkanR.x} ${bDet.latkanR.y + 14} ${bDet.latkanR.x + 5} ${bDet.latkanR.y + 12} Z`}
+                              fill={fabTheme.baseColor}
+                              stroke={fabTheme.outlineColor}
+                              strokeWidth="1.1"
+                              strokeLinejoin="round"
+                            />
+                          </g>
+                        )}
+                      </g>
+                    )}
+                  </g>
+                );
+              }
+
+              if (bDet.isBack) {
+                return (
+                  <g id="blouse-back-details">
+                    {/* Spine seam */}
+                    <path d={bDet.spine!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
+                    {/* Tailored back darts */}
+                    <path d={bDet.dartLeft!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
+                    <path d={bDet.dartRight!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />
+
+                    {/* Back Hem Border */}
+                    <path d={bDet.hemBorder!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />
+
+                    {/* Potli Buttons (fabric covered buttons with thread loops along back seam) */}
+                    {bDet.showPotli && bDet.potliYs && bDet.potliYs.map((py, idx) => (
+                      <g key={`potli-${idx}`} id={`potli-button-${idx}`}>
+                        <path
+                          d={`M ${STAGE_CX - 1} ${py - 3} C ${STAGE_CX - 4.5} ${py - 2} ${STAGE_CX - 4.5} ${py + 2} ${STAGE_CX - 1} ${py + 3}`}
+                          fill="none"
+                          stroke={fabTheme.outlineColor}
+                          strokeWidth="0.85"
+                          strokeLinecap="round"
+                        />
+                        <circle
+                          cx={STAGE_CX + 1}
+                          cy={py}
+                          r="2.4"
+                          fill={fabTheme.accentColor}
+                          stroke={fabTheme.outlineColor}
+                          strokeWidth="0.95"
+                        />
+                        <circle cx={STAGE_CX + 0.5} cy={py - 0.5} r="0.65" fill="#ffffff" opacity="0.7" />
+                      </g>
+                    ))}
+
+                    {/* Upper Neck Dori & Designer Latkans */}
+                    <path d={bDet.tieBow!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />
+                    <path d={bDet.doriLeft!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />
+                    <path d={bDet.doriRight!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />
+
+                    {/* Upper Latkan Left */}
+                    {bDet.latkanL && (
+                      <g id="latkan-upper-left">
+                        <circle cx={bDet.latkanL.x} cy={bDet.latkanL.y} r="2.2" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
+                        <path
+                          d={`M ${bDet.latkanL.x} ${bDet.latkanL.y + 2} L ${bDet.latkanL.x - 5.5} ${bDet.latkanL.y + 13} Q ${bDet.latkanL.x} ${bDet.latkanL.y + 15} ${bDet.latkanL.x + 5.5} ${bDet.latkanL.y + 13} Z`}
+                          fill={fabTheme.baseColor}
+                          stroke={fabTheme.outlineColor}
+                          strokeWidth="1.1"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d={`M ${bDet.latkanL.x - 5} ${bDet.latkanL.y + 12.5} Q ${bDet.latkanL.x} ${bDet.latkanL.y + 14.5} ${bDet.latkanL.x + 5} ${bDet.latkanL.y + 12.5}`}
+                          fill="none"
+                          stroke={fabTheme.accentColor}
+                          strokeWidth="1.0"
+                        />
+                        <circle cx={bDet.latkanL.x} cy={bDet.latkanL.y + 15} r="1.3" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.6" />
+                        <line x1={bDet.latkanL.x - 3} y1={bDet.latkanL.y + 15} x2={bDet.latkanL.x - 4} y2={bDet.latkanL.y + 21} stroke={fabTheme.outlineColor} strokeWidth="0.8" strokeLinecap="round" />
+                        <line x1={bDet.latkanL.x} y1={bDet.latkanL.y + 16.5} x2={bDet.latkanL.x} y2={bDet.latkanL.y + 23} stroke={fabTheme.accentColor} strokeWidth="0.9" strokeLinecap="round" />
+                        <line x1={bDet.latkanL.x + 3} y1={bDet.latkanL.y + 15} x2={bDet.latkanL.x + 4} y2={bDet.latkanL.y + 21} stroke={fabTheme.outlineColor} strokeWidth="0.8" strokeLinecap="round" />
+                      </g>
+                    )}
+
+                    {/* Upper Latkan Right */}
+                    {bDet.latkanR && (
+                      <g id="latkan-upper-right">
+                        <circle cx={bDet.latkanR.x} cy={bDet.latkanR.y} r="2.2" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
+                        <path
+                          d={`M ${bDet.latkanR.x} ${bDet.latkanR.y + 2} L ${bDet.latkanR.x - 5.5} ${bDet.latkanR.y + 13} Q ${bDet.latkanR.x} ${bDet.latkanR.y + 15} ${bDet.latkanR.x + 5.5} ${bDet.latkanR.y + 13} Z`}
+                          fill={fabTheme.baseColor}
+                          stroke={fabTheme.outlineColor}
+                          strokeWidth="1.1"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d={`M ${bDet.latkanR.x - 5} ${bDet.latkanR.y + 12.5} Q ${bDet.latkanR.x} ${bDet.latkanR.y + 14.5} ${bDet.latkanR.x + 5} ${bDet.latkanR.y + 12.5}`}
+                          fill="none"
+                          stroke={fabTheme.accentColor}
+                          strokeWidth="1.0"
+                        />
+                        <circle cx={bDet.latkanR.x} cy={bDet.latkanR.y + 15} r="1.3" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.6" />
+                        <line x1={bDet.latkanR.x - 3} y1={bDet.latkanR.y + 15} x2={bDet.latkanR.x - 4} y2={bDet.latkanR.y + 21} stroke={fabTheme.outlineColor} strokeWidth="0.8" strokeLinecap="round" />
+                        <line x1={bDet.latkanR.x} y1={bDet.latkanR.y + 16.5} x2={bDet.latkanR.x} y2={bDet.latkanR.y + 23} stroke={fabTheme.accentColor} strokeWidth="0.9" strokeLinecap="round" />
+                        <line x1={bDet.latkanR.x + 3} y1={bDet.latkanR.y + 15} x2={bDet.latkanR.x + 4} y2={bDet.latkanR.y + 21} stroke={fabTheme.outlineColor} strokeWidth="0.8" strokeLinecap="round" />
+                      </g>
+                    )}
+
+                    {/* Lower Waist Dori & Latkans (if tieBack, deepBack, or cutOut) */}
+                    {bDet.hasLowerTie && (
+                      <g id="blouse-lower-tie">
+                        <path d={bDet.lowerTieBow!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />
+                        <path d={bDet.lowerDoriL!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" strokeLinecap="round" />
+                        <path d={bDet.lowerDoriR!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" strokeLinecap="round" />
+                        {/* Lower Latkan Left */}
+                        {bDet.lowerLatkanL && (
+                          <g id="latkan-lower-left">
+                            <circle cx={bDet.lowerLatkanL.x} cy={bDet.lowerLatkanL.y} r="2.0" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
+                            <path
+                              d={`M ${bDet.lowerLatkanL.x} ${bDet.lowerLatkanL.y + 2} L ${bDet.lowerLatkanL.x - 4.5} ${bDet.lowerLatkanL.y + 11} Q ${bDet.lowerLatkanL.x} ${bDet.lowerLatkanL.y + 13} ${bDet.lowerLatkanL.x + 4.5} ${bDet.lowerLatkanL.y + 11} Z`}
+                              fill={fabTheme.baseColor}
+                              stroke={fabTheme.outlineColor}
+                              strokeWidth="1.0"
+                              strokeLinejoin="round"
+                            />
+                            <line x1={bDet.lowerLatkanL.x - 2} y1={bDet.lowerLatkanL.y + 12} x2={bDet.lowerLatkanL.x - 3} y2={bDet.lowerLatkanL.y + 17} stroke={fabTheme.outlineColor} strokeWidth="0.75" strokeLinecap="round" />
+                            <line x1={bDet.lowerLatkanL.x} y1={bDet.lowerLatkanL.y + 13} x2={bDet.lowerLatkanL.x} y2={bDet.lowerLatkanL.y + 19} stroke={fabTheme.accentColor} strokeWidth="0.85" strokeLinecap="round" />
+                            <line x1={bDet.lowerLatkanL.x + 2} y1={bDet.lowerLatkanL.y + 12} x2={bDet.lowerLatkanL.x + 3} y2={bDet.lowerLatkanL.y + 17} stroke={fabTheme.outlineColor} strokeWidth="0.75" strokeLinecap="round" />
+                          </g>
+                        )}
+                        {/* Lower Latkan Right */}
+                        {bDet.lowerLatkanR && (
+                          <g id="latkan-lower-right">
+                            <circle cx={bDet.lowerLatkanR.x} cy={bDet.lowerLatkanR.y} r="2.0" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
+                            <path
+                              d={`M ${bDet.lowerLatkanR.x} ${bDet.lowerLatkanR.y + 2} L ${bDet.lowerLatkanR.x - 4.5} ${bDet.lowerLatkanR.y + 11} Q ${bDet.lowerLatkanR.x} ${bDet.lowerLatkanR.y + 13} ${bDet.lowerLatkanR.x + 4.5} ${bDet.lowerLatkanR.y + 11} Z`}
+                              fill={fabTheme.baseColor}
+                              stroke={fabTheme.outlineColor}
+                              strokeWidth="1.0"
+                              strokeLinejoin="round"
+                            />
+                            <line x1={bDet.lowerLatkanR.x - 2} y1={bDet.lowerLatkanR.y + 12} x2={bDet.lowerLatkanR.x - 3} y2={bDet.lowerLatkanR.y + 17} stroke={fabTheme.outlineColor} strokeWidth="0.75" strokeLinecap="round" />
+                            <line x1={bDet.lowerLatkanR.x} y1={bDet.lowerLatkanR.y + 13} x2={bDet.lowerLatkanR.x} y2={bDet.lowerLatkanR.y + 19} stroke={fabTheme.accentColor} strokeWidth="0.85" strokeLinecap="round" />
+                            <line x1={bDet.lowerLatkanR.x + 2} y1={bDet.lowerLatkanR.y + 12} x2={bDet.lowerLatkanR.x + 3} y2={bDet.lowerLatkanR.y + 17} stroke={fabTheme.outlineColor} strokeWidth="0.75" strokeLinecap="round" />
+                          </g>
+                        )}
+                      </g>
+                    )}
+                  </g>
+                );
+              }
+
+              if (bDet.isNotched) {
+                return (
+                  <g id="blouse-front-notched-seams">
+                    <path d={bDet.princessLeft!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.35" strokeLinecap="round" />
+                    <path d={bDet.princessRight!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.35" strokeLinecap="round" />
+                    <path d={bDet.hemLine!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.35" strokeLinecap="round" />
+                  </g>
+                );
+              }
+
+              return (
+                <g id="blouse-front-darts">
+                  {/* Sculpted Princess Seams */}
+                  <path d={bDet.princessLeft!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" opacity="0.75" strokeLinecap="round" />
+                  <path d={bDet.princessRight!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" opacity="0.75" strokeLinecap="round" />
+
+                  {/* Bustier Cup Cradles & Underbust Patti */}
+                  <path d={bDet.cupLeft!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.15" opacity="0.65" strokeLinecap="round" />
+                  <path d={bDet.cupRight!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.15" opacity="0.65" strokeLinecap="round" />
+                  <path d={bDet.underbustPatti!} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.95" opacity="0.75" strokeLinecap="round" />
+
+                  {/* Center Front Seam */}
+                  <path d={bDet.centerSeam!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.0" opacity="0.55" strokeLinecap="round" />
+
+                  {/* Structured Choli Waistband Patti (Hem Border) */}
+                  <path d={bDet.hemUpperPatti!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />
+                  <path d={bDet.hemMidPatti!} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.95" opacity="0.85" strokeLinecap="round" />
+                  <path d={bDet.hemLine!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />
+                </g>
+              );
+            })()}
+          </g>
+
+          {/* Sleeves Rendered On Top Layer (Seamlessly Unified with Blouse - No dividing yoke seam) */}
+          {sleevePts('l') && sleevePts('r') && (
+            <g id="sleeves-top-layer">
+              {/* Sleeve 3D Cylindrical Volume Highlights */}
+              <g clipPath="url(#sleeve-clip-l)">
+                <path
+                  d={svgPath(sleevePts('l')!)}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.16)"
+                  strokeWidth="8"
+                  opacity="0.45"
+                />
+              </g>
+              <g clipPath="url(#sleeve-clip-r)">
+                <path
+                  d={svgPath(sleevePts('r')!)}
+                  fill="none"
+                  stroke="rgba(255,255,255,0.16)"
+                  strokeWidth="8"
+                  opacity="0.45"
+                />
+              </g>
+
+              {/* Gravity Fold Creases (Natural Draping Folds at Elbow & Forearm) */}
+              {gravityFoldPaths('l').map((d, idx) => (
+                <path
+                  key={`fold-l-${idx}`}
+                  d={d}
+                  fill="none"
+                  stroke={fabTheme.outlineColor}
+                  strokeWidth="1.1"
+                  opacity="0.6"
+                  strokeLinecap="round"
+                />
+              ))}
+              {gravityFoldPaths('r').map((d, idx) => (
+                <path
+                  key={`fold-r-${idx}`}
+                  d={d}
+                  fill="none"
+                  stroke={fabTheme.outlineColor}
+                  strokeWidth="1.1"
+                  opacity="0.6"
+                  strokeLinecap="round"
+                />
+              ))}
+
+              {/* Sleeve Cuffs / Hem Border */}
+              {cuffPts('l') && (
+                <g id="cuff-l-top">
+                  <path d={svgPath(cuffPts('l')!)} fill={topGradColors.start} opacity="0.95" />
+                  <path d={svgPath(cuffPts('l')!)} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.4" strokeLinejoin="round" />
+                  <path d={svgPath(cuffPts('l')!)} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.9" opacity="0.8" />
+                </g>
+              )}
+              {cuffPts('r') && (
+                <g id="cuff-r-top">
+                  <path d={svgPath(cuffPts('r')!)} fill={topGradColors.start} opacity="0.95" />
+                  <path d={svgPath(cuffPts('r')!)} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.4" strokeLinejoin="round" />
+                  <path d={svgPath(cuffPts('r')!)} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.9" opacity="0.8" />
+                </g>
+              )}
+
+              {/* Bell Sleeve Subtle Flare Lines */}
+              {sleeveId === 'bell' && (
+                <g id="bell-sleeve-flares" opacity="0.45">
+                  <path d="M 134 320 C 130 350 120 380 114 402" fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.95" strokeLinecap="round" />
+                  <path d="M 148 315 C 146 348 144 378 142 400" fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.9" strokeLinecap="round" />
+                  <path d={`M ${STAGE_W - 134} 320 C ${STAGE_W - 130} 350 ${STAGE_W - 120} 380 ${STAGE_W - 114} 402`} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.95" strokeLinecap="round" />
+                  <path d={`M ${STAGE_W - 148} 315 C ${STAGE_W - 146} 348 ${STAGE_W - 144} 378 ${STAGE_W - 142} 400`} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.9" strokeLinecap="round" />
+                </g>
+              )}
+
+              {/* Clickable Hit Areas for Sleeves (to switch directly to Sleeves customization) */}
+              {onSelectCategorySlot && (
+                <g id="interactive-sleeves-click-area" className="pointer-events-auto">
+                  <path
+                    d={svgPath(sleevePts('l')!)}
+                    fill="transparent"
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectCategorySlot('sleeves');
+                    }}
+                  >
+                    <title>Sleeves: Click to customize sleeve style</title>
+                  </path>
+                  <path
+                    d={svgPath(sleevePts('r')!)}
+                    fill="transparent"
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectCategorySlot('sleeves');
+                    }}
+                  >
+                    <title>Sleeves: Click to customize sleeve style</title>
+                  </path>
+                </g>
+              )}
+            </g>
+          )}
+
+          {/* Stretched Pose Sleeve Hem Lines */}
+          {armPose === 'stretched' && sleevePts('l') && (
+            <g id="stretched-sleeve-cuffs">
+              {(() => {
+                let reach = 114;
+                if (sleeveId === 'cap') reach = 28;
+                else if (sleeveId === 'short') reach = 50;
+                else if (sleeveId === 'elbow') reach = 74;
+                else if (sleeveId === 'threequarter') reach = 94;
+                else if (sleeveId === 'full') reach = 114;
+
+                const xEndL = 164 - reach;
+                const xEndR = STAGE_W - xEndL;
+                const yTop = 146 + reach * 0.1 - 2;
+                const yBot = 178 - reach * 0.05 + 3;
+
+                return (
+                  <>
+                    <line x1={xEndL} y1={yTop} x2={xEndL} y2={yBot} stroke={fabTheme.outlineColor} strokeWidth="1.5" strokeLinecap="round" />
+                    <line x1={xEndR} y1={yTop} x2={xEndR} y2={yBot} stroke={fabTheme.outlineColor} strokeWidth="1.5" strokeLinecap="round" />
+                  </>
+                );
+              })()}
+            </g>
+          )}
+
+          {/* Avatar Front Hair Cascade (Glossy locks falling over shoulder & bodice) */}
+          <AvatarRenderer viewMode={viewMode} layer="frontHair" />
+
+          {/* Shirt Specific Linework: Collar & Placket Buttons */}
+          {currentGarment === 'shirt' && !isBack && (
+            <g id="shirt-details">
+              <path
+                d={svgPath(COLLAR[geo('collar', 'classic')] || COLLAR.classic)}
+                fill="none"
+                stroke={fabTheme.outlineColor}
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <line x1={STAGE_CX} y1="170" x2={STAGE_CX} y2="420" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeDasharray="3 2" />
+              {[200, 240, 280, 320, 360, 400].map((by) => (
+                <circle key={by} cx={STAGE_CX} cy={by} r="2.8" fill="#ffffff" stroke={fabTheme.outlineColor} strokeWidth="1.1" />
+              ))}
+            </g>
+          )}
+
+          {/* Dupatta / Drape Textures & 2D Game Linework */}
+          {pieces.map((pts, i) => (
+            <g key={`drape-piece-${i}`} id={`drape-${i}`}>
+              <clipPath id={`drape-clip-${i}`}>
+                <path d={svgPath(pts)} />
+              </clipPath>
+              <g clipPath={`url(#drape-clip-${i})`}>
+                {fabId === 'net' && <rect width={STAGE_W} height={STAGE_H} fill="url(#net-mesh)" />}
+                {fabId === 'banarasi' && <rect width={STAGE_W} height={STAGE_H} fill="url(#banarasi-butis)" />}
+                {fabId === 'velvet' && (
+                  <rect width={STAGE_W} height={STAGE_H} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="6" />
+                )}
+                {fabId === 'organza' && <rect width={STAGE_W} height={STAGE_H} fill="rgba(255,255,255,0.15)" />}
+              </g>
+              {/* Longitudinal Drape Pleat Lines */}
+              {drapePleatLines(pts).map((plD, pIdx) => (
+                <path
+                  key={`dr-pleat-${pIdx}`}
+                  d={plD}
+                  fill="none"
+                  stroke={fabTheme.outlineColor}
+                  strokeWidth="1.1"
+                  opacity="0.7"
+                  strokeLinecap="round"
+                />
+              ))}
+              {/* Drape Thin Black Outline */}
+              <path 
+                d={svgPath(pts)}
+                fill="none"
+                stroke={fabTheme.outlineColor}
+                strokeWidth="1.45"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              {/* Inset Kinari / Zari Border Piping */}
+              <path 
+                d={svgPath(pts)}
+                fill="none"
+                stroke={fabTheme.accentColor}
+                strokeWidth="1.1"
+                strokeDasharray={fabId === 'banarasi' ? '3 2' : undefined}
+                opacity="0.85"
+              />
+            </g>
+          ))}
+        </svg>
+
+        {/* Back View Seams & Closures */}
+        {isBack && (
+          <>
+            {/* Center back seam */}
+            <div
+              className="absolute left-[229px] top-[160px] w-0 border-l-[1.5px] border-[#2b2724]/30"
+              style={{ height: `${hemBack - 168}px` }}
+            />
+            {/* Fabric button closures */}
+            {[0, 1, 2, 3, 4]
+              .map((i) => {
+                const y = 188 + i * Math.max(26, (hemBack - 210) / 5);
+                return y < hemBack - 24 ? y : null;
+              })
+              .filter(Boolean)
+              .map((y, idx) => (
+                <div
+                  key={idx}
+                  className="absolute left-[224px] w-[11px] h-[11px] rounded-full bg-[#f7f4ef] border border-[#2b2724]/40 shadow-xs"
+                  style={{ top: `${y}px` }}
+                />
+              ))}
+          </>
+        )}
+      </div>
+
+      {/* Top Controls Header (View Mode, Arm Pose Switcher, and Latkan Horizontal Box inside phone stage) */}
+      <div className="absolute top-2 left-2.5 right-2.5 flex flex-wrap items-center justify-between gap-1.5 z-20 pointer-events-none">
+        <div className="flex flex-wrap items-center gap-1.5 pointer-events-auto">
+          {/* View Switcher Controls (Front | Detail | Back) */}
+          <div className="flex rounded-lg overflow-hidden border border-[#3c342c]/20 bg-[#f7f4ef]/90 backdrop-blur-md shadow-xs">
+            {(['front', 'detail', 'back'] as ViewMode[]).map((mode) => {
+              const isCurrent = viewMode === mode;
+              return (
+                <button
+                  key={mode}
+                  id={`stage-view-btn-${mode}`}
+                  onClick={() => onSetViewMode(mode)}
+                  className={`px-2 py-1 text-[9.5px] uppercase tracking-[0.12em] font-sans transition-all cursor-pointer ${
+                    isCurrent
+                      ? 'bg-[#174d33] text-[#f7f4ef] font-semibold'
+                      : 'text-[#5a534c] hover:bg-black/5'
+                  }`}
+                >
+                  {mode}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Arm Pose Switcher (Resting | Stretched with Gravity Drape) */}
+          <div className="flex rounded-lg overflow-hidden border border-[#3c342c]/20 bg-[#f7f4ef]/90 backdrop-blur-md shadow-xs">
+            <button
+              id="stage-pose-btn-resting"
+              onClick={() => setArmPose('resting')}
+              title="Resting arms along torso"
+              className={`px-2 py-1 text-[9.5px] uppercase tracking-wider font-sans transition-all cursor-pointer flex items-center gap-1 ${
+                armPose === 'resting'
+                  ? 'bg-[#174d33] text-[#f7f4ef] font-semibold'
+                  : 'text-[#5a534c] hover:bg-black/5'
+              }`}
+            >
+              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 4v3" />
+                <path d="M8 10v10" />
+                <path d="M16 10v10" />
+              </svg>
+              <span>Rest</span>
+            </button>
+            <button
+              id="stage-pose-btn-stretched"
+              onClick={() => setArmPose('stretched')}
+              title="Stretch arms sideways to view sleeve gravity drop"
+              className={`px-2 py-1 text-[9.5px] uppercase tracking-wider font-sans transition-all cursor-pointer flex items-center gap-1 ${
+                armPose === 'stretched'
+                  ? 'bg-[#174d33] text-[#f7f4ef] font-semibold'
+                  : 'text-[#5a534c] hover:bg-black/5'
+              }`}
+            >
+              <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12h16" />
+                <path d="M12 4v8" />
+              </svg>
+              <span>Stretch</span>
+            </button>
+          </div>
+
+          {/* Floating Horizontal Box Specifically for Latkan */}
+          {latkanBoxOrientation === 'horizontal' ? (
+            <div
+              id="stage-latkan-horizontal-box"
+              className="flex items-center rounded-lg overflow-hidden border border-[#3c342c]/20 bg-[#f7f4ef]/90 backdrop-blur-md shadow-xs animate-fade"
+            >
+              <div
+                title="Belt & Latkan Customization (Horizontal Box)"
+                className="flex items-center gap-1 px-1.5 py-1 text-[9px] uppercase tracking-wider font-semibold text-[#174d33] border-r border-[#3c342c]/15 bg-[#174d33]/5"
+              >
+                <Sparkles className="w-2.5 h-2.5 text-[#b68235]" />
+                <span className="hidden xs:inline">Belt</span>
+                <span>Latkan</span>
+              </div>
+              {(['none', 'light', 'heavy'] as BeltLatkanMode[]).map((mode) => {
+                const isCurrent = beltLatkan === mode;
+                return (
+                  <button
+                    key={mode}
+                    id={`stage-latkan-btn-${mode}`}
+                    onClick={() => setBeltLatkan(mode)}
+                    title={`Belt (Latkan): ${mode === 'none' ? 'No Belt' : `${mode} size`}`}
+                    className={`px-1.5 py-1 text-[9px] uppercase tracking-wider font-sans transition-all cursor-pointer ${
+                      isCurrent
+                        ? 'bg-[#174d33] text-[#f7f4ef] font-semibold'
+                        : 'text-[#5a534c] hover:bg-black/5'
+                    }`}
+                  >
+                    {mode === 'none' ? 'None' : mode}
+                  </button>
+                );
+              })}
+              <button
+                id="stage-latkan-switch-to-vertical"
+                onClick={() => setLatkanBoxOrientation('vertical')}
+                title="Switch Latkan to Vertical Floating Box"
+                className="px-1 py-1 text-[#5a534c] hover:bg-black/5 hover:text-[#174d33] border-l border-[#3c342c]/15 transition-colors"
+              >
+                <ArrowUpDown className="w-2.5 h-2.5" />
+              </button>
+            </div>
+          ) : (
+            /* Compact Header Badge when Vertical Box is Active */
+            <button
+              id="stage-latkan-vert-indicator"
+              onClick={() => setLatkanBoxOrientation('horizontal')}
+              title="Latkan is currently in the floating vertical box on the right. Click to switch to horizontal box."
+              className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#3c342c]/20 bg-[#f7f4ef]/90 backdrop-blur-md shadow-xs pointer-events-auto text-[9px] font-semibold text-[#174d33] hover:bg-black/5 transition-all"
+            >
+              <Sparkles className="w-2.5 h-2.5 text-[#b68235]" />
+              <span>Latkan: <span className="capitalize">{beltLatkan}</span></span>
+              <ArrowLeftRight className="w-2.5 h-2.5 text-[#5a534c]" />
+            </button>
+          )}
+        </div>
+
+        {/* Rendering Feedback */}
+        {loadingSlot && (
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#3c342c]/20 bg-[#f7f4ef]/95 font-mono text-[9px] uppercase tracking-wider text-[#5a534c] shadow-xs pointer-events-auto">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#b68235] animate-ping" />
+            <span>{loadingSlot}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Floating Vertical Box specifically for Latkan (just like the floating vertical category rail) */}
+      {latkanBoxOrientation === 'vertical' && (
+        <aside
+          id="floating-latkan-vertical-box"
+          aria-label="Floating Latkan Vertical Box"
+          className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5 p-1.5 rounded-[22px] bg-[#eae9e9]/88 backdrop-blur-md border border-[#3c342c]/18 shadow-md z-30 pointer-events-auto select-none animate-fade"
+        >
+          {/* Box Header Label */}
+          <div className="flex flex-col items-center gap-0.5 pb-1 border-b border-[#3c342c]/15 w-full text-center">
+            <Sparkles className="w-3.5 h-3.5 text-[#b68235]" />
+            <span className="text-[7.5px] uppercase tracking-wider font-bold text-[#174d33] leading-none">
+              Latkan
+            </span>
+          </div>
+
+          {/* 3 Size/Option Buttons: None, Light, Heavy */}
+          {(['none', 'light', 'heavy'] as BeltLatkanMode[]).map((mode) => {
+            const isCurrent = beltLatkan === mode;
+            return (
+              <button
+                key={mode}
+                id={`stage-latkan-vert-btn-${mode}`}
+                onClick={() => setBeltLatkan(mode)}
+                title={`Belt & Latkan: ${mode === 'none' ? 'No Belt / Clean' : `${mode} size`}`}
+                className={`w-[48px] py-1.5 px-1 text-[9px] uppercase tracking-wider font-sans rounded-xl transition-all cursor-pointer text-center flex flex-col items-center justify-center ${
+                  isCurrent
+                    ? 'bg-[#174d33] text-[#f7f4ef] font-semibold shadow-xs ring-1 ring-[#174d33]/20'
+                    : 'text-[#5a534c] hover:bg-black/5 hover:text-[#2b2724]'
+                }`}
+              >
+                <span>{mode === 'none' ? 'None' : mode}</span>
+                <span className="text-[7px] font-mono opacity-70">
+                  {mode === 'none' ? 'off' : mode === 'light' ? 'dainty' : 'bridal'}
+                </span>
+              </button>
+            );
+          })}
+
+          {/* Switch back to Horizontal Box button */}
+          <button
+            id="stage-latkan-switch-to-horizontal"
+            onClick={() => setLatkanBoxOrientation('horizontal')}
+            title="Switch Latkan to Horizontal Top Box"
+            className="w-[48px] py-1 flex items-center justify-center gap-0.5 text-[#5a534c] hover:bg-black/5 hover:text-[#174d33] rounded-lg border-t border-[#3c342c]/12 mt-0.5 transition-colors text-[8px]"
+          >
+            <ArrowLeftRight className="w-3 h-3" />
+            <span>Horiz</span>
+          </button>
+        </aside>
+      )}
+
+      {/* Layer Debug & Pose Indicator */}
+      <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between font-mono text-[9.5px] text-[#5a534c]/80 tracking-wider pointer-events-none z-10">
+        <span>
+          {(activeCategory.slot === 'fabric' || activeCategory.slot === 'drape'
+            ? 'dupatta'
+            : activeCategory.slot
+          ).replace(/[A-Z]/g, (m) => '_' + m.toLowerCase())}
+          _layer.svg · {optOf(activeCategory).name.toLowerCase()} · atelier preview
+        </span>
+        <span className="hidden sm:inline-block text-[#5a534c]/70">
+          pose: {armPose === 'stretched' ? 'outstretched (gravitational sleeve fall)' : 'natural resting'}
+        </span>
+      </div>
+    </div>
+  );
+};

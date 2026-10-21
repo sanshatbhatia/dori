@@ -1,0 +1,6 @@
+{
+  "name": "Dori Design Studio",
+  "description": "Bespoke fashion studio for designing customized lehengas with live layered mannequin preview and dynamic phone display scaling.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

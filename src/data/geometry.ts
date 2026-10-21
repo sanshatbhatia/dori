@@ -1,0 +1,745 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { FocusConfig, SlotKey } from '../types';
+
+export const STAGE_W = 460;
+export const STAGE_H = 820;
+export const STAGE_CX = 230;
+
+export const GREEN = '#174d33';
+export const GOLD = '#b68235';
+export const INK = '#2b2724';
+export const FABRIC = '#5b8f72';
+
+export const mir = (p: number[][]): number[][] => p.map((q) => [STAGE_W - q[0], q[1]]);
+
+export const poly = (p: number[][]): string =>
+  'polygon(' + p.map((q) => q[0].toFixed(1) + 'px ' + q[1].toFixed(1) + 'px').join(',') + ')';
+
+export const svgPath = (pts: number[][]): string =>
+  'M' + pts.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('L') + 'Z';
+
+export function resample(pts: number[][], n: number): number[][] {
+  const P = pts.concat([pts[0]]);
+  const seg: number[] = [];
+  let total = 0;
+  for (let i = 0; i < P.length - 1; i++) {
+    const d = Math.hypot(P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1]);
+    seg.push(d);
+    total += d;
+  }
+  const out: number[][] = [];
+  let i = 0;
+  let acc = 0;
+  for (let k = 0; k < n; k++) {
+    const t = (total * k) / n;
+    while (i < seg.length - 1 && acc + seg[i] < t) {
+      acc += seg[i];
+      i++;
+    }
+    const f = seg[i] ? (t - acc) / seg[i] : 0;
+    out.push([P[i][0] + (P[i + 1][0] - P[i][0]) * f, P[i][1] + (P[i + 1][1] - P[i][1]) * f]);
+  }
+  return out;
+}
+
+export const scaleX = (pts: number[][], k: number): number[][] =>
+  pts.map((p) => [STAGE_CX + (p[0] - STAGE_CX) * k, p[1]]);
+
+export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = {
+  sweetheart: {
+    pts: [
+      [198, 148],
+      [199, 155],
+      [202, 165],
+      [208, 175],
+      [215, 180],
+      [221, 177],
+      [226, 171],
+      [230, 163],
+      [234, 171],
+      [239, 177],
+      [245, 180],
+      [252, 175],
+      [258, 165],
+      [261, 155],
+      [262, 148],
+    ],
+  },
+  princess: {
+    pts: [
+      [198, 148],
+      [200, 160],
+      [204, 174],
+      [210, 186],
+      [218, 196],
+      [224, 204],
+      [230, 208],
+      [236, 204],
+      [242, 196],
+      [250, 186],
+      [256, 174],
+      [260, 160],
+      [262, 148],
+    ],
+  },
+  round: {
+    pts: [
+      [198, 150],
+      [199, 160],
+      [202, 171],
+      [206, 180],
+      [212, 188],
+      [220, 193],
+      [230, 195],
+      [240, 193],
+      [248, 188],
+      [254, 180],
+      [258, 171],
+      [261, 160],
+      [262, 150],
+    ],
+  },
+  square: {
+    pts: [
+      [197, 148],
+      [197, 186],
+      [199, 194],
+      [205, 198],
+      [216, 198],
+      [230, 198],
+      [244, 198],
+      [255, 198],
+      [261, 194],
+      [263, 186],
+      [263, 148],
+    ],
+  },
+  vneck: {
+    pts: [
+      [200, 148],
+      [204, 164],
+      [209, 180],
+      [215, 196],
+      [222, 210],
+      [230, 224],
+      [238, 210],
+      [245, 196],
+      [251, 180],
+      [256, 164],
+      [260, 148],
+    ],
+  },
+  boat: {
+    pts: [
+      [186, 148],
+      [196, 154],
+      [212, 162],
+      [230, 165],
+      [248, 162],
+      [264, 154],
+      [274, 148],
+    ],
+    sh: [150, 151],
+  },
+  keyhole: {
+    pts: [
+      [198, 150],
+      [208, 156],
+      [218, 162],
+      [222, 172],
+      [220, 192],
+      [222, 216],
+      [225, 232],
+      [230, 236],
+      [235, 232],
+      [238, 216],
+      [240, 192],
+      [238, 172],
+      [242, 162],
+      [252, 156],
+      [262, 150],
+    ],
+  },
+  halter: {
+    pts: [
+      [208, 150],
+      [216, 154],
+      [223, 178],
+      [226, 212],
+      [230, 246],
+      [234, 212],
+      [237, 178],
+      [244, 154],
+      [252, 150],
+    ],
+    sh: [202, 154],
+  },
+  notched: {
+    pts: [
+      [198, 146],
+      [202, 154],
+      [210, 172],
+      [216, 194],
+      [223, 182],
+      [230, 170],
+      [237, 182],
+      [244, 194],
+      [250, 172],
+      [258, 154],
+      [262, 146],
+    ],
+  },
+  high: {
+    pts: [
+      [212, 134],
+      [214, 142],
+      [217, 148],
+      [222, 154],
+      [230, 156],
+      [238, 154],
+      [243, 148],
+      [246, 142],
+      [248, 134],
+    ],
+  },
+  shirtOpen: {
+    pts: [
+      [202, 146],
+      [212, 168],
+      [230, 176],
+      [248, 168],
+      [258, 146],
+    ],
+  },
+};
+
+export const BACK_CUTS: Record<string, { pts: number[][] }> = {
+  roundBack: {
+    pts: [
+      [198, 150],
+      [200, 166],
+      [204, 184],
+      [210, 202],
+      [218, 216],
+      [230, 222],
+      [242, 216],
+      [250, 202],
+      [256, 184],
+      [260, 166],
+      [262, 150],
+    ],
+  },
+  squareBack: {
+    pts: [
+      [196, 148],
+      [196, 198],
+      [199, 207],
+      [206, 210],
+      [230, 210],
+      [254, 210],
+      [261, 207],
+      [264, 198],
+      [264, 148],
+    ],
+  },
+  deepBack: {
+    pts: [
+      [196, 148],
+      [200, 175],
+      [206, 206],
+      [213, 238],
+      [220, 268],
+      [230, 294],
+      [240, 268],
+      [247, 238],
+      [254, 206],
+      [260, 175],
+      [264, 148],
+    ],
+  },
+  keyholeBack: {
+    pts: [
+      [198, 150],
+      [212, 158],
+      [220, 166],
+      [221, 190],
+      [220, 225],
+      [224, 260],
+      [230, 274],
+      [236, 260],
+      [240, 225],
+      [239, 190],
+      [240, 166],
+      [248, 158],
+      [262, 150],
+    ],
+  },
+  tieBack: {
+    pts: [
+      [198, 148],
+      [206, 175],
+      [214, 212],
+      [220, 252],
+      [226, 280],
+      [234, 280],
+      [240, 252],
+      [246, 212],
+      [254, 175],
+      [262, 148],
+    ],
+  },
+  cutOut: {
+    pts: [
+      [196, 150],
+      [204, 185],
+      [216, 218],
+      [230, 240],
+      [244, 218],
+      [256, 185],
+      [264, 150],
+    ],
+  },
+};
+
+export const TOP: Record<string, { right: number[][]; hemC?: number[][] }> = {
+  fitted: {
+    right: [
+      [306, 214],
+      [301, 240],
+      [295, 266],
+      [288, 288],
+    ],
+    hemC: [
+      [268, 289],
+      [249, 287],
+      [230, 285],
+      [211, 287],
+      [192, 289],
+    ],
+  },
+  peplum: {
+    right: [
+      [306, 214],
+      [300, 240],
+      [294, 258],
+      [288, 270],
+      [294, 282],
+      [304, 296],
+      [316, 314],
+      [328, 330],
+      [338, 345],
+    ],
+    hemC: [
+      [322, 348],
+      [306, 343],
+      [288, 349],
+      [270, 344],
+      [250, 350],
+      [230, 346],
+      [210, 350],
+      [190, 344],
+      [172, 349],
+      [154, 343],
+      [138, 348],
+    ],
+  },
+  corset: {
+    right: [
+      [304, 212],
+      [297, 238],
+      [289, 266],
+      [280, 288],
+    ],
+    hemC: [
+      [268, 296],
+      [250, 308],
+      [230, 322],
+      [210, 308],
+      [192, 296],
+    ],
+  },
+  wrap: {
+    right: [
+      [306, 216],
+      [300, 248],
+      [292, 280],
+      [288, 296],
+    ],
+    hemC: [
+      [266, 306],
+      [230, 296],
+      [194, 304],
+    ],
+  },
+  jacket: {
+    right: [
+      [306, 218],
+      [302, 270],
+      [298, 330],
+      [294, 392],
+    ],
+  },
+  bodice: {
+    right: [
+      [306, 216],
+      [298, 266],
+      [290, 330],
+    ],
+  },
+  shirtBody: {
+    right: [
+      [310, 214],
+      [306, 300],
+      [302, 392],
+      [300, 428],
+    ],
+  },
+  kurta: {
+    right: [
+      [312, 216],
+      [308, 320],
+      [304, 450],
+      [302, 536],
+    ],
+  },
+};
+
+export const COLLAR: Record<string, number[][]> = {
+  classic: [[196, 140], [228, 196], [230, 176], [232, 196], [264, 140], [258, 131], [230, 166], [202, 131]],
+  spread: [[186, 140], [226, 190], [230, 172], [234, 190], [274, 140], [266, 131], [230, 162], [194, 131]],
+  buttonDown: [[198, 138], [226, 186], [230, 170], [234, 186], [262, 138], [256, 130], [230, 160], [204, 130]],
+  band: [[199, 132], [261, 132], [261, 153], [199, 153]],
+  cuban: [[190, 142], [224, 208], [230, 182], [236, 208], [270, 142], [262, 130], [230, 172], [198, 130]],
+  wing: [[200, 136], [224, 178], [230, 164], [236, 178], [260, 136], [254, 130], [230, 156], [206, 130]],
+};
+
+export const SLV: Record<string, { L: number; w: [number, number, number] } | null> = {
+  sleeveless: null,
+  cap: { L: 46, w: [30, 29, 28] },
+  short: { L: 98, w: [30, 28, 27] },
+  elbow: { L: 152, w: [30, 27, 26] },
+  flared: { L: 168, w: [30, 28, 54] },
+  threequarter: { L: 214, w: [30, 27, 24] },
+  full: { L: 274, w: [30, 26, 20] },
+  puff: { L: 106, w: [32, 54, 27] },
+  bell: { L: 252, w: [30, 26, 72] },
+};
+
+export const BOT: Record<string, { profile: [number, number][]; scallop?: boolean }> = {
+  pleated: { profile: [[0, 51.5], [0.035, 54], [0.12, 82], [0.24, 108], [0.48, 148], [0.72, 192], [1, 228]] },
+  aline: { profile: [[0, 51.5], [0.035, 53.5], [0.12, 78], [0.24, 98], [0.5, 138], [0.75, 172], [1, 204]] },
+  circular: { profile: [[0, 51.5], [0.035, 54], [0.12, 84], [0.24, 114], [0.45, 162], [0.7, 202], [1, 230]] },
+  panelled: { profile: [[0, 51.5], [0.035, 53.5], [0.12, 80], [0.24, 102], [0.5, 146], [0.75, 186], [1, 216]], scallop: true },
+  flared: { profile: [[0, 51.5], [0.035, 53.5], [0.12, 78], [0.24, 96], [0.48, 126], [0.72, 176], [1, 222]] },
+  straight: { profile: [[0, 51.5], [0.035, 53], [0.12, 72], [0.24, 82], [0.45, 88], [0.75, 94], [1, 102]] },
+  tiered: { profile: [[0, 51.5], [0.035, 53.5], [0.12, 80], [0.24, 100], [0.33, 118], [0.35, 132], [0.66, 162], [0.68, 176], [1, 218]] },
+  mermaid: { profile: [[0, 51.5], [0.035, 53], [0.12, 74], [0.24, 82], [0.42, 82], [0.6, 80], [0.72, 88], [0.84, 146], [1, 210]] },
+  trouser: { profile: [[0, 51.5], [0.035, 53], [0.12, 72], [0.24, 80], [0.5, 78], [1, 74]] },
+};
+
+export const LENV: Record<string, number> = {
+  knee: 190,
+  tea: 250,
+  midi: 306,
+  ankle: 356,
+  floor: 442,
+  trail: 486,
+};
+
+export const FAB: Record<string, { c: string; op: number }> = {
+  sage: { c: '#7e9f8a', op: 0.95 },
+  net: { c: '#f6ece1', op: 0.55 },
+  organza: { c: '#f6e4c8', op: 0.68 },
+  silk: { c: '#eecfa0', op: 0.9 },
+  banarasi: { c: '#e0bb80', op: 0.95 },
+  velvet: { c: '#8a5f4a', op: 0.95 },
+};
+
+export interface FabricTheme {
+  id: string;
+  name: string;
+  baseColor: string;
+  topGradient: string;
+  botGradient: string;
+  drapeColor: string;
+  drapeOpacity: number;
+  outlineColor: string;
+  accentColor: string;
+  seamOpacity: number;
+  borderStyle: 'gotapatti' | 'velvet' | 'lace' | 'wire' | 'classic';
+  texKey: string;
+}
+
+export const FABRIC_THEMES: Record<string, FabricTheme> = {
+  sage: {
+    id: 'sage',
+    name: 'Atelier Sage Linen',
+    baseColor: '#7e9f8a',
+    topGradient: 'linear-gradient(160deg, #88aa95 0%, #7e9f8a 60%, #6d8e79 100%)',
+    botGradient: 'linear-gradient(165deg, #84a691 0%, #789984 65%, #658671 100%)',
+    drapeColor: '#f4ede4',
+    drapeOpacity: 0.88,
+    outlineColor: '#243329',
+    accentColor: '#c59d74',
+    seamOpacity: 0.85,
+    borderStyle: 'classic',
+    texKey: 'plain',
+  },
+  banarasi: {
+    id: 'banarasi',
+    name: 'Banarasi Zari',
+    baseColor: '#2b5f4a',
+    topGradient: 'linear-gradient(160deg, #336e56 0%, #255541 55%, #193e2f 100%)',
+    botGradient: 'linear-gradient(165deg, #2c634d 0%, #204c3a 60%, #153528 100%)',
+    drapeColor: '#d6a84f',
+    drapeOpacity: 0.92,
+    outlineColor: '#121214',
+    accentColor: '#e0b43c',
+    seamOpacity: 0.85,
+    borderStyle: 'gotapatti',
+    texKey: 'banarasi',
+  },
+  velvet: {
+    id: 'velvet',
+    name: 'Royal Velvet',
+    baseColor: '#582436',
+    topGradient: 'linear-gradient(160deg, #662c41 0%, #4d1e2f 55%, #351320 100%)',
+    botGradient: 'linear-gradient(165deg, #5c263a 0%, #431929 60%, #2e0f1b 100%)',
+    drapeColor: '#7a3e52',
+    drapeOpacity: 0.94,
+    outlineColor: '#0e0b10',
+    accentColor: '#d8b068',
+    seamOpacity: 0.9,
+    borderStyle: 'velvet',
+    texKey: 'velvet',
+  },
+  silk: {
+    id: 'silk',
+    name: 'Silk Chiffon',
+    baseColor: '#477860',
+    topGradient: 'linear-gradient(160deg, #538c70 0%, #3e6d56 55%, #2a4c3b 100%)',
+    botGradient: 'linear-gradient(165deg, #4b8066 0%, #37614d 60%, #244234 100%)',
+    drapeColor: '#eecfa0',
+    drapeOpacity: 0.88,
+    outlineColor: '#141716',
+    accentColor: '#9ecbb3',
+    seamOpacity: 0.78,
+    borderStyle: 'classic',
+    texKey: 'silk',
+  },
+  organza: {
+    id: 'organza',
+    name: 'Organza',
+    baseColor: '#5d8e78',
+    topGradient: 'linear-gradient(160deg, #6fa38b 0%, #54846e 55%, #3b604e 100%)',
+    botGradient: 'linear-gradient(165deg, #649680 0%, #4c7763 60%, #355646 100%)',
+    drapeColor: '#f6e4c8',
+    drapeOpacity: 0.76,
+    outlineColor: '#161918',
+    accentColor: '#c8ecd8',
+    seamOpacity: 0.7,
+    borderStyle: 'wire',
+    texKey: 'organza',
+  },
+  net: {
+    id: 'net',
+    name: 'Sheer Net',
+    baseColor: '#53826b',
+    topGradient: 'linear-gradient(160deg, #659a80 0%, #497660 55%, #335544 100%)',
+    botGradient: 'linear-gradient(165deg, #5b8d74 0%, #426c57 60%, #2c4a3b 100%)',
+    drapeColor: '#f6ece1',
+    drapeOpacity: 0.65,
+    outlineColor: '#141615',
+    accentColor: '#e4f2e9',
+    seamOpacity: 0.65,
+    borderStyle: 'lace',
+    texKey: 'net',
+  },
+};
+
+export const DRP: Record<string, number[][][]> = {
+  oneShoulder: [
+    [[248, 146], [276, 148], [288, 230], [298, 305], [320, 460], [342, 600], [354, 690], [306, 690], [296, 600], [278, 460], [266, 305], [258, 230]],
+  ],
+  bothShoulders: [
+    [[352, 264], [384, 264], [390, 400], [392, 580], [356, 576], [350, 400]],
+    [[416, 264], [448, 264], [450, 400], [446, 584], [412, 580], [412, 400]],
+  ],
+  crossBody: [
+    [[354, 264], [444, 264], [450, 318], [404, 440], [374, 576], [344, 566], [380, 428], [420, 328], [356, 304]],
+  ],
+  frontOpen: [
+    [[350, 264], [396, 264], [400, 452], [398, 656], [360, 652], [356, 450]],
+    [[404, 264], [450, 264], [446, 450], [442, 656], [404, 660], [402, 452]],
+  ],
+  aroundBody: [
+    [[348, 260], [452, 260], [454, 328], [346, 328]],
+    [[416, 324], [452, 328], [450, 676], [414, 670]],
+  ],
+};
+
+export const TEXL: Record<string, number> = {
+  plain: 0,
+  piping: 7,
+  embroidered: -7,
+  pleat: 12,
+  buttons: -3,
+  sheer: 6,
+};
+
+export const BASE_ZOOM = 0.58;
+
+export const FOCUS: Record<SlotKey, FocusConfig> = {
+  topStyle: { cy: 250, z: 0.95, view: 'detail' },
+  neckline: { cy: 200, z: 1.35, view: 'detail' },
+  collar: { cy: 186, z: 1.45, view: 'detail' },
+  sleeves: { cy: 250, z: 1.05, view: 'detail' },
+  cuff: { cy: 336, z: 1.15, view: 'detail' },
+  back: { cy: 226, z: 1.1, view: 'back' },
+  bottom: { cy: 520, z: 0.72, view: 'detail' },
+  bottomLength: { cy: 550, z: 0.64, view: 'detail' },
+  fabric: { cy: 396, z: 0.6, view: 'front' },
+  drape: { cy: 384, z: 0.58, view: 'front' },
+  waist: { cy: 330, z: 1.1, view: 'detail' },
+  hemY: { cy: 376, z: 0.9, view: 'detail' },
+  texture: { cy: 260, z: 0.95, view: 'front' },
+  fit: { cy: 306, z: 0.72, view: 'front' },
+};
+
+export const PSC: Record<SlotKey, number> = {
+  topStyle: 0.34,
+  neckline: 0.46,
+  collar: 0.5,
+  sleeves: 0.36,
+  cuff: 0.42,
+  back: 0.38,
+  bottom: 0.17,
+  bottomLength: 0.14,
+  fabric: 0.42,
+  drape: 0.3,
+  waist: 0.4,
+  hemY: 0.3,
+  texture: 0.3,
+  fit: 0.24,
+};
+
+export const LEG_L: number[][] = [
+  // Outer hip / upper thigh
+  [161, 450],
+  // Outer thigh - smooth clean taper
+  [164, 485],
+  [168, 530],
+  [173, 575],
+  // Knee - subtle gentle contour
+  [175, 606],
+  // Calf - smooth gentle curve
+  [173, 650],
+  [176, 705],
+  // Ankle - slender silhouette
+  [180, 755],
+  // Stylized 2D foot
+  [179, 780], // Heel back
+  [180, 794], // Heel bottom
+  [196, 794], // Sole ground contact
+  [202, 791], // Sleek stylized toe
+  [194, 770], // Instep
+  // Inner leg going upward
+  [189, 755], // Inner ankle
+  [184, 705], // Inner calf
+  [186, 650], // Inner knee
+  [188, 606],
+  // Inner thigh - smooth upward curve to crotch
+  [191, 550],
+  [198, 500],
+  [210, 470],
+  [228, 452], // Crotch
+];
+
+export const LEG_R: number[][] = mir(LEG_L);
+
+export const BODY: number[][] = [
+  // Neck top
+  [216, 120], [244, 120],
+  // Right shoulder, bust, waist, hip
+  [250, 138], [266, 141], [278, 143.5], [288, 145.5], [295, 148], [301, 154], [305, 164], [307, 178], [306, 196], [300, 240], [288, 272],
+  [278, 300], [282, 330], [300, 368], [304, 410], [302, 435],
+  // Right human-contoured leg
+  ...LEG_R,
+  // Perineum / crotch arch center
+  [230, 451.5],
+  // Left human-contoured leg
+  ...[...LEG_L].reverse(),
+  // Left hip (going up from [161, 450])
+  [158, 435], [156, 410], [160, 368], [178, 330],
+  // Left waist, bust, shoulder, neck
+  [182, 300], [172, 272], [160, 240], [154, 196], [153, 178], [155, 164], [159, 154], [165, 148], [172, 145.5], [182, 143.5], [194, 141], [210, 138],
+];
+
+export const ARM_L: number[][] = [
+  [164, 146], // Top shoulder cap
+  [158, 146.5],
+  [152, 148.5],
+  [147, 153],
+  [143, 160], // Outer shoulder round
+  [140.5, 172],
+  [140, 190], // Outer upper arm
+  [140, 240], // Outer bicep
+  [138, 290], // Outer elbow
+  [136, 350], // Outer forearm
+  [138, 412], // Outer wrist
+  [135, 435], // Outer palm
+  [140, 468], // Fingertips
+  [144, 468], // Fingertips inner
+  [149, 440], // Inner palm
+  [155, 412], // Inner wrist
+  [158, 350], // Inner forearm
+  [161, 290], // Inner elbow
+  [165, 240], // Inner bicep
+  [168, 190], // Inner armpit
+  [173, 156], // Inner shoulder joint
+  [168, 148], // Shoulder joint top
+];
+
+export const ARM_R: number[][] = mir(ARM_L);
+
+// Outstretched arms (sideways mannequin pose)
+export const ARM_OUT_L: number[][] = [
+  [164, 146], // Top shoulder cap
+  [156, 146.3], // Outer shoulder transition curve
+  [146, 147],
+  [134, 148],
+  [122, 149], // Upper arm top
+  [96, 152],  // Elbow top
+  [70, 155],  // Forearm top
+  [44, 158],  // Wrist top
+  [28, 160],  // Palm top
+  [14, 165],  // Fingertip outer
+  [14, 169],  // Fingertip inner
+  [28, 173],  // Palm bottom
+  [44, 172],  // Wrist under
+  [70, 174],  // Forearm under
+  [96, 176],  // Elbow under
+  [122, 178], // Bicep under
+  [146, 180], // Underarm
+  [168, 184], // Inner armpit
+  [172, 160], // Inner shoulder joint
+  [168, 148], // Shoulder joint top
+];
+
+export const ARM_OUT_R: number[][] = mir(ARM_OUT_L);
+
+export function colorMix(base: string, tint: 'white' | 'black', pct: number): string {
+  return `color-mix(in oklab, ${base}, ${tint} ${Math.max(0, Math.min(100, Math.round(pct)))}%)`;
+}
+
+export function fillGradient(base: string, texKey: string, lift = 0): string {
+  const t = (TEXL[texKey] != null ? TEXL[texKey] : 0) + lift;
+  const startColor = t + 15 < 0 ? colorMix(base, 'black', -(t + 15)) : colorMix(base, 'white', t + 15);
+  const midColor = t + 3 < 0 ? colorMix(base, 'black', -(t + 3)) : colorMix(base, 'white', t + 3);
+  const endColor = 8 - t < 0 ? colorMix(base, 'white', -(8 - t)) : colorMix(base, 'black', 8 - t);
+  return `linear-gradient(163deg, ${startColor} 0%, ${midColor} 62%, ${endColor} 100%)`;
+}
