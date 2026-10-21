@@ -19,7 +19,7 @@ export const NECKS: ComponentOption[] = [
   O('vneck', 'V-Neck'),
   O('boat', 'Boat Neck'),
   O('halter', 'Halter'),
-  O('high', 'High Neck'),
+  O('high', 'Zero Neck'),
 ];
 
 export const SLEEVES: ComponentOption[] = [
