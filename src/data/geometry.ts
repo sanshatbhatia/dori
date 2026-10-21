@@ -181,15 +181,17 @@ export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = 
   notched: {
     pts: [
       [198, 146],
-      [202, 154],
-      [210, 172],
-      [216, 194],
-      [223, 182],
-      [230, 170],
-      [237, 182],
-      [244, 194],
-      [250, 172],
-      [258, 154],
+      [201, 155],
+      [207, 165],
+      [215, 172],
+      [224, 176],
+      [227, 176],
+      [230, 186],
+      [233, 176],
+      [236, 176],
+      [245, 172],
+      [253, 165],
+      [259, 155],
       [262, 146],
     ],
   },
@@ -446,8 +448,8 @@ export const LENV: Record<string, number> = {
   tea: 250,
   midi: 306,
   ankle: 356,
-  floor: 442,
-  trail: 486,
+  floor: 488,
+  trail: 524,
 };
 
 export const FAB: Record<string, { c: string; op: number }> = {
@@ -562,23 +564,28 @@ export const FABRIC_THEMES: Record<string, FabricTheme> = {
 };
 
 export const DRP: Record<string, number[][][]> = {
+  // Pallu over the right shoulder, falling down the side to the hem
   oneShoulder: [
     [[248, 146], [276, 148], [288, 230], [298, 305], [320, 460], [342, 600], [354, 690], [306, 690], [296, 600], [278, 460], [266, 305], [258, 230]],
   ],
+  // Draped over both shoulders, falling behind the arms on each side
   bothShoulders: [
-    [[352, 264], [384, 264], [390, 400], [392, 580], [356, 576], [350, 400]],
-    [[416, 264], [448, 264], [450, 400], [446, 584], [412, 580], [412, 400]],
+    [[184, 148], [208, 146], [196, 230], [186, 330], [172, 470], [160, 640], [124, 640], [140, 470], [158, 330], [172, 230]],
+    [[252, 146], [276, 148], [288, 230], [302, 330], [320, 470], [336, 640], [300, 640], [288, 470], [274, 330], [264, 230]],
   ],
+  // From the right shoulder across the bodice to the left hip, then down
   crossBody: [
-    [[354, 264], [444, 264], [450, 318], [404, 440], [374, 576], [344, 566], [380, 428], [420, 328], [356, 304]],
+    [[248, 146], [276, 148], [270, 214], [226, 282], [186, 330], [176, 460], [166, 620], [130, 620], [146, 452], [160, 318], [208, 252], [250, 196]],
   ],
+  // Two open panels framing the front of the lehenga
   frontOpen: [
-    [[350, 264], [396, 264], [400, 452], [398, 656], [360, 652], [356, 450]],
-    [[404, 264], [450, 264], [446, 450], [442, 656], [404, 660], [402, 452]],
+    [[198, 148], [214, 150], [208, 300], [198, 460], [190, 690], [162, 690], [172, 460], [182, 300]],
+    [[246, 150], [262, 148], [278, 300], [288, 460], [298, 690], [270, 690], [262, 460], [252, 300]],
   ],
+  // Wrapped around the hips with the pallu tucked and falling at the right
   aroundBody: [
-    [[348, 260], [452, 260], [454, 328], [346, 328]],
-    [[416, 324], [452, 328], [450, 676], [414, 670]],
+    [[168, 318], [292, 300], [300, 344], [176, 366]],
+    [[272, 306], [304, 300], [326, 470], [338, 640], [302, 644], [292, 470]],
   ],
 };
 
@@ -591,7 +598,7 @@ export const TEXL: Record<string, number> = {
   sheer: 6,
 };
 
-export const BASE_ZOOM = 0.58;
+export const BASE_ZOOM = 0.62;
 
 export const FOCUS: Record<SlotKey, FocusConfig> = {
   topStyle: { cy: 250, z: 0.95, view: 'detail' },
@@ -731,6 +738,10 @@ export const ARM_OUT_L: number[][] = [
 ];
 
 export const ARM_OUT_R: number[][] = mir(ARM_OUT_L);
+
+// Stretch pose swings the outstretched arms down into an A-pose around the shoulder joint
+export const A_POSE_ANGLE = (55 * Math.PI) / 180;
+export const A_POSE_PIVOT: [number, number] = [170, 162];
 
 export function colorMix(base: string, tint: 'white' | 'black', pct: number): string {
   return `color-mix(in oklab, ${base}, ${tint} ${Math.max(0, Math.min(100, Math.round(pct)))}%)`;

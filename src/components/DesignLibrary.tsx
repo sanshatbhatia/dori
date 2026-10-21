@@ -85,11 +85,10 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
     return (
       <div id="design-library-cards" className="flex-none pt-2 pb-3.5 border-t border-[#3c342c]/15 bg-[#fffdf9] z-10">
         {/* Category Header */}
-        <div className="flex items-baseline gap-2 px-3.5 pb-2">
+        <div className="flex items-baseline justify-between gap-2 px-3.5 pb-2">
           <h2 className="font-serif text-[17px] font-semibold text-[#2b2724] leading-none">
             {activeCategory.label}
           </h2>
-          <div className="flex-1 h-px bg-[#3c342c]/15" />
           <span className="text-[9.5px] uppercase tracking-[0.14em] text-[#5a534c] font-sans font-medium">
             {activeCategory.opts.length} options
           </span>

@@ -10,7 +10,8 @@ import {
   ARM_L,
   ARM_R,
   ARM_OUT_L,
-  ARM_OUT_R,
+  A_POSE_ANGLE,
+  A_POSE_PIVOT,
   BACK_CUTS,
   BASE_ZOOM,
   BODY,
@@ -158,6 +159,36 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   // Sleeves Configuration & Dynamic Path Builder
   const sleeveId = geo('sleeves', 'threequarter');
 
+  // Stretched pose sleeve reach (along the arm), hem drop and underside sag
+  const stretchDims = (sId: string) => {
+    if (sId === 'cap') return { reach: 28, hemDrop: 2, maxSag: 1 };
+    if (sId === 'short') return { reach: 50, hemDrop: 2, maxSag: 1 };
+    if (sId === 'elbow') return { reach: 74, hemDrop: 2, maxSag: 1 };
+    if (sId === 'flared') return { reach: 80, hemDrop: 24, maxSag: 8 };
+    if (sId === 'threequarter') return { reach: 94, hemDrop: 2, maxSag: 1 };
+    if (sId === 'bell') return { reach: 110, hemDrop: 44, maxSag: 16 };
+    if (sId === 'puff') return { reach: 56, hemDrop: 14, maxSag: 10 };
+    return { reach: 114, hemDrop: 3, maxSag: 2 };
+  };
+
+  // Stretch pose: the left arm swings down from the shoulder into a relaxed A-pose.
+  // Points at the armpit stay put and the bend ramps up along the upper arm,
+  // so the sleeve's inner edge settles against the bodice side seam.
+  const bendArm = (pts: number[][]): number[][] =>
+    pts.map(([x, y]) => {
+      const t = Math.min(1, Math.max(0, (A_POSE_PIVOT[0] - 20 - x) / 30));
+      const a = -A_POSE_ANGLE * t * t * (3 - 2 * t);
+      const dx = x - A_POSE_PIVOT[0];
+      const dy = y - A_POSE_PIVOT[1];
+      return [
+        A_POSE_PIVOT[0] + dx * Math.cos(a) - dy * Math.sin(a),
+        A_POSE_PIVOT[1] + dx * Math.sin(a) + dy * Math.cos(a),
+      ];
+    });
+  const armOutL = bendArm(ARM_OUT_L);
+  const armOutR = mir(armOutL);
+  const bentXY = (x: number, y: number) => bendArm([[x, y]])[0].map((v) => Math.round(v * 10) / 10).join(' ');
+
   const buildLeftSleevePath = (sId: string, pose: string, tip: number[], underarm: number[]): number[][] => {
     const s = SLV[sId];
     if (!s) {
@@ -175,31 +206,22 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     }
 
     if (pose === 'stretched') {
-      let reach = 114;
-      let hemDrop = 2;
-      let maxSag = 1;
-      if (sId === 'cap') { reach = 28; hemDrop = 2; maxSag = 1; }
-      else if (sId === 'short') { reach = 50; hemDrop = 2; maxSag = 1; }
-      else if (sId === 'elbow') { reach = 74; hemDrop = 2; maxSag = 1; }
-      else if (sId === 'threequarter') { reach = 94; hemDrop = 2; maxSag = 1; }
-      else if (sId === 'full') { reach = 114; hemDrop = 3; maxSag = 2; }
-      else if (sId === 'bell') { reach = 110; hemDrop = 76; maxSag = 42; }
-      else if (sId === 'puff') { reach = 56; hemDrop = 14; maxSag = 10; }
+      const { reach, hemDrop, maxSag } = stretchDims(sId);
 
       const xEnd = 164 - reach;
       const yArmTopEnd = 146 + reach * 0.1;
       const yArmBotEnd = 178 - reach * 0.05;
       const yHemBot = yArmBotEnd + hemDrop;
 
-      // 1. Underarm to sleeve hem
+      // 1. Underarm to sleeve hem: once the arm swings down, the sleeve's inner
+      // edge runs from the armpit to the hem corner along the bodice side
+      const corner = bendArm([[xEnd, yHemBot]])[0];
       const underPts: number[][] = [];
       const sagSteps = 6;
-      for (let i = sagSteps; i >= 0; i--) {
+      for (let i = 0; i <= sagSteps; i++) {
         const f = i / sagSteps;
-        const x = xEnd + f * (underarm[0] - xEnd);
-        const yLinear = yHemBot + f * (underarm[1] - yHemBot);
-        const sag = maxSag * Math.sin(f * Math.PI);
-        underPts.push([x, yLinear + sag]);
+        const bow = Math.sin(f * Math.PI) * Math.min(maxSag, 8) * 0.5;
+        underPts.push([underarm[0] + f * (corner[0] - underarm[0]) - bow, underarm[1] + f * (corner[1] - underarm[1])]);
       }
 
       // 2. Sleeve hem across
@@ -207,7 +229,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
       const hemSteps = 5;
       for (let i = hemSteps - 1; i >= 0; i--) {
         const f = i / hemSteps;
-        const x = xEnd - Math.sin(f * Math.PI) * (sId === 'bell' ? 8 : 0);
+        const x = xEnd - Math.sin(f * Math.PI) * (sId === 'bell' ? 8 : sId === 'flared' ? 5 : 0);
         const y = (yArmTopEnd - 2) + f * (yHemBot - (yArmTopEnd - 2));
         hemPts.push([x, y]);
       }
@@ -236,7 +258,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
         }
       }
 
-      return [...underPts, ...hemPts, ...topPtsList];
+      return [...underPts, ...bendArm([...hemPts, ...topPtsList])];
     } else {
       // Natural anatomical resting pose with rounded, curved shoulder cap
 
@@ -498,39 +520,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     if (!s) return null;
 
     if (armPose === 'stretched') {
-      let reach = 120;
-      let hemDrop = 2;
-      let maxSag = 1;
-
-      if (sleeveId === 'cap') {
-        reach = 28;
-        hemDrop = 2;
-        maxSag = 1;
-      } else if (sleeveId === 'short') {
-        reach = 50;
-        hemDrop = 2;
-        maxSag = 1;
-      } else if (sleeveId === 'elbow') {
-        reach = 74;
-        hemDrop = 2;
-        maxSag = 1;
-      } else if (sleeveId === 'threequarter') {
-        reach = 94;
-        hemDrop = 2;
-        maxSag = 1;
-      } else if (sleeveId === 'full') {
-        reach = 114;
-        hemDrop = 3;
-        maxSag = 2;
-      } else if (sleeveId === 'bell') {
-        reach = 110;
-        hemDrop = 76;
-        maxSag = 42;
-      } else if (sleeveId === 'puff') {
-        reach = 56;
-        hemDrop = 14;
-        maxSag = 10;
-      }
+      const { reach, hemDrop, maxSag } = stretchDims(sleeveId);
 
       const xEnd = 164 - reach;
       const yArmTopEnd = 146 + reach * 0.1;
@@ -557,23 +547,24 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
       const hemSteps = 4;
       for (let i = 1; i <= hemSteps; i++) {
         const f = i / hemSteps;
-        const x = xEnd - Math.sin(f * Math.PI) * (sleeveId === 'bell' ? 8 : 0);
+        const x = xEnd - Math.sin(f * Math.PI) * (sleeveId === 'bell' ? 8 : sleeveId === 'flared' ? 5 : 0);
         const y = (yArmTopEnd - 2) + f * (yHemBot - (yArmTopEnd - 2));
         hemPtsList.push([x, y]);
       }
 
+      const outer = bendArm([...topPtsList, ...hemPtsList]);
+      const corner = outer[outer.length - 1];
+      const armpit = [154, 214];
       const underPtsList: number[][] = [];
       const sagSteps = 8;
       for (let i = 1; i <= sagSteps; i++) {
         const f = i / sagSteps;
-        const x = xEnd + f * (168 - xEnd);
-        const yLinear = yHemBot + f * (184 - yHemBot);
-        const sag = maxSag * Math.sin(f * Math.PI);
-        underPtsList.push([x, yLinear + sag]);
+        const bow = Math.sin(f * Math.PI) * Math.min(maxSag, 8) * 0.5;
+        underPtsList.push([corner[0] + f * (armpit[0] - corner[0]) - bow, corner[1] + f * (armpit[1] - corner[1])]);
       }
 
-      const armholePts = [[170, 160], [164, 144]];
-      const allPts = [...topPtsList, ...hemPtsList, ...underPtsList, ...armholePts];
+      const armholePts = [[166, 186], [170, 160], [164, 144]];
+      const allPts = [...outer, ...underPtsList, ...armholePts];
       const p = resample(scaleX(allPts, fitK), 34);
       return side === 'r' ? mir(p) : p;
     }
@@ -625,14 +616,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     if (!s || !cuffH) return null;
 
     if (armPose === 'stretched') {
-      let reach = 120;
-      if (sleeveId === 'cap') reach = 28;
-      else if (sleeveId === 'short') reach = 52;
-      else if (sleeveId === 'elbow') reach = 76;
-      else if (sleeveId === 'threequarter') reach = 98;
-      else if (sleeveId === 'full') reach = 120;
-      else if (sleeveId === 'bell') reach = 110;
-      else if (sleeveId === 'puff') reach = 56;
+      const { reach } = stretchDims(sleeveId);
 
       const xEnd = 164 - reach;
       const cuffW = Math.max(6, Math.min(16, cuffH * 0.35));
@@ -644,12 +628,12 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
       const yBot2 = 178 - reach * 0.05 + 2;
 
       const p = scaleX(
-        [
+        bendArm([
           [x1, yTop1],
           [x2, yTop2],
           [x2, yBot2],
           [x1, yBot1],
-        ],
+        ]),
         fitK
       );
       return side === 'r' ? mir(p) : p;
@@ -681,24 +665,16 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     // Short, elbow, and three-quarter are simple tailored sleeves (no baggy droop or baggy fold ripples)
     if (sleeveId === 'short' || sleeveId === 'elbow' || sleeveId === 'threequarter') return [];
 
-    let reach = 110;
-    let hemDrop = 76;
-    let maxSag = 42;
-    if (sleeveId === 'bell') {
-      reach = 110;
-      hemDrop = 76;
-      maxSag = 42;
-    } else {
-      return [];
-    }
+    if (sleeveId !== 'bell') return [];
+    const { reach, hemDrop, maxSag } = stretchDims(sleeveId);
 
     const xEnd = 164 - reach;
     const yHemBot = 178 - reach * 0.05 + hemDrop;
 
     const raw = [
-      `M 166 178 Q ${Math.round(xEnd + (164 - xEnd) * 0.48)} ${Math.round(yHemBot + maxSag * 0.55)} ${Math.round(xEnd + 8)} ${Math.round(yHemBot - 10)}`,
-      `M 158 172 Q ${Math.round(xEnd + (164 - xEnd) * 0.3)} ${Math.round(yHemBot + maxSag * 0.28)} ${Math.round(xEnd + 18)} ${Math.round(yHemBot - 20)}`,
-      `M 168 182 Q ${Math.round(xEnd + (164 - xEnd) * 0.65)} ${Math.round(yHemBot + maxSag * 0.82)} ${Math.round(xEnd + 5)} ${Math.round(yHemBot - 5)}`,
+      `M ${bentXY(166, 178)} Q ${bentXY(xEnd + (164 - xEnd) * 0.48, yHemBot + maxSag * 0.55)} ${bentXY(xEnd + 8, yHemBot - 10)}`,
+      `M ${bentXY(158, 172)} Q ${bentXY(xEnd + (164 - xEnd) * 0.3, yHemBot + maxSag * 0.28)} ${bentXY(xEnd + 18, yHemBot - 20)}`,
+      `M ${bentXY(168, 182)} Q ${bentXY(xEnd + (164 - xEnd) * 0.65, yHemBot + maxSag * 0.82)} ${bentXY(xEnd + 5, yHemBot - 5)}`,
     ];
 
     if (side === 'r') {
@@ -997,7 +973,7 @@ interface BlouseDetailsResult {
         peplumFlutes,
         hemRuffleLine,
         hemRuffleAccent,
-        tieBow: isBack ? `M ${STAGE_CX - 12} ${tieY - 4} C ${STAGE_CX - 5} ${tieY - 8} ${STAGE_CX} ${tieY} C ${STAGE_CX + 5} ${tieY - 8} ${STAGE_CX + 12} ${tieY - 4}` : null,
+        tieBow: isBack ? `M ${STAGE_CX - 12} ${tieY - 4} Q ${STAGE_CX - 5} ${tieY - 8} ${STAGE_CX} ${tieY} Q ${STAGE_CX + 5} ${tieY - 8} ${STAGE_CX + 12} ${tieY - 4}` : null,
         doriLeft: isBack ? `M ${STAGE_CX - 3} ${tieY} C ${STAGE_CX - 12} ${tieY + 20} ${STAGE_CX - 24} ${tieY + 44} ${STAGE_CX - 18} ${tieY + 68}` : null,
         doriRight: isBack ? `M ${STAGE_CX + 3} ${tieY} C ${STAGE_CX + 12} ${tieY + 20} ${STAGE_CX + 24} ${tieY + 44} ${STAGE_CX + 18} ${tieY + 68}` : null,
         latkanL: isBack ? { x: STAGE_CX - 18, y: tieY + 68 } : null,
@@ -1018,7 +994,7 @@ interface BlouseDetailsResult {
         isBack: true,
         spine: `M ${STAGE_CX} ${neckLowestY + 1} L ${STAGE_CX} ${hem}`,
         // Upper Nape Tie Dori
-        tieBow: `M ${STAGE_CX - 12} ${tieY - 4} C ${STAGE_CX - 5} ${tieY - 8} ${STAGE_CX} ${tieY} C ${STAGE_CX + 5} ${tieY - 8} ${STAGE_CX + 12} ${tieY - 4}`,
+        tieBow: `M ${STAGE_CX - 12} ${tieY - 4} Q ${STAGE_CX - 5} ${tieY - 8} ${STAGE_CX} ${tieY} Q ${STAGE_CX + 5} ${tieY - 8} ${STAGE_CX + 12} ${tieY - 4}`,
         doriLeft: `M ${STAGE_CX - 3} ${tieY} C ${STAGE_CX - 12} ${tieY + 20} ${STAGE_CX - 24} ${tieY + 44} ${STAGE_CX - 18} ${tieY + 68}`,
         doriRight: `M ${STAGE_CX + 3} ${tieY} C ${STAGE_CX + 12} ${tieY + 20} ${STAGE_CX + 24} ${tieY + 44} ${STAGE_CX + 18} ${tieY + 68}`,
         latkanL: { x: STAGE_CX - 18, y: tieY + 68 },
@@ -1045,8 +1021,8 @@ interface BlouseDetailsResult {
       return {
         isBack: false,
         isNotched: true,
-        princessLeft: `M ${STAGE_CX - 14} 194 L ${STAGE_CX - 14} ${hem}`,
-        princessRight: `M ${STAGE_CX + 14} 194 L ${STAGE_CX + 14} ${hem}`,
+        princessLeft: `M ${STAGE_CX - 22} 174 Q ${STAGE_CX - 26} 220 ${STAGE_CX - 24} ${hem}`,
+        princessRight: `M ${STAGE_CX + 22} 174 Q ${STAGE_CX + 26} 220 ${STAGE_CX + 24} ${hem}`,
         hemLine: `M ${STAGE_CX - 60} ${hem} Q ${STAGE_CX} ${hem - 4} ${STAGE_CX + 60} ${hem}`,
       };
     }
@@ -1104,8 +1080,8 @@ interface BlouseDetailsResult {
   const f = FOCUS[activeCategory.slot] || FOCUS.topStyle;
   const isDetail = viewMode === 'detail';
   const fade = isDetail && ['neckline', 'collar', 'topStyle', 'sleeves', 'back', 'texture', 'cuff'].includes(activeCategory.slot) ? 0.65 : 1;
-  const k = isDetail ? f.z : isBack ? 0.66 : (armPose === 'stretched' ? 0.52 : BASE_ZOOM);
-  const fy = isDetail ? f.cy : isBack ? 320 : 395;
+  const k = isDetail ? f.z : isBack ? 0.66 : BASE_ZOOM;
+  const fy = isDetail ? f.cy : isBack ? 320 : 372;
 
   // Active layer loading effect
   const isLayerLoading = (slotShort: string) => loadingSlot.toLowerCase() === slotShort.toLowerCase();
@@ -1129,7 +1105,7 @@ interface BlouseDetailsResult {
 
         {/* Avatar Body Form (Torso, Hips & Human Legs) */}
         <div
-          className="absolute inset-0 bg-gradient-to-br from-[#faecd8] via-[#eed3ba] to-[#dfba98]"
+          className="absolute inset-0 bg-gradient-to-br from-[#fdeee2] via-[#f9e0cf] to-[#eec6ad]"
           style={{ clipPath: poly(scaleX(BODY, fitK)) }}
         />
         {/* Soft Natural Waist & Navel Accent */}
@@ -1137,31 +1113,29 @@ interface BlouseDetailsResult {
           <div className="absolute left-[228px] top-[316px] w-[5px] h-[7px] rounded-full bg-[#ba8066]/35 shadow-inner pointer-events-none" />
         )}
 
-        {/* Atelier Drape Stand */}
+        {/* Atelier Hanging Rod with a spare dupatta */}
         <div
-          className="absolute top-[256px] w-[100px] h-[470px] transition-all duration-500"
-          style={{ left: isBack ? '12px' : '352px' }}
+          className="absolute top-[196px] w-[104px] h-[330px] transition-all duration-500 pointer-events-none"
+          style={{ left: isBack ? '6px' : '352px' }}
         >
-          {/* Hanging sample cloth on the atelier rack */}
+          {/* Sheer cloth folded over the rod, gold zari border on the edges */}
           <div
-            className="absolute left-[16px] top-[6px] w-[68px] h-[310px] rounded-b-[4px] opacity-85 pointer-events-none"
+            className="absolute left-[12px] top-[6px] w-[80px] h-[300px] rounded-b-[3px]"
             style={{
-              background: 'linear-gradient(90deg, #dfd2c0 0%, #f7f1e6 30%, #ece1d1 60%, #ded0bd 100%)',
+              background: 'linear-gradient(90deg, #ece2d3 0%, #f8f2e8 28%, #f1e7d8 58%, #e6d9c6 100%)',
               boxShadow: '0 4px 12px rgba(100,75,50,0.08)',
+              borderLeft: '3px solid #c9a35c',
+              borderRight: '3px solid #c9a35c',
+              borderBottom: '4px solid #c9a35c',
             }}
           >
-            {/* Vertical fold creases */}
-            <div className="absolute left-[20px] top-0 w-[1px] h-full bg-[#c8b59e]/50" />
-            <div className="absolute left-[44px] top-0 w-[1px] h-full bg-[#c8b59e]/50" />
-            <div className="absolute left-0 bottom-0 w-full h-[6px] border-b-[2px] border-dashed border-[#b39e85]/60" />
+            <div className="absolute left-[24px] top-0 w-[1px] h-full bg-[#c8b59e]/45" />
+            <div className="absolute left-[50px] top-0 w-[1px] h-full bg-[#c8b59e]/45" />
+            <div className="absolute left-0 top-0 w-full h-[46%] bg-gradient-to-b from-[#fbf7f0]/80 to-transparent" />
           </div>
-
-          <div className="absolute left-0 top-0 w-[100px] h-[9px] rounded-[5px] bg-gradient-to-b from-[#cfa46c] to-[#a97f4c]" />
-          <div className="absolute -left-[5px] -top-[3px] w-[15px] h-[15px] rounded-full bg-gradient-to-br from-[#d3aa74] to-[#a97f4c]" />
-          <div className="absolute left-[90px] -top-[3px] w-[15px] h-[15px] rounded-full bg-gradient-to-br from-[#d3aa74] to-[#a97f4c]" />
-          <div className="absolute left-[46px] top-[8px] w-[9px] h-[436px] rounded-[5px] bg-gradient-to-r from-[#b98d57] via-[#cfa46c] to-[#9b7343]" />
-          <div className="absolute left-[14px] top-[440px] w-[72px] h-[13px] rounded-[7px] bg-gradient-to-b from-[#c79a63] to-[#a1784a]" />
-          <div className="absolute left-[6px] top-[450px] w-[88px] h-[14px] rounded-full bg-[radial-gradient(ellipse_at_50%_50%,rgba(146,114,88,0.2),transparent_72%)]" />
+          <div className="absolute left-0 top-0 w-[104px] h-[9px] rounded-[5px] bg-gradient-to-b from-[#cfa46c] to-[#a97f4c]" />
+          <div className="absolute -left-[6px] -top-[3px] w-[15px] h-[15px] rounded-full bg-gradient-to-br from-[#d3aa74] to-[#a97f4c]" />
+          <div className="absolute left-[95px] -top-[3px] w-[15px] h-[15px] rounded-full bg-gradient-to-br from-[#d3aa74] to-[#a97f4c]" />
         </div>
 
         {/* Layer 1: Skirt / Bottom */}
@@ -1203,7 +1177,7 @@ interface BlouseDetailsResult {
             <>
               {/* Left Arm Base & Canvas Texture */}
               <div
-                className="absolute inset-0 bg-gradient-to-br from-[#f6e2ce] via-[#eed3ba] to-[#e0bd9c]"
+                className="absolute inset-0 bg-gradient-to-br from-[#fde9dc] via-[#f9e0cf] to-[#efc9b0]"
                 style={{ clipPath: poly(scaleX(ARM_L, fitK)) }}
               />
               <div
@@ -1216,7 +1190,7 @@ interface BlouseDetailsResult {
               />
               {/* Right Arm Base & Canvas Texture */}
               <div
-                className="absolute inset-0 bg-gradient-to-bl from-[#f6e2ce] via-[#eed3ba] to-[#e0bd9c]"
+                className="absolute inset-0 bg-gradient-to-bl from-[#fde9dc] via-[#f9e0cf] to-[#efc9b0]"
                 style={{ clipPath: poly(scaleX(ARM_R, fitK)) }}
               />
               <div
@@ -1232,32 +1206,29 @@ interface BlouseDetailsResult {
             <>
               {/* Outstretched Arms Base */}
               <div
-                className="absolute inset-0 bg-gradient-to-r from-[#f6e2ce] via-[#eed3ba] to-[#e0bd9c]"
-                style={{ clipPath: poly(scaleX(ARM_OUT_L, fitK)) }}
+                className="absolute inset-0 bg-gradient-to-r from-[#fde9dc] via-[#f9e0cf] to-[#efc9b0]"
+                style={{ clipPath: poly(scaleX(armOutL, fitK)) }}
               />
               <div
                 className="absolute inset-0 opacity-40"
                 style={{
-                  clipPath: poly(scaleX(ARM_OUT_L, fitK)),
+                  clipPath: poly(scaleX(armOutL, fitK)),
                   backgroundImage:
                     'repeating-linear-gradient(46deg, rgba(196,146,112,0.12) 0 1px, transparent 1px 8px), repeating-linear-gradient(-46deg, rgba(196,146,112,0.1) 0 1px, transparent 1px 8px)',
                 }}
               />
               <div
-                className="absolute inset-0 bg-gradient-to-l from-[#f6e2ce] via-[#eed3ba] to-[#e0bd9c]"
-                style={{ clipPath: poly(scaleX(ARM_OUT_R, fitK)) }}
+                className="absolute inset-0 bg-gradient-to-l from-[#fde9dc] via-[#f9e0cf] to-[#efc9b0]"
+                style={{ clipPath: poly(scaleX(armOutR, fitK)) }}
               />
               <div
                 className="absolute inset-0 opacity-40"
                 style={{
-                  clipPath: poly(scaleX(ARM_OUT_R, fitK)),
+                  clipPath: poly(scaleX(armOutR, fitK)),
                   backgroundImage:
                     'repeating-linear-gradient(-46deg, rgba(196,146,112,0.12) 0 1px, transparent 1px 8px), repeating-linear-gradient(46deg, rgba(196,146,112,0.1) 0 1px, transparent 1px 8px)',
                 }}
               />
-              {/* Outstretched Couture Seam Lines */}
-              <div className="absolute left-[96px] top-[152px] w-0 h-[24px] border-l border-dashed border-[#ba8066]/40" />
-              <div className="absolute left-[364px] top-[152px] w-0 h-[24px] border-l border-dashed border-[#ba8066]/40" />
             </>
           )}
         </div>
@@ -1356,9 +1327,9 @@ interface BlouseDetailsResult {
             </linearGradient>
             {/* Avatar 2D Fashion Character Gradients */}
             <linearGradient id="avatar-skin-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#faecd8" />
-              <stop offset="45%" stopColor="#f3d8bc" />
-              <stop offset="100%" stopColor="#e3be99" />
+              <stop offset="0%" stopColor="#fdeee2" />
+              <stop offset="45%" stopColor="#f9e0cf" />
+              <stop offset="100%" stopColor="#efcab2" />
             </linearGradient>
             <linearGradient id="hair-dark-grad" x1="15%" y1="0%" x2="85%" y2="100%">
               <stop offset="0%" stopColor="#282226" />
@@ -1381,14 +1352,14 @@ interface BlouseDetailsResult {
             </radialGradient>
             {/* Mannequin Arm Opaque Canvas Texture Gradients & Shadow Filter */}
             <linearGradient id="mannequin-arm-l" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#f8e5d3" />
-              <stop offset="50%" stopColor="#eed3ba" />
-              <stop offset="100%" stopColor="#dfba98" />
+              <stop offset="0%" stopColor="#fdebdf" />
+              <stop offset="50%" stopColor="#f9e0cf" />
+              <stop offset="100%" stopColor="#eec6ad" />
             </linearGradient>
             <linearGradient id="mannequin-arm-r" x1="100%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#f8e5d3" />
-              <stop offset="50%" stopColor="#eed3ba" />
-              <stop offset="100%" stopColor="#dfba98" />
+              <stop offset="0%" stopColor="#fdebdf" />
+              <stop offset="50%" stopColor="#f9e0cf" />
+              <stop offset="100%" stopColor="#eec6ad" />
             </linearGradient>
             <pattern id="mannequin-canvas-texture" width="8" height="8" patternUnits="userSpaceOnUse">
               <path d="M 0 0 L 8 8 M 8 0 L 0 8" stroke="rgba(196,146,112,0.12)" strokeWidth="0.75" />
@@ -1464,7 +1435,7 @@ interface BlouseDetailsResult {
               />
 
               {/* Left Leg: Flat 2D Linen Fill, Subtle Canvas Texture & Crisp Outline */}
-              <path d={svgPath(scaleX(LEG_L, fitK))} fill="#eed3ba" />
+              <path d={svgPath(scaleX(LEG_L, fitK))} fill="#f9e0cf" />
               <path d={svgPath(scaleX(LEG_L, fitK))} fill="url(#mannequin-canvas-texture)" opacity="0.35" />
               <path
                 d={svgPath(scaleX(LEG_L, fitK))}
@@ -1476,7 +1447,7 @@ interface BlouseDetailsResult {
               />
 
               {/* Right Leg: Flat 2D Linen Fill, Subtle Canvas Texture & Crisp Outline */}
-              <path d={svgPath(scaleX(LEG_R, fitK))} fill="#eed3ba" />
+              <path d={svgPath(scaleX(LEG_R, fitK))} fill="#f9e0cf" />
               <path d={svgPath(scaleX(LEG_R, fitK))} fill="url(#mannequin-canvas-texture)" opacity="0.35" />
               <path
                 d={svgPath(scaleX(LEG_R, fitK))}
@@ -2059,7 +2030,7 @@ interface BlouseDetailsResult {
                 {/* Left Arm Opaque Linen Base & Texture (Hides underlying skirt pleats & linework) */}
                 <path
                   d={svgPath(scaleX(ARM_L, fitK))}
-                  fill="#eed3ba"
+                  fill="#f9e0cf"
                 />
                 <path
                   d={svgPath(scaleX(ARM_L, fitK))}
@@ -2074,7 +2045,7 @@ interface BlouseDetailsResult {
                 {/* Right Arm Opaque Linen Base & Texture (Hides underlying skirt pleats & linework) */}
                 <path
                   d={svgPath(scaleX(ARM_R, fitK))}
-                  fill="#eed3ba"
+                  fill="#f9e0cf"
                 />
                 <path
                   d={svgPath(scaleX(ARM_R, fitK))}
@@ -2152,46 +2123,57 @@ interface BlouseDetailsResult {
               <g id="outstretched-arms-linework" filter="url(#arm-shadow)">
                 {/* Outstretched Arms Opaque Fills (Hides underlying background / linework) */}
                 <path
-                  d={svgPath(scaleX(ARM_OUT_L, fitK))}
-                  fill="#eed3ba"
+                  d={svgPath(scaleX(armOutL, fitK))}
+                  fill="#f9e0cf"
                 />
                 <path
-                  d={svgPath(scaleX(ARM_OUT_L, fitK))}
+                  d={svgPath(scaleX(armOutL, fitK))}
                   fill="url(#mannequin-arm-l)"
                 />
                 <path
-                  d={svgPath(scaleX(ARM_OUT_L, fitK))}
+                  d={svgPath(scaleX(armOutL, fitK))}
                   fill="url(#mannequin-canvas-texture)"
                   opacity="0.45"
                 />
                 <path
-                  d={svgPath(scaleX(ARM_OUT_R, fitK))}
-                  fill="#eed3ba"
+                  d={svgPath(scaleX(armOutR, fitK))}
+                  fill="#f9e0cf"
                 />
                 <path
-                  d={svgPath(scaleX(ARM_OUT_R, fitK))}
+                  d={svgPath(scaleX(armOutR, fitK))}
                   fill="url(#mannequin-arm-r)"
                 />
                 <path
-                  d={svgPath(scaleX(ARM_OUT_R, fitK))}
+                  d={svgPath(scaleX(armOutR, fitK))}
                   fill="url(#mannequin-canvas-texture)"
                   opacity="0.45"
                 />
 
-                <path d={svgPath(scaleX(ARM_OUT_L, fitK))} fill="none" stroke="#2a1f18" strokeWidth="1.25" opacity="0.8" strokeLinejoin="round" />
-                <path d={svgPath(scaleX(ARM_OUT_R, fitK))} fill="none" stroke="#2a1f18" strokeWidth="1.25" opacity="0.8" strokeLinejoin="round" />
+                <path d={svgPath(scaleX(armOutL, fitK))} fill="none" stroke="#2a1f18" strokeWidth="1.25" opacity="0.8" strokeLinejoin="round" />
+                <path d={svgPath(scaleX(armOutR, fitK))} fill="none" stroke="#2a1f18" strokeWidth="1.25" opacity="0.8" strokeLinejoin="round" />
 
                 {/* Gold Bangles (Churi) for Outstretched Arms */}
                 <g id="wrist-bangles-stretched" opacity="0.92">
-                  <path d={`M ${scaleX([[108, 418]], fitK)[0][0]} 418 Q ${scaleX([[114, 421]], fitK)[0][0]} 421 ${scaleX([[120, 418]], fitK)[0][0]} 418`} fill="none" stroke="#C7A66A" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d={`M ${scaleX([[109, 422]], fitK)[0][0]} 422 Q ${scaleX([[114, 425]], fitK)[0][0]} 425 ${scaleX([[120, 422]], fitK)[0][0]} 422`} fill="none" stroke="#b58d44" strokeWidth="1.3" strokeLinecap="round" />
-                  <path d={`M ${scaleX([[STAGE_W - 120, 418]], fitK)[0][0]} 418 Q ${scaleX([[STAGE_W - 114, 421]], fitK)[0][0]} 421 ${scaleX([[STAGE_W - 108, 418]], fitK)[0][0]} 418`} fill="none" stroke="#C7A66A" strokeWidth="1.6" strokeLinecap="round" />
-                  <path d={`M ${scaleX([[STAGE_W - 120, 422]], fitK)[0][0]} 422 Q ${scaleX([[STAGE_W - 114, 425]], fitK)[0][0]} 425 ${scaleX([[STAGE_W - 109, 422]], fitK)[0][0]} 422`} fill="none" stroke="#b58d44" strokeWidth="1.3" strokeLinecap="round" />
+                  {[50, 55].map((bx, i) =>
+                    [
+                      bendArm([[bx, 157], [bx - 1.5, 166], [bx, 175]]),
+                      mir(bendArm([[bx, 157], [bx - 1.5, 166], [bx, 175]])),
+                    ].map((b, j) => {
+                      const [p0, p1, p2] = scaleX(b, fitK);
+                      return (
+                      <path
+                        key={`bangle-${i}-${j}`}
+                        d={`M ${p0[0]} ${p0[1]} Q ${p1[0]} ${p1[1]} ${p2[0]} ${p2[1]}`}
+                        fill="none"
+                        stroke={i === 0 ? '#C7A66A' : '#b58d44'}
+                        strokeWidth={i === 0 ? 1.6 : 1.3}
+                        strokeLinecap="round"
+                      />
+                      );
+                    })
+                  )}
                 </g>
 
-                {/* Underarm Joint Peeks */}
-                <path d="M 166 182 Q 170 185 174 182" fill="none" stroke="#2b241e" strokeWidth="1.2" />
-                <path d="M 294 182 Q 290 185 286 182" fill="none" stroke="#2b241e" strokeWidth="1.2" />
               </g>
             )}
           </g>
@@ -2599,7 +2581,7 @@ interface BlouseDetailsResult {
               )}
 
               {/* Bell Sleeve Subtle Flare Lines */}
-              {sleeveId === 'bell' && (
+              {sleeveId === 'bell' && armPose === 'resting' && (
                 <g id="bell-sleeve-flares" opacity="0.45">
                   <path d="M 134 320 C 130 350 120 380 114 402" fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.95" strokeLinecap="round" />
                   <path d="M 148 315 C 146 348 144 378 142 400" fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.9" strokeLinecap="round" />
@@ -2642,22 +2624,15 @@ interface BlouseDetailsResult {
           {armPose === 'stretched' && sleevePts('l') && (
             <g id="stretched-sleeve-cuffs">
               {(() => {
-                let reach = 114;
-                if (sleeveId === 'cap') reach = 28;
-                else if (sleeveId === 'short') reach = 50;
-                else if (sleeveId === 'elbow') reach = 74;
-                else if (sleeveId === 'threequarter') reach = 94;
-                else if (sleeveId === 'full') reach = 114;
-
+                const { reach, hemDrop } = stretchDims(sleeveId);
                 const xEndL = 164 - reach;
-                const xEndR = STAGE_W - xEndL;
-                const yTop = 146 + reach * 0.1 - 2;
-                const yBot = 178 - reach * 0.05 + 3;
+                const hemL = scaleX(bendArm([[xEndL, 146 + reach * 0.1 - 2], [xEndL, 178 - reach * 0.05 + hemDrop + 1]]), fitK);
+                const hemR = mir(hemL);
 
                 return (
                   <>
-                    <line x1={xEndL} y1={yTop} x2={xEndL} y2={yBot} stroke={fabTheme.outlineColor} strokeWidth="1.5" strokeLinecap="round" />
-                    <line x1={xEndR} y1={yTop} x2={xEndR} y2={yBot} stroke={fabTheme.outlineColor} strokeWidth="1.5" strokeLinecap="round" />
+                    <line x1={hemL[0][0]} y1={hemL[0][1]} x2={hemL[1][0]} y2={hemL[1][1]} stroke={fabTheme.outlineColor} strokeWidth="1.5" strokeLinecap="round" />
+                    <line x1={hemR[0][0]} y1={hemR[0][1]} x2={hemR[1][0]} y2={hemR[1][1]} stroke={fabTheme.outlineColor} strokeWidth="1.5" strokeLinecap="round" />
                   </>
                 );
               })()}
@@ -2690,6 +2665,12 @@ interface BlouseDetailsResult {
               <clipPath id={`drape-clip-${i}`}>
                 <path d={svgPath(pts)} />
               </clipPath>
+              {/* Sheer dupatta fabric: the lehenga shows softly through */}
+              <path
+                d={svgPath(pts)}
+                fill={currentGarment === 'shirt' ? fab.c : fabTheme.drapeColor}
+                opacity={fabTheme.drapeOpacity * 0.86 * fade}
+              />
               <g clipPath={`url(#drape-clip-${i})`}>
                 {fabId === 'net' && <rect width={STAGE_W} height={STAGE_H} fill="url(#net-mesh)" />}
                 {fabId === 'banarasi' && <rect width={STAGE_W} height={STAGE_H} fill="url(#banarasi-butis)" />}
@@ -2724,9 +2705,9 @@ interface BlouseDetailsResult {
                 d={svgPath(pts)}
                 fill="none"
                 stroke={fabTheme.accentColor}
-                strokeWidth="1.1"
+                strokeWidth="2.2"
                 strokeDasharray={fabId === 'banarasi' ? '3 2' : undefined}
-                opacity="0.85"
+                opacity="0.9"
               />
             </g>
           ))}
@@ -2935,19 +2916,6 @@ interface BlouseDetailsResult {
         </aside>
       )}
 
-      {/* Layer Debug & Pose Indicator */}
-      <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between font-mono text-[9.5px] text-[#5a534c]/80 tracking-wider pointer-events-none z-10">
-        <span>
-          {(activeCategory.slot === 'fabric' || activeCategory.slot === 'drape'
-            ? 'dupatta'
-            : activeCategory.slot
-          ).replace(/[A-Z]/g, (m) => '_' + m.toLowerCase())}
-          _layer.svg · {optOf(activeCategory).name.toLowerCase()} · atelier preview
-        </span>
-        <span className="hidden sm:inline-block text-[#5a534c]/70">
-          pose: {armPose === 'stretched' ? 'outstretched (gravitational sleeve fall)' : 'natural resting'}
-        </span>
-      </div>
     </div>
   );
 };
