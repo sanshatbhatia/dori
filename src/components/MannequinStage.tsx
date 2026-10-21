@@ -817,7 +817,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
 
     // Top waist anatomical curve across the front
     const wTop = scaledProfile[0][1];
-    const waistDip = currentGarment === 'shirt' ? 2 : painted ? 0 : 4.5;
+    const waistDip = currentGarment === 'shirt' ? 2 : painted ? 2.5 : 4.5;
     const waistCurveSteps = 10;
     const waistTopCurve: number[][] = [];
     for (let i = 1; i < waistCurveSteps; i++) {
@@ -827,7 +827,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
       waistTopCurve.push([x, y]);
     }
 
-    return resample([...right, ...hem, ...left, ...waistTopCurve], 64);
+    return resample([...right, ...hem, ...left, ...waistTopCurve], 240);
   };
 
   const skirtFolds = () => {
@@ -1524,6 +1524,21 @@ interface BlouseDetailsResult {
             <clipPath id="skirt-clip">
               <path d={svgPath(currentGarment === 'shirt' ? botPts('trouser', 'floor', 300) : botPts(botGeo, lenId, botTop))} />
             </clipPath>
+            <linearGradient id="midriff-side-shade" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#b9826a" stopOpacity="0.32" />
+              <stop offset="0.22" stopColor="#b9826a" stopOpacity="0.06" />
+              <stop offset="0.5" stopColor="#ffffff" stopOpacity="0.08" />
+              <stop offset="0.78" stopColor="#b9826a" stopOpacity="0.06" />
+              <stop offset="1" stopColor="#b9826a" stopOpacity="0.32" />
+            </linearGradient>
+            <linearGradient id="midriff-top-shade" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#9c6a55" stopOpacity="0.28" />
+              <stop offset="1" stopColor="#9c6a55" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="midriff-bottom-shade" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#9c6a55" stopOpacity="0" />
+              <stop offset="1" stopColor="#9c6a55" stopOpacity="0.22" />
+            </linearGradient>
             <linearGradient id="painted-upper-arm-skin" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#f4d6c2" />
               <stop offset="45%" stopColor="#fae1ce" />
@@ -1548,6 +1563,9 @@ interface BlouseDetailsResult {
                 </>
               );
             })()}
+            <clipPath id="above-skirt-clip">
+              <rect x="0" y="0" width={STAGE_W} height={botTop + 1} />
+            </clipPath>
             <clipPath id="body-clip">
               <path d={svgPath(scaleX(BODY, fitK))} />
             </clipPath>
@@ -1570,7 +1588,18 @@ interface BlouseDetailsResult {
           <AvatarRenderer viewMode={viewMode} layer="rearHair" />
 
           {/* Painted skin across the torso (shows at the neckline and midriff) */}
-          {painted && paintedImage(PAINTED.skin, 'body-clip')}
+          {/* (stops at the skirt waistband so no skin peeks out beside it) */}
+          {painted && (
+            <g clipPath="url(#above-skirt-clip)">{paintedImage(PAINTED.skin, 'body-clip')}</g>
+          )}
+          {/* Midriff modelling: rounded sides and soft shade under the blouse and above the waistband */}
+          {painted && !isBack && (
+            <g clipPath="url(#body-clip)">
+              <rect x={STAGE_CX - 46} y={250} width={92} height={34} fill="url(#midriff-side-shade)" />
+              <rect x={STAGE_CX - 46} y={256} width={92} height={10} fill="url(#midriff-top-shade)" />
+              <rect x={STAGE_CX - 46} y={botTop - 5} width={92} height={6} fill="url(#midriff-bottom-shade)" />
+            </g>
+          )}
 
           {/* Avatar Anatomy & 2D Game Cel Linework */}
           <g id="mannequin-linework">
