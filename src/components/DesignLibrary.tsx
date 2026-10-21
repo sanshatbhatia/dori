@@ -72,6 +72,23 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
         </svg>
       );
     }
+    if (optId === 'halter') {
+      return (
+        <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>
+          {/* Ruched halter straps rising to the neck over a fitted bodice */}
+          <path
+            d="M 17 5 L 19 5 L 15 17 Q 20 18.5 25 17 L 21 5 L 23 5 L 29 17 L 28.5 32 L 11.5 32 L 11 17 Z"
+            fill="currentColor"
+            fillOpacity="0.18"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinejoin="round"
+          />
+          <path d="M 13.5 13 L 16.5 13.8 M 14.6 10 L 17.4 10.8 M 15.6 7 L 18.4 7.8 M 26.5 13 L 23.5 13.8 M 25.4 10 L 22.6 10.8 M 24.4 7 L 21.6 7.8" stroke="#b68235" strokeWidth="0.9" strokeLinecap="round" />
+          <path d="M 16 21 Q 16.5 26 16.5 31.5 M 24 21 Q 23.5 26 23.5 31.5" fill="none" stroke="currentColor" strokeWidth="0.75" opacity="0.6" />
+        </svg>
+      );
+    }
     if (optId === 'vneck') {
       return (
         <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>

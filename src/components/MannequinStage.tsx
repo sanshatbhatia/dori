@@ -34,6 +34,7 @@ import {
   PAINTED_LATKAN_ANCHOR,
   PAINTED_BACK,
   PAINTED_HEM_BACK_L,
+  HALTER_STRAP_OUTER_L,
   PAINTED_ARM_L,
   PAINTED_SLEEVES,
   ARM_UPPER_LEN,
@@ -517,8 +518,11 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     if (!s) {
       // On the painted figure the armhole curves up to a strap that starts inside the
       // shoulder tip, so no fabric juts out over the arm
-      const strapL = [[180.5, 157]];
-      const leftSleevePath = painted
+      const halter = painted && neckId === 'halter' && !isBack;
+      const strapL = halter ? [HALTER_STRAP_OUTER_L[HALTER_STRAP_OUTER_L.length - 1]] : [[180.5, 157]];
+      const leftSleevePath = halter
+        ? [underarmL, ...HALTER_STRAP_OUTER_L.slice(0, -1)]
+        : painted
         ? [underarmL, [175.5, 206], [173.5, 192], [174.5, 176], [177, 165]]
         : buildLeftSleevePath(sleeveId, armPose, tipL, underarmL);
       const rightSleevePath = mir(leftSleevePath).reverse();
@@ -2193,6 +2197,38 @@ interface BlouseDetailsResult {
               <rect x="228" y="150" width="4" height="140" fill="rgba(0,0,0,0.12)" />
             )}
           </g>
+
+          {/* Halter straps: gathered (ruched) fabric between the strap edges */}
+          {painted && neckId === 'halter' && !isBack && sleeveId === 'sleeveless' && (() => {
+            const inner = NECK.halter.pts.slice(0, 6);
+            const outer = [...HALTER_STRAP_OUTER_L].reverse().slice(0, 6);
+            const lerp = (pts: number[][], f: number) => {
+              const i = Math.min(pts.length - 2, Math.floor(f * (pts.length - 1)));
+              const u = f * (pts.length - 1) - i;
+              return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * u, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * u];
+            };
+            const folds: string[] = [];
+            for (let k = 1; k < 16; k++) {
+              const f = k / 16;
+              const a = lerp(inner, f), b = lerp(outer, f);
+              const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2 + (k % 2 ? 1.6 : -1.6)];
+              folds.push(`M ${a[0]} ${a[1]} Q ${m[0]} ${m[1]} ${b[0]} ${b[1]}`);
+            }
+            return (
+              <g id="halter-ruching" fill="none" strokeLinecap="round">
+                {[1, -1].map((sd) => (
+                  <g key={sd} transform={sd === -1 ? `translate(${STAGE_W} 0) scale(-1 1)` : undefined}>
+                    {folds.map((d, i) => (
+                      <g key={i}>
+                        <path d={d} stroke="rgba(0,0,0,0.22)" strokeWidth="0.9" />
+                        <path d={d} stroke="rgba(255,255,255,0.18)" strokeWidth="0.7" transform="translate(0 1.1)" />
+                      </g>
+                    ))}
+                  </g>
+                ))}
+              </g>
+            );
+          })()}
 
           {/* Blouse 2D Game Linework: Silhouette, Neckline, Seams & Darts */}
           <g id="blouse-linework">

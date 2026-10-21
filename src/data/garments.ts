@@ -103,6 +103,7 @@ export const GARMENTS: Record<GarmentKey, GarmentConfig> = {
 export const PREFERRED_WITH: Record<string, Record<string, string>> = {
   'blouseFront:corset': { neckline: 'square', sleeves: 'sleeveless' },
   'blouseFront:jacket': { sleeves: 'threequarter' },
+  'neckline:halter': { sleeves: 'sleeveless' },
 };
 
 /** Why a whole category can't be used with the current design, or null when it can */
@@ -149,8 +150,8 @@ export function checkCompatibilityReason(
   }
 
   if (cat.slot === 'sleeves') {
-    if (neck === 'halter' && ['sleeveless', 'cap'].indexOf(id) < 0) {
-      return 'A halter neckline leaves no shoulder seam to hang this sleeve from.';
+    if (neck === 'halter' && id !== 'sleeveless') {
+      return 'A halter leaves the shoulders bare, so it is always sleeveless.';
     }
     if (top === 'corset' && ['sleeveless', 'cap', 'short', 'puff'].indexOf(id) < 0) {
       return "Corset construction can't carry a longer sleeve.";
