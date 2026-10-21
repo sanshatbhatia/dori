@@ -69,7 +69,6 @@ export const GARMENTS: Record<GarmentKey, GarmentConfig> = {
           O('fitted', 'Fitted'),
           O('peplum', 'Peplum'),
           O('corset', 'Corset'),
-          O('wrap', 'Wrap'),
           O('jacket', 'Jacket'),
         ],
       },

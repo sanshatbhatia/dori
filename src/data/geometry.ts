@@ -425,19 +425,6 @@ export const TOP: Record<string, { right: number[][]; hemC?: number[][] }> = {
       [192.6, 276.4],
     ],
   },
-  wrap: {
-    right: [
-      [306, 216],
-      [300, 248],
-      [292, 280],
-      [288, 296],
-    ],
-    hemC: [
-      [266, 306],
-      [230, 296],
-      [194, 304],
-    ],
-  },
   jacket: {
     right: [
       [306, 218],
