@@ -14,7 +14,6 @@ const O = (id: string, name: string, extra?: Partial<ComponentOption>): Componen
 export const NECKS: ComponentOption[] = [
   O('notched', 'Notched Lapel'),
   O('sweetheart', 'Sweetheart'),
-  O('princess', 'Princess'),
   O('round', 'Round'),
   O('square', 'Square'),
   O('vneck', 'V-Neck'),
@@ -145,7 +144,7 @@ export function checkCompatibilityReason(
   const neck = get('neckline');
   const bot = get('bottom');
 
-  if (cat.slot === 'neckline' && top === 'corset' && ['sweetheart', 'square', 'vneck', 'princess'].indexOf(id) < 0) {
+  if (cat.slot === 'neckline' && top === 'corset' && ['sweetheart', 'square', 'vneck'].indexOf(id) < 0) {
     return 'A corset bodice only carries a structured neckline — try Sweetheart or Square.';
   }
 
