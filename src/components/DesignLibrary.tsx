@@ -72,6 +72,23 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
         </svg>
       );
     }
+    if (optId === 'sweetheart') {
+      return (
+        <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>
+          {/* Strapped bodice with a sweetheart neckline */}
+          <path
+            d="M 11 7 L 15 7 Q 15.5 15 20 21 Q 24.5 15 25 7 L 29 7 L 30 14 L 28.5 32 L 11.5 32 L 10 14 Z"
+            fill="currentColor"
+            fillOpacity="0.18"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            strokeLinejoin="round"
+          />
+          <path d="M 15 7.5 Q 15.5 15 20 21 Q 24.5 15 25 7.5" fill="none" stroke="#b68235" strokeWidth="1" />
+          <path d="M 16 23 Q 16.5 27 16.5 31.5 M 24 23 Q 23.5 27 23.5 31.5" fill="none" stroke="currentColor" strokeWidth="0.75" opacity="0.6" />
+        </svg>
+      );
+    }
     if (optId === 'jacket') {
       return (
         <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>
