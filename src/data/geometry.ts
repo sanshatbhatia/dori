@@ -900,14 +900,14 @@ export const PAINTED_SLEEVES: Record<string, { len: number; ease: number; flare:
 // Neck point, down the front opening to the hem, across to the side, up to the armpit,
 // and along the shoulder seam back to the neck.
 export const JACKET_PANEL_L: number[][] = [
-  [197, 151], [193, 166], [190, 186], [188.5, 212], [189, 240], [191.5, 270], [195, 302], [199.5, 337], [204, 372],
+  [199, 145.5], [195.6, 158], [192.4, 172], [190, 186], [188.5, 212], [189, 240], [191.5, 270], [195, 302], [199.5, 337], [204, 372],
   [186, 373.5], [166, 371.5], [146, 367],
   [150.5, 336], [157, 302], [165, 270], [171, 244], [176, 224], [178.4, 215],
-  [175, 192], [172, 172], [167.4, 160], [174, 157.6], [181, 155.6], [189, 153.2],
+  [175, 192], [172, 172], [167.4, 160], [174, 156.4], [181, 153.4], [188.5, 150], [194, 147.6],
 ];
 // Inner edge of the front opening, top to hem: where the embroidered placket runs
 export const JACKET_OPENING_L: number[][] = [
-  [197, 151], [193, 166], [190, 186], [188.5, 212], [189, 240], [191.5, 270], [195, 302], [199.5, 337], [204, 372],
+  [199, 145.5], [195.6, 158], [192.4, 172], [190, 186], [188.5, 212], [189, 240], [191.5, 270], [195, 302], [199.5, 337], [204, 372],
 ];
 
 // Back view painted from design/reference-lehenga-back.webp (scripts/painted-assets/build_back.py)

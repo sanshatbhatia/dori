@@ -501,6 +501,9 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   };
 
   // Top / Blouse / Bodice & Sleeves: Unified Continuous Silhouette
+  // The jacket set's choli sits under the jacket's own sleeves, so it is cut sleeveless
+  const bodiceSleeveId = painted && topStyleId === 'jacket' ? 'sleeveless' : sleeveId;
+
   const topPts = () => {
     const b = TOP[topStyleId] || TOP.fitted;
     const n = (isBack ? BACK_CUTS[geo('back', 'roundBack')] : NECK[neckId]) || NECK.round;
@@ -514,7 +517,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     const underarmR = right[0];
     const underarmL: [number, number] = [STAGE_W - underarmR[0], underarmR[1]];
 
-    const s = SLV[sleeveId];
+    const s = SLV[bodiceSleeveId];
 
     // 1. Sleeveless: standard sleeveless bodice silhouette with armhole scoop
     if (!s) {
@@ -527,7 +530,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
         ? [underarmL, ...HALTER_STRAP_OUTER_L.slice(0, -1)]
         : painted
         ? [underarmL, [175.5, 206], [173.5, 192], [174.5, 176], [177, 165]]
-        : buildLeftSleevePath(sleeveId, armPose, tipL, underarmL);
+        : buildLeftSleevePath(bodiceSleeveId, armPose, tipL, underarmL);
       const rightSleevePath = mir(leftSleevePath).reverse();
       const combined = [
         ...(painted ? strapL : shL_pts),
@@ -543,8 +546,8 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     }
 
     // 2. Cap sleeve or outstretched pose: underarm connects cleanly at underarm point
-    if (sleeveId === 'cap' || armPose === 'stretched') {
-      const leftSleevePath = buildLeftSleevePath(sleeveId, armPose, tipL, underarmL);
+    if (bodiceSleeveId === 'cap' || armPose === 'stretched') {
+      const leftSleevePath = buildLeftSleevePath(bodiceSleeveId, armPose, tipL, underarmL);
       const rightSleevePath = mir(leftSleevePath).reverse();
       const combined = [
         ...shL_pts,
@@ -562,10 +565,10 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     // 3. Resting pose with sleeves (short, puff, elbow, threequarter, full, bell):
     // The sleeve inner edge merges directly into the torso side seam at the natural junction point.
     // This completely eliminates the sharp triangular wedge between the blouse and sleeves.
-    const hemYTarget = sleeveId === 'puff' ? 245 : 150 + s.L;
+    const hemYTarget = bodiceSleeveId === 'puff' ? 245 : 150 + s.L;
     const junctionY = Math.min(hemYTarget - 6, 260);
 
-    const leftSleevePath = buildLeftSleevePath(sleeveId, armPose, tipL, underarmL);
+    const leftSleevePath = buildLeftSleevePath(bodiceSleeveId, armPose, tipL, underarmL);
     const rightSleevePath = mir(leftSleevePath).reverse();
 
     const junctionPtL = leftSleevePath[0];
@@ -1586,6 +1589,9 @@ interface BlouseDetailsResult {
                 </>
               );
             })()}
+            <clipPath id="below-collar-clip">
+              <rect x="0" y="150" width={STAGE_W} height={STAGE_H} />
+            </clipPath>
             <clipPath id="above-skirt-clip">
               <rect x="0" y="0" width={STAGE_W} height={botTop + 1} />
             </clipPath>
@@ -2172,7 +2178,18 @@ interface BlouseDetailsResult {
           )}
 
           {/* Blouse Fabric Base, Texture & Cel Shading Overlay */}
-          {painted ? paintedImage(PV.blouse, 'top-clip') : <path d={svgPath(topPts())} fill="url(#top-fabric-grad)" />}
+          {/* (a flat fill matched to the painted fabric backs the texture where it doesn't reach, e.g. a collar) */}
+          {painted && <path d={svgPath(topPts())} fill="#82a18b" />}
+          {painted ? (
+            isBack && neckId === 'halter' ? (
+              // the back texture fades out near the neck, so the halter collar uses the flat fill
+              <g clipPath="url(#below-collar-clip)">{paintedImage(PV.blouse, 'top-clip')}</g>
+            ) : (
+              paintedImage(PV.blouse, 'top-clip')
+            )
+          ) : (
+            <path d={svgPath(topPts())} fill="url(#top-fabric-grad)" />
+          )}
           <g clipPath="url(#top-clip)">
             {texKey === 'net' && <rect width={STAGE_W} height={STAGE_H} fill="url(#net-mesh)" />}
             {texKey === 'banarasi' && <rect width={STAGE_W} height={STAGE_H} fill="url(#banarasi-butis)" />}
@@ -2202,7 +2219,7 @@ interface BlouseDetailsResult {
           </g>
 
           {/* Halter: tonal diamond embroidery over the bodice, front and back */}
-          {painted && neckId === 'halter' && sleeveId === 'sleeveless' && (
+          {painted && neckId === 'halter' && bodiceSleeveId === 'sleeveless' && !(isBack && topStyleId === 'jacket') && (
             <g id="halter-embroidery" clipPath="url(#top-clip)" fill="none" stroke="#3e5f4b" strokeWidth="0.5" opacity="0.22">
               {Array.from({ length: 16 }, (_, i) => {
                 const o = (i - 8) * 13;
@@ -2678,7 +2695,7 @@ interface BlouseDetailsResult {
             const cloth = fabTheme.drapeColor;
             const panelL = scaleX(JACKET_PANEL_L, fitK);
             const panelR = mir(panelL);
-            const backPanel = [...panelL.slice(9), ...mir(panelL.slice(9)).reverse()];
+            const backPanel = [...panelL.slice(JACKET_OPENING_L.length), ...mir(panelL.slice(JACKET_OPENING_L.length)).reverse()];
             const opening = scaleX(JACKET_OPENING_L, fitK);
             const line = (pts: number[][]) => 'M ' + pts.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ');
             const offset = (pts: number[][], d: number) => pts.map(([x, y]) => [x - d, y]);
@@ -2692,7 +2709,7 @@ interface BlouseDetailsResult {
                 motifs.push([a[0] + (b[0] - a[0]) * f - 3.2, a[1] + (b[1] - a[1]) * f]);
               }
             }
-            const hemL = [panelL[8], panelL[9], panelL[10], panelL[11]];
+            const hemL = panelL.slice(JACKET_OPENING_L.length - 1, JACKET_OPENING_L.length + 3);
             const sleeves = [sleevePts('l'), sleevePts('r')].filter(Boolean) as number[][][];
             // cuff band on painted stretch-pose sleeves
             const cuffBand = (() => {
@@ -2796,7 +2813,7 @@ interface BlouseDetailsResult {
 
           <AvatarRenderer viewMode={viewMode} layer="frontHair" />
           {/* Halter mock collar: drawn over the painted neck, behind the long hair */}
-          {painted && neckId === 'halter' && !isBack && sleeveId === 'sleeveless' && (() => {
+          {painted && neckId === 'halter' && !isBack && bodiceSleeveId === 'sleeveless' && (() => {
             const P = (pts: number[][]) => scaleX(pts, fitK);
             const arm = P(HALTER_STRAP_OUTER_L);
             const top = P(NECK.halter.pts);
@@ -2827,14 +2844,35 @@ interface BlouseDetailsResult {
               </g>
             );
           })()}
+          {/* Painted back of the head and the long hair, over the blouse */}
+          {painted && isBack && paintedImage(PAINTED_BACK.head)}
+          {/* Halter collar at the nape: over the painted neck, but behind the long hair */}
+          {painted && isBack && neckId === 'halter' && (() => {
+            const H = PAINTED_BACK.head;
+            return (
+              <g id="halter-back-collar">
+                <mask id="back-collar-under-hair" maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE_W} height={STAGE_H}>
+                  <rect width={STAGE_W} height={STAGE_H} fill="#fff" />
+                  <image href={H.href} x={H.x} y={H.y} width={H.w} height={H.h} preserveAspectRatio="none" style={{ filter: 'grayscale(1) contrast(4) brightness(1.15)' }} />
+                </mask>
+                <clipPath id="back-collar-clip">
+                  <rect x="0" y="120" width={STAGE_W} height="32" />
+                </clipPath>
+                <g mask="url(#back-collar-under-hair)" clipPath="url(#back-collar-clip)">
+                  <path d={svgPath(topPts())} fill="#82a18b" />
+                  <path d={`M ${STAGE_CX - 13} 134 Q ${STAGE_CX} 136 ${STAGE_CX + 13} 134`} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.7" opacity="0.4" />
+                </g>
+              </g>
+            );
+          })()}
           {/* Halter from the back: teardrop keyhole below the collar showing the painted back skin
-              (the painted head and long hair are drawn after it, over the blouse) */}
-          {painted && isBack && neckId === 'halter' && sleeveId === 'sleeveless' && (() => {
+              (drawn over the collar, behind the long hair) */}
+          {painted && isBack && neckId === 'halter' && sleeveId === 'sleeveless' && topStyleId !== 'jacket' && (() => {
             const { top, bottom, half } = HALTER_KEYHOLE;
             const mid = top + (bottom - top) * 0.42;
             const d = `M ${STAGE_CX} ${top} C ${STAGE_CX - half * 0.7} ${top} ${STAGE_CX - half} ${mid - 22} ${STAGE_CX - half} ${mid} C ${STAGE_CX - half} ${mid + 30} ${STAGE_CX - 5} ${bottom - 18} ${STAGE_CX} ${bottom} C ${STAGE_CX + 5} ${bottom - 18} ${STAGE_CX + half} ${mid + 30} ${STAGE_CX + half} ${mid} C ${STAGE_CX + half} ${mid - 22} ${STAGE_CX + half * 0.7} ${top} ${STAGE_CX} ${top} Z`;
             return (
-              <g id="halter-keyhole">
+              <g id="halter-keyhole" mask="url(#back-collar-under-hair)">
                 <clipPath id="keyhole-clip"><path d={d} /></clipPath>
                 <g clipPath="url(#keyhole-clip)">
                   {paintedImage(PV.skin)}
@@ -2844,8 +2882,6 @@ interface BlouseDetailsResult {
               </g>
             );
           })()}
-          {/* Painted back of the head and the long hair, over the blouse */}
-          {painted && isBack && paintedImage(PAINTED_BACK.head)}
 
           {/* Shirt Specific Linework: Collar & Placket Buttons */}
           {currentGarment === 'shirt' && !isBack && (

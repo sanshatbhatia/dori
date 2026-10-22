@@ -150,7 +150,8 @@ export function checkCompatibilityReason(
   }
 
   if (cat.slot === 'sleeves') {
-    if (neck === 'halter' && id !== 'sleeveless') {
+    // with the jacket set the sleeves belong to the jacket, so the halter choli doesn't limit them
+    if (neck === 'halter' && top !== 'jacket' && id !== 'sleeveless') {
       return 'A halter leaves the shoulders bare, so it is always sleeveless.';
     }
     if (top === 'corset' && ['sleeveless', 'cap', 'short', 'puff'].indexOf(id) < 0) {
