@@ -2489,8 +2489,28 @@ interface BlouseDetailsResult {
                 );
               }
 
-              // The painted fabric already carries the front seams
-              if (painted) return null;
+              // The painted fabric carries the princess darts; the centre seam is drawn here so it
+              // always starts at the neckline's centre point
+              if (painted) {
+                if (isBack || (topStyleId !== 'fitted' && topStyleId !== 'jacket')) return null;
+                const neck = scaleX(NECK[neckId]?.pts || [], fitK);
+                const atCentre = neck.filter((q) => Math.abs(q[0] - STAGE_CX) < 0.5);
+                const top = atCentre.length ? Math.max(...atCentre.map((q) => q[1])) : Math.max(...neck.map((q) => q[1]));
+                const hemC = TOP[topStyleId]?.hemC || [];
+                const bottom = (hemC.find((q) => q[0] === STAGE_CX) || [STAGE_CX, 259])[1] - 1;
+                if (top >= bottom - 4) return null;
+                return (
+                  <path
+                    id="blouse-centre-seam"
+                    d={`M ${STAGE_CX} ${top + 0.6} L ${STAGE_CX} ${bottom}`}
+                    fill="none"
+                    stroke={fabTheme.outlineColor}
+                    strokeWidth="0.75"
+                    opacity="0.5"
+                    strokeLinecap="round"
+                  />
+                );
+              }
 
               if (bDet.isNotched) {
                 return (

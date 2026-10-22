@@ -97,7 +97,9 @@ save('skirt-texture',sk,np.ones(sk.shape[:2]),-pad[3],y0)
 # --- blouse texture (left half mirrored; hair and dupatta cover the right)
 bl_known=green&(((Y<282)&(Y>130))|sleeve_zone)&(Y>130)
 bl_known=erode(bl_known)
-img,k=mirror_fill(a,bl_known)
+# the painted centre seam sits a little right of the body axis; build the texture from the
+# left half only so it is symmetric, and draw the centre seam in code at the stage centre
+img,k=mirror_fill(a,bl_known&(X<=CX-1))
 pad=(0,140,0,140)
 big,kb=extend(img,k,(0,140,200,140))
 fill=pullpush(big,kb)
