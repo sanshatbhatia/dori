@@ -230,9 +230,10 @@ B = np.where(bl_sil[..., None], bl_full, np.array([247, 246, 242.]))
 B = np.where(sk_sil[..., None], skirt_full, B)
 # the painted right sleeve sits under the dupatta; treat it as backdrop so the cut-out
 # carries only the sheer cloth, never the sleeve (it would show over bare arms)
-right_sleeve = green & (X > CX + 20) & (Y > 140) & (Y < 300)
-right_sleeve = np.asarray(Image.fromarray((right_sleeve * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(15))) > 0
-B = np.where(right_sleeve[..., None], bl_full, B)
+# a green tint means sleeve fabric under the cloth; no tint means arm or background
+tint = (a[..., 1] - a[..., 0]) > 2
+upper_side = (X > CX + 20) & (Y > 140) & (Y < 330)
+B = np.where((upper_side & tint)[..., None], bl_full, np.where((upper_side & ~tint & ~sk_sil)[..., None], np.array([247, 246, 242.]), B))
 D = np.array([250, 244, 232.])
 diff = a - B; dirv = D - B
 al = np.clip((diff * dirv).sum(2) / np.maximum((dirv * dirv).sum(2), 1), 0, 1)
@@ -259,6 +260,19 @@ while q:
 al = np.where(keep, al, 0)
 col = np.where(al[..., None] > 0, (a - (1 - al[..., None]) * B) / np.maximum(al[..., None], 0.05), D)
 col = np.where((gold & pm)[..., None], a, np.clip(col, 0, 255))
+# the painted right elbow shows through the cloth here as a pink wedge; the app draws its own
+# arm elsewhere, so fill it in smoothly from the surrounding cloth (colour and sheerness)
+elbow = (X >= 356) & (X <= 418) & (Y >= 282) & (Y <= 364)
+ghost = elbow & (((a[..., 0] - a[..., 1]) > 8) | ((a[..., 0] - a[..., 2]) > 28)) & ~gold & (al > 0)
+ghost = np.asarray(Image.fromarray((ghost * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(7))) > 0
+ghost &= elbow & (al > 0)
+known = (al > 0.05) & ~ghost & ~gold & (Y > 250) & (Y < 400) & (X > 330)
+fill_col = pullpush(col, known)
+fill_al = pullpush(np.dstack([al] * 3), known)[..., 0]
+feather = np.asarray(Image.fromarray((ghost * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(2))) / 255.0
+feather = np.maximum(feather, ghost.astype(float))
+col = col * (1 - feather[..., None]) + fill_col * feather[..., None]
+al = np.where(al > 0, al * (1 - feather) + fill_al * feather, al)
 ys, xs = np.nonzero(al > 0)
 y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
 save('dupatta-one-shoulder-back', col[y0:y1, x0:x1], al[y0:y1, x0:x1], x0, y0)

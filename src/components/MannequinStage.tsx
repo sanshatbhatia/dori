@@ -1609,6 +1609,31 @@ interface BlouseDetailsResult {
             <clipPath id="below-collar-clip">
               <rect x="0" y="150" width={STAGE_W} height={STAGE_H} />
             </clipPath>
+            {/* The outstretched arm is in front of the painted dupatta below the shoulder (cloth painted
+                over it would be leftover painting floating over the arm) */}
+            <clipPath id="dupatta-off-arm-clip">
+              <path
+                clipRule="evenodd"
+                d={`M 0 0 H ${STAGE_W} V ${STAGE_H} H 0 Z ${
+                  armPose === 'stretched'
+                    ? svgPath(
+                        mir(
+                          (() => {
+                            const s0 = 30, s1 = ARM_UPPER_LEN + ARM_FORE_LEN + 60, n = 24;
+                            const side = (sd: 1 | -1) =>
+                              Array.from({ length: n + 1 }, (_, i) => {
+                                const a = armAt(s0 + ((s1 - s0) * i) / n);
+                                const m = a.w + 0.6; // just the arm itself: the cloth falls behind it
+                                return [a.p[0] + sd * a.n[0] * m, a.p[1] + sd * a.n[1] * m];
+                              });
+                            return [...side(1), ...side(-1).reverse()];
+                          })()
+                        )
+                      )
+                    : ''
+                }`}
+              />
+            </clipPath>
             <clipPath id="above-skirt-clip">
               <rect x="0" y="0" width={STAGE_W} height={botTop + 1} />
             </clipPath>
@@ -2952,7 +2977,7 @@ interface BlouseDetailsResult {
 
           {/* Dupatta / Drape Textures & 2D Game Linework */}
           {painted && drapeId === 'oneShoulder' && (
-            <g id="drape-painted" opacity={fade}>
+            <g id="drape-painted" opacity={fade} clipPath="url(#dupatta-off-arm-clip)">
               {paintedImage(PV.dupattaOneShoulder)}
             </g>
           )}

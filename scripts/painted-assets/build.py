@@ -166,6 +166,11 @@ bl_sil=mirror_mask(green&(((Y<282)&(Y>130))|sleeve_zone)&(X<CX))
 sk_sil=mirror_mask(green&(Y>=283)&~sleeve_zone&(X<CX))
 B=np.where(bl_sil[...,None], bl_full, np.array([247,246,242.]))
 B=np.where(sk_sil[...,None], skirt_full, B)
+# beside the body the painted sleeve isn't a mirror of the left one: a green tint means
+# sleeve fabric under the cloth, no tint means arm or background
+tint=(a[...,1]-a[...,0])>2
+upper_side=(X>CX+20)&(Y<330)
+B=np.where((upper_side&tint)[...,None], bl_full, np.where((upper_side&~tint&~sk_sil)[...,None], np.array([247,246,242.]), B))
 D=np.array([250,244,232.])
 diff=a-B; dirv=D-B
 al=np.clip((diff*dirv).sum(2)/np.maximum((dirv*dirv).sum(2),1),0,1)
