@@ -929,4 +929,4 @@ export const PAINTED_HEM_BACK_L: number[][] = [[11.3, 728.1], [18.3, 732.5], [25
 // Halter seen from the back: an open back with a band across the lower back, laced up the
 // centre; the neck cords cross in an X down to the top of the lacing
 export const HALTER_BACK_TOP: number[][] = [[181, 210], [205, 211], [230, 211.5], [255, 211], [279, 210]];
-export const HALTER_LACING = { top: 211.5, bottom: 259, gap: 5, loops: [217, 229, 241, 253] };
+export const HALTER_LACING = { top: 211.5, bottom: 259, gap: 6, loops: [216, 225.5, 235, 244.5] };

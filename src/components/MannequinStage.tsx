@@ -1258,6 +1258,16 @@ interface BlouseDetailsResult {
     />
   );
 
+  // Braided cord (halter ties): dark edge, base, and two offset strands for the twist
+  const braidedCord = (d: string, key: string, w = 1.8) => (
+    <g key={key} fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d={d} stroke={fabTheme.outlineColor} strokeWidth={w + 0.7} opacity="0.5" />
+      <path d={d} stroke="#86a690" strokeWidth={w} />
+      <path d={d} stroke="#c3d6c8" strokeWidth={w * 0.55} strokeDasharray="1.1 1.1" />
+      <path d={d} stroke="#5f826b" strokeWidth={w * 0.55} strokeDasharray="1.1 1.1" strokeDashoffset="1.1" />
+    </g>
+  );
+
   // Focus & Camera Zoom
   const f = FOCUS[activeCategory.slot] || FOCUS.topStyle;
   const isDetail = viewMode === 'detail';
@@ -1551,6 +1561,11 @@ interface BlouseDetailsResult {
               <stop offset="0" stopColor="#8a7055" stopOpacity="0.16" />
               <stop offset="0.45" stopColor="#ffffff" stopOpacity="0.1" />
               <stop offset="1" stopColor="#8a7055" stopOpacity="0.14" />
+            </linearGradient>
+            <linearGradient id="lacing-shade" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#7a5444" stopOpacity="0.3" />
+              <stop offset="0.5" stopColor="#7a5444" stopOpacity="0" />
+              <stop offset="1" stopColor="#7a5444" stopOpacity="0.3" />
             </linearGradient>
             <linearGradient id="midriff-side-shade" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0" stopColor="#b9826a" stopOpacity="0.32" />
@@ -2143,7 +2158,8 @@ interface BlouseDetailsResult {
                 </g>
 
                 {/* Painted forearms and hands from the reference artwork */}
-                {painted && <g mask="url(#painted-forearm-mask)">{paintedImage(PV.armsStretch)}</g>}
+                {/* (the front painting's forearms fit the arm skeleton, so the back view uses them too) */}
+                {painted && <g mask="url(#painted-forearm-mask)">{paintedImage(PAINTED.armsStretch)}</g>}
 
                 {/* Gold Bangles (Churi) for Outstretched Arms */}
                 <g id="wrist-bangles-stretched" opacity="0.92" display={painted ? 'none' : undefined}>
@@ -2235,7 +2251,7 @@ interface BlouseDetailsResult {
               <path d={`M ${STAGE_CX - 21 * fitK} 147.6 Q ${STAGE_CX} 148.3 ${STAGE_CX + 21 * fitK} 147.6`} stroke={fabTheme.outlineColor} strokeWidth="0.7" opacity="0.5" />
               {Array.from({ length: 17 }, (_, i) => {
                 const x = STAGE_CX + (i - 8) * 2.45 * fitK;
-                return <path key={`pk-${i}`} d={`M ${x} 141.6 Q ${x + (i % 2 ? 0.9 : -0.9)} 144.6 ${x} 147.2`} stroke="rgba(0,0,0,0.22)" strokeWidth="0.6" />;
+                return <path key={`pk-${i}`} d={`M ${x} 142 Q ${x + (i % 2 ? 0.45 : -0.45)} 144.6 ${x} 147`} stroke="rgba(0,0,0,0.16)" strokeWidth="0.45" />;
               })}
             </g>
           )}
@@ -2823,12 +2839,13 @@ interface BlouseDetailsResult {
               <g mask="url(#cord-under-hair)" fill="none" strokeLinecap="round">
                 {[1, -1].map((sd) => {
                   const X = (dx: number) => STAGE_CX + sd * dx * fitK;
-                  const d = `M ${X(-20.5)} 143 C ${X(-17)} 136 ${X(-14)} 130 ${X(-11.5)} 124`;
+                  // from the casing end, up the side of the neck, curving round behind it
+                  const d = `M ${X(-20.2)} 142.6 C ${X(-17.6)} 138.4 ${X(-15.2)} 134 ${X(-13.4)} 129.4`;
                   return (
                     <g key={sd}>
-                      <path d={d} stroke={fabTheme.outlineColor} strokeWidth="2.6" opacity="0.55" />
-                      <path d={d} stroke="#8fae98" strokeWidth="2" />
-                      <path d={d} stroke="#b9cfbf" strokeWidth="1.6" strokeDasharray="1 1.3" />
+                      {braidedCord(d, `cord-${sd}`, 1.7)}
+                      {/* shadow where the cord passes behind the neck */}
+                      <path d={`M ${X(-13.6)} 130 Q ${X(-11.4)} 128.4 ${X(-9.2)} 128.6`} stroke="rgba(120,80,60,0.3)" strokeWidth="1.4" />
                     </g>
                   );
                 })}
@@ -2843,39 +2860,58 @@ interface BlouseDetailsResult {
             const H = PAINTED_BACK.head;
             const { top, bottom, gap, loops } = HALTER_LACING;
             const xl = STAGE_CX - gap, xr = STAGE_CX + gap;
-            const cord = (d: string, key: string) => (
-              <g key={key}>
-                <path d={d} stroke={fabTheme.outlineColor} strokeWidth="2.4" opacity="0.55" />
-                <path d={d} stroke="#8fae98" strokeWidth="1.8" />
-                <path d={d} stroke="#b9cfbf" strokeWidth="1.4" strokeDasharray="1 1.2" />
-              </g>
-            );
+            const cord = (d: string, key: string, w = 1.4) => braidedCord(d, key, w);
+            const ex = 2.6; // eyelets sit just inside each edge of the opening
             return (
               <g id="halter-back-lacing" fill="none" strokeLinecap="round">
                 <mask id="back-cord-under-hair" maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE_W} height={STAGE_H}>
                   <rect width={STAGE_W} height={STAGE_H} fill="#fff" />
                   <image href={H.href} x={H.x} y={H.y} width={H.w} height={H.h} preserveAspectRatio="none" style={{ filter: 'grayscale(1) contrast(4) brightness(1.15)' }} />
                 </mask>
-                {/* skin showing in the laced opening */}
+                {/* skin showing in the laced opening, with a soft shadow at the fabric edges */}
                 <clipPath id="lacing-gap"><rect x={xl} y={top} width={xr - xl} height={bottom - top} /></clipPath>
-                <g clipPath="url(#lacing-gap)">{paintedImage(PV.skin)}</g>
-                <path d={`M ${xl} ${top} L ${xl} ${bottom} M ${xr} ${top} L ${xr} ${bottom}`} stroke={fabTheme.outlineColor} strokeWidth="0.8" opacity="0.6" />
-                {/* crossed neck cords */}
-                <g mask="url(#back-cord-under-hair)">
-                  {cord(`M ${STAGE_CX - 9} 127 C ${STAGE_CX - 4} 160 ${xr - 1} 190 ${xr + 1.5} ${top + 1}`, 'x1')}
-                  {cord(`M ${STAGE_CX + 9} 127 C ${STAGE_CX + 4} 160 ${xl + 1} 190 ${xl - 1.5} ${top + 1}`, 'x2')}
+                <g clipPath="url(#lacing-gap)">
+                  {paintedImage(PV.skin)}
+                  <rect x={xl} y={top} width={xr - xl} height={bottom - top} fill="url(#lacing-shade)" />
                 </g>
-                {/* lacing between the loops */}
-                {loops.slice(0, -1).map((y, i) => cord(`M ${xl - 1} ${y} L ${xr + 1} ${loops[i + 1]} M ${xr + 1} ${y} L ${xl - 1} ${loops[i + 1]}`, `l${i}`))}
+                <path d={`M ${xl} ${top} L ${xl} ${bottom} M ${xr} ${top} L ${xr} ${bottom}`} stroke={fabTheme.outlineColor} strokeWidth="0.75" opacity="0.6" />
+                {/* topstitched facing along both edges */}
+                <path d={`M ${xl - 1.4} ${top + 1} L ${xl - 1.4} ${bottom - 1} M ${xr + 1.4} ${top + 1} L ${xr + 1.4} ${bottom - 1}`} stroke={fabTheme.outlineColor} strokeWidth="0.45" strokeDasharray="1.2 1" opacity="0.45" />
+                {/* crossed neck cords, from the nape to the top eyelets */}
+                <g mask="url(#back-cord-under-hair)">
+                  {cord(`M ${STAGE_CX - 11.5} 127 C ${STAGE_CX - 9} 150 ${xr + 4} 180 ${xr - ex} ${loops[0]}`, 'x1')}
+                  {cord(`M ${STAGE_CX + 11.5} 127 C ${STAGE_CX + 9} 150 ${xl - 4} 180 ${xl + ex} ${loops[0]}`, 'x2')}
+                </g>
+                {/* criss-cross lacing between the eyelets */}
+                {loops.slice(0, -1).map((y, i) =>
+                  cord(`M ${xl + ex} ${y} Q ${STAGE_CX} ${(y + loops[i + 1]) / 2 + 0.6} ${xr - ex} ${loops[i + 1]} M ${xr - ex} ${y} Q ${STAGE_CX} ${(y + loops[i + 1]) / 2 + 0.6} ${xl + ex} ${loops[i + 1]}`, `l${i}`)
+                )}
+                {/* metal eyelets */}
                 {loops.map((y, i) => (
-                  <g key={`loop-${i}`}>
-                    <rect x={xl - 3.4} y={y - 2} width="2.6" height="4" rx="0.8" fill="#c8a24f" stroke={fabTheme.outlineColor} strokeWidth="0.4" />
-                    <rect x={xr + 0.8} y={y - 2} width="2.6" height="4" rx="0.8" fill="#c8a24f" stroke={fabTheme.outlineColor} strokeWidth="0.4" />
+                  <g key={`eyelet-${i}`}>
+                    {[xl + ex, xr - ex].map((x, j) => (
+                      <g key={j}>
+                        <circle cx={x} cy={y} r="1.35" fill="#e6cb86" stroke="#8a6a2f" strokeWidth="0.5" />
+                        <circle cx={x} cy={y} r="0.55" fill="#5b4a2a" />
+                      </g>
+                    ))}
                   </g>
                 ))}
-                {/* tie hanging below the hem */}
-                {cord(`M ${xl - 1} ${loops[loops.length - 1]} C ${STAGE_CX - 3} ${bottom + 4} ${STAGE_CX - 5} ${bottom + 14} ${STAGE_CX - 4} ${bottom + 26}`, 't1')}
-                {cord(`M ${xr + 1} ${loops[loops.length - 1]} C ${STAGE_CX + 3} ${bottom + 4} ${STAGE_CX + 4} ${bottom + 16} ${STAGE_CX + 2} ${bottom + 30}`, 't2')}
+                {/* bow at the bottom with two hanging ends tipped in gold */}
+                {(() => {
+                  const y = loops[loops.length - 1] + 2.5;
+                  return (
+                    <g>
+                      {cord(`M ${STAGE_CX} ${y} C ${STAGE_CX - 7} ${y - 6} ${STAGE_CX - 9} ${y + 2} ${STAGE_CX} ${y}`, 'bow-l', 1.2)}
+                      {cord(`M ${STAGE_CX} ${y} C ${STAGE_CX + 7} ${y - 6} ${STAGE_CX + 9} ${y + 2} ${STAGE_CX} ${y}`, 'bow-r', 1.2)}
+                      {cord(`M ${STAGE_CX} ${y} C ${STAGE_CX - 3} ${y + 8} ${STAGE_CX - 5} ${y + 16} ${STAGE_CX - 4} ${y + 24}`, 'end-l', 1.2)}
+                      {cord(`M ${STAGE_CX} ${y} C ${STAGE_CX + 3} ${y + 9} ${STAGE_CX + 4} ${y + 18} ${STAGE_CX + 3} ${y + 27}`, 'end-r', 1.2)}
+                      <circle cx={STAGE_CX} cy={y} r="1.5" fill="#86a690" stroke={fabTheme.outlineColor} strokeWidth="0.4" />
+                      <rect x={STAGE_CX - 5} y={y + 23} width="2" height="3.4" rx="0.8" fill="#c8a24f" />
+                      <rect x={STAGE_CX + 2} y={y + 26} width="2" height="3.4" rx="0.8" fill="#c8a24f" />
+                    </g>
+                  );
+                })()}
               </g>
             );
           })()}

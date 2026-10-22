@@ -228,6 +228,11 @@ bl_sil = mirror(green & (Y > 130) & (Y < 282) & (X < CX))
 sk_sil = mirror(green & (Y >= 286) & ~sleeve_zone & (X < CX))
 B = np.where(bl_sil[..., None], bl_full, np.array([247, 246, 242.]))
 B = np.where(sk_sil[..., None], skirt_full, B)
+# the painted right sleeve sits under the dupatta; treat it as backdrop so the cut-out
+# carries only the sheer cloth, never the sleeve (it would show over bare arms)
+right_sleeve = green & (X > CX + 20) & (Y > 140) & (Y < 300)
+right_sleeve = np.asarray(Image.fromarray((right_sleeve * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(15))) > 0
+B = np.where(right_sleeve[..., None], bl_full, B)
 D = np.array([250, 244, 232.])
 diff = a - B; dirv = D - B
 al = np.clip((diff * dirv).sum(2) / np.maximum((dirv * dirv).sum(2), 1), 0, 1)
@@ -239,6 +244,7 @@ pm = (reg | dup_poly) & dup_near
 al = np.where(pm, al, 0)
 al = np.where(gold & pm, 1, al)
 al = np.where(hair, 0, al)
+al = np.where(green & (Y < 300), 0, al)  # bare sleeve or blouse, not cloth
 al = np.where(al < 0.08, 0, al)
 grow = np.asarray(Image.fromarray(((al > 0.05) * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3))) > 0
 keep = np.zeros_like(grow)
