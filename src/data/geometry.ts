@@ -51,9 +51,8 @@ export const scaleX = (pts: number[][], k: number): number[][] =>
 
 // Halter armhole (left): from the underarm, cut in diagonally up to the neck
 export const HALTER_STRAP_OUTER_L: number[][] = [
-  [180, 207], [182.5, 197], [186.5, 187], [191.5, 176], [197, 164], [203, 152], [209, 141], [213.4, 133],
-  [216, 129.5], [217.4, 127],
-]
+  [180, 207], [183, 197], [187.5, 187], [192.5, 176], [197.5, 165], [202, 155], [205.5, 148], [208, 143],
+];
 
 export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = {
   // Sweetheart: rounded curves over the bust sweeping in to a soft V at centre front
@@ -168,14 +167,17 @@ export const NECK: Record<string, { pts: number[][]; sh?: [number, number] }> = 
       [262, 150],
     ],
   },
-  // Halter: high-neck halter; the bodice rises to a mock collar around the neck
+  // Halter: the bodice is gathered into a ruched casing at the base of the neck; braided
+  // cords run from its ends up round the neck
   halter: {
     pts: [
-      [218.6, 126.5],
-      [224, 128.6],
-      [230, 129.2],
-      [236, 128.6],
-      [241.4, 126.5],
+      [209, 142],
+      [216, 141.2],
+      [223, 140.8],
+      [230, 140.6],
+      [237, 140.8],
+      [244, 141.2],
+      [251, 142],
     ],
   },
   // Wide scoop with a small centre notch, measured from the reference artwork
@@ -924,7 +926,7 @@ export const PAINTED_BACK = {
 export const PAINTED_HEM_BACK_L: number[][] = [[11.3, 728.1], [18.3, 732.5], [25.3, 736.0], [32.3, 744.7], [39.3, 748.2], [46.2, 750.8], [53.2, 751.7], [60.2, 757.8], [67.2, 760.4], [74.2, 763.0], [81.2, 764.8], [88.1, 765.7], [95.1, 766.5], [102.1, 767.4], [109.1, 771.8], [116.1, 773.5], [123.1, 776.1], [130.0, 777.0], [137.0, 777.0], [144.0, 777.9], [151.0, 778.8], [158.0, 778.8], [165.0, 776.1], [171.9, 779.6], [178.9, 780.5], [185.9, 780.5], [192.9, 781.4], [199.9, 780.5], [206.9, 781.4], [213.9, 784.0], [220.8, 784.0], [227.8, 784.9], [230, 784.9]];
 
 
-// Halter seen from the back: the collar runs round the nape and a teardrop keyhole opens
-// below it, closed at the collar and pointed at the bottom
-export const HALTER_BACK_TOP: number[][] = [[218.6, 126.5], [230, 125.6], [241.4, 126.5]];
-export const HALTER_KEYHOLE = { top: 133, bottom: 222, half: 17 };
+// Halter seen from the back: an open back with a band across the lower back, laced up the
+// centre; the neck cords cross in an X down to the top of the lacing
+export const HALTER_BACK_TOP: number[][] = [[181, 210], [205, 211], [230, 211.5], [255, 211], [279, 210]];
+export const HALTER_LACING = { top: 211.5, bottom: 259, gap: 5, loops: [217, 229, 241, 253] };
