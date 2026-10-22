@@ -2877,10 +2877,27 @@ interface BlouseDetailsResult {
                 <path d={`M ${xl} ${top} L ${xl} ${bottom} M ${xr} ${top} L ${xr} ${bottom}`} stroke={fabTheme.outlineColor} strokeWidth="0.75" opacity="0.6" />
                 {/* topstitched facing along both edges */}
                 <path d={`M ${xl - 1.4} ${top + 1} L ${xl - 1.4} ${bottom - 1} M ${xr + 1.4} ${top + 1} L ${xr + 1.4} ${bottom - 1}`} stroke={fabTheme.outlineColor} strokeWidth="0.45" strokeDasharray="1.2 1" opacity="0.45" />
+                {/* nothing of the cords shows outside the neck's edges above the shoulders */}
+                <clipPath id="back-neck-cord-clip">
+                  <path d={`M ${STAGE_CX - 15.3} 100 L ${STAGE_CX - 15.3} 131 L ${STAGE_CX - 40} 150 L ${STAGE_CX - 40} ${STAGE_H} L ${STAGE_CX + 40} ${STAGE_H} L ${STAGE_CX + 40} 150 L ${STAGE_CX + 15.3} 131 L ${STAGE_CX + 15.3} 100 Z`} />
+                </clipPath>
                 {/* crossed neck cords, from the nape to the top eyelets */}
                 <g mask="url(#back-cord-under-hair)">
-                  {cord(`M ${STAGE_CX - 11.5} 127 C ${STAGE_CX - 9} 150 ${xr + 4} 180 ${xr - ex} ${loops[0]}`, 'x1')}
-                  {cord(`M ${STAGE_CX + 11.5} 127 C ${STAGE_CX + 9} 150 ${xl - 4} 180 ${xl + ex} ${loops[0]}`, 'x2')}
+                  {/* each cord comes round the side of the neck from the front, then crosses down the back */}
+                  {[1, -1].map((sd) => {
+                    const X = (dx: number) => STAGE_CX + sd * dx;
+                    const end = sd === 1 ? xr - ex : xl + ex;
+                    return (
+                      <g key={`neck-cord-${sd}`}>
+                        {/* shade on the neck where the cord turns round it */}
+                        <path d={`M ${X(-15.3)} 129.6 Q ${X(-14.9)} 131.8 ${X(-13.6)} 133.8`} stroke="rgba(110,70,55,0.28)" strokeWidth="2" strokeLinecap="round" />
+                        {/* starts at the edge of the neck so its turn round to the front stays out of sight */}
+                        <g clipPath="url(#back-neck-cord-clip)">
+                          {cord(`M ${X(-15.4)} 130.4 C ${X(-12.4)} 131 ${X(-9)} 133.2 ${X(-6.4)} 137.4 C ${X(-3.4)} 143.6 ${X(-1)} 160 ${X(1.5)} 178 S ${end} ${loops[0] - 6} ${end} ${loops[0]}`, `x${sd}`)}
+                        </g>
+                      </g>
+                    );
+                  })}
                 </g>
                 {/* criss-cross lacing between the eyelets */}
                 {loops.slice(0, -1).map((y, i) =>
