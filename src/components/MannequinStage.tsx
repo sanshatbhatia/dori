@@ -1009,6 +1009,7 @@ interface BlouseDetailsResult {
   lowerLatkanL?: { x: number; y: number } | null;
   lowerLatkanR?: { x: number; y: number } | null;
   showPotli?: boolean;
+  dori?: { y: number; xl: number; xr: number; tailEnd: number } | null;
   potliYs?: number[];
   dartLeft?: string;
   dartRight?: string;
@@ -1158,6 +1159,23 @@ interface BlouseDetailsResult {
       const showPotli = !hasLowerTie && (backStyle === 'roundBack' || backStyle === 'squareBack' || backStyle === 'keyholeBack');
       const potliYs = [182, 202, 222, 242, 262].filter((y) => y > neckLowestY + 4 && y < hem - 8);
 
+      // Dori: cords tied to both edges of the back opening, knotted in a bow at the centre,
+      // with two tails ending in latkans just below the blouse hem
+      const backPts = scaleX(n.pts, fitK);
+      const leftEdge = backPts.slice(0, Math.ceil(backPts.length / 2));
+      const edgeX = (y: number) => {
+        for (let i = 0; i < leftEdge.length - 1; i++) {
+          const [a, b] = [leftEdge[i], leftEdge[i + 1]];
+          if ((y - a[1]) * (y - b[1]) <= 0 && a[1] !== b[1]) return a[0] + ((y - a[1]) / (b[1] - a[1])) * (b[0] - a[0]);
+        }
+        return leftEdge[0][0];
+      };
+      const openTop = Math.min(...backPts.map((q) => q[1]));
+      const doriY = openTop + (neckLowestY - openTop) * 0.38;
+      const dori = plainV || hasLowerTie
+        ? null
+        : { y: doriY, xl: edgeX(doriY), xr: STAGE_W - edgeX(doriY), tailEnd: hem + 7 };
+
       const lowerTieY = hem - 10;
 
       return {
@@ -1179,6 +1197,7 @@ interface BlouseDetailsResult {
         // Potli buttons
         showPotli,
         potliYs,
+        dori,
         // Tailored Back Darts
         dartLeft: `M ${STAGE_CX - 34} ${Math.max(170, neckLowestY)} Q ${STAGE_CX - 30} 230 ${STAGE_CX - 26} ${hem}`,
         dartRight: `M ${STAGE_CX + 34} ${Math.max(170, neckLowestY)} Q ${STAGE_CX + 28} 230 ${STAGE_CX + 24} ${hem}`,
@@ -2450,7 +2469,55 @@ interface BlouseDetailsResult {
                       </g>
                     ))}
 
-                    {/* Upper Neck Dori & Designer Latkans */}
+                    {/* Upper dori: tied across the opening in a bow, tails ending in latkans */}
+                    {bDet.dori && (() => {
+                      const { y, xl, xr, tailEnd } = bDet.dori;
+                      const cx = STAGE_CX;
+                      const gold = (d: string, key: string, w = 1.25) => (
+                        <g key={key} fill="none" strokeLinecap="round" strokeLinejoin="round">
+                          <path d={d} stroke="#6b5222" strokeWidth={w + 0.6} opacity="0.55" />
+                          <path d={d} stroke="#c9a24e" strokeWidth={w} />
+                          <path d={d} stroke="#f0d998" strokeWidth={w * 0.5} strokeDasharray="1 1.1" />
+                        </g>
+                      );
+                      const latkan = (x: number, ty: number, key: string) => (
+                        <g key={key}>
+                          {/* gold cap bead, sage bell with gold rim, then a gold tassel */}
+                          <circle cx={x} cy={ty} r="1.5" fill="#d9b867" stroke="#6b5222" strokeWidth="0.4" />
+                          <path d={`M ${x} ${ty + 1.2} L ${x - 3.2} ${ty + 7.6} Q ${x} ${ty + 8.8} ${x + 3.2} ${ty + 7.6} Z`} fill={fabTheme.baseColor} stroke={fabTheme.outlineColor} strokeWidth="0.55" strokeLinejoin="round" />
+                          <path d={`M ${x - 3} ${ty + 7.5} Q ${x} ${ty + 8.7} ${x + 3} ${ty + 7.5}`} fill="none" stroke="#c9a24e" strokeWidth="0.8" />
+                          {[-2, -1, 0, 1, 2].map((k) => (
+                            <path key={k} d={`M ${x + k * 0.7} ${ty + 8.4} L ${x + k * 1.1} ${ty + 14 - Math.abs(k) * 0.6}`} stroke={k % 2 ? '#a9843c' : '#d9b867'} strokeWidth="0.55" strokeLinecap="round" />
+                          ))}
+                        </g>
+                      );
+                      // knot sits a little below the cord line; tails swing slightly apart
+                      const ky = y + 2.2;
+                      const tl = cx - 7.5, tr = cx + 8; // clear of the potli buttons down the centre
+                      return (
+                        <g id="back-dori">
+                          {/* cords from each edge of the opening to the knot */}
+                          {gold(`M ${xl + 0.5} ${y} Q ${(xl + cx) / 2} ${y + 3.2} ${cx - 1} ${ky}`, 'cord-l')}
+                          {gold(`M ${xr - 0.5} ${y} Q ${(xr + cx) / 2} ${y + 3.2} ${cx + 1} ${ky}`, 'cord-r')}
+                          {/* where the cords are stitched to the opening's edges */}
+                          <circle cx={xl + 0.6} cy={y} r="0.9" fill="#c9a24e" stroke="#6b5222" strokeWidth="0.35" />
+                          <circle cx={xr - 0.6} cy={y} r="0.9" fill="#c9a24e" stroke="#6b5222" strokeWidth="0.35" />
+                          {/* bow loops */}
+                          {gold(`M ${cx} ${ky} C ${cx - 4} ${ky - 6} ${cx - 10} ${ky - 3.5} ${cx - 8} ${ky + 0.5} C ${cx - 6.5} ${ky + 3} ${cx - 2.5} ${ky + 1.2} ${cx} ${ky}`, 'loop-l', 1.1)}
+                          {gold(`M ${cx} ${ky} C ${cx + 4} ${ky - 6} ${cx + 10} ${ky - 3.5} ${cx + 8} ${ky + 0.5} C ${cx + 6.5} ${ky + 3} ${cx + 2.5} ${ky + 1.2} ${cx} ${ky}`, 'loop-r', 1.1)}
+                          {/* tails hanging over the blouse and past its hem */}
+                          {gold(`M ${cx - 0.6} ${ky + 0.6} C ${cx - 3} ${ky + 18} ${tl + 1.5} ${tailEnd - 22} ${tl} ${tailEnd}`, 'tail-l', 1.1)}
+                          {gold(`M ${cx + 0.6} ${ky + 0.6} C ${cx + 3} ${ky + 20} ${tr - 1.5} ${tailEnd - 20} ${tr} ${tailEnd + 4}`, 'tail-r', 1.1)}
+                          <ellipse cx={cx} cy={ky} rx="1.8" ry="1.5" fill="#c9a24e" stroke="#6b5222" strokeWidth="0.45" />
+                          {latkan(tl, tailEnd, 'lat-l')}
+                          {latkan(tr, tailEnd + 4, 'lat-r')}
+                        </g>
+                      );
+                    })()}
+
+                    {/* Legacy upper dori (only when the back has no dori across its opening) */}
+                    {!bDet.dori && (
+                      <>
                     {bDet.tieBow && <path d={bDet.tieBow} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />}
                     {bDet.doriLeft && <path d={bDet.doriLeft} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
                     {bDet.doriRight && <path d={bDet.doriRight} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
@@ -2501,6 +2568,9 @@ interface BlouseDetailsResult {
                         <line x1={bDet.latkanR.x} y1={bDet.latkanR.y + 16.5} x2={bDet.latkanR.x} y2={bDet.latkanR.y + 23} stroke={fabTheme.accentColor} strokeWidth="0.9" strokeLinecap="round" />
                         <line x1={bDet.latkanR.x + 3} y1={bDet.latkanR.y + 15} x2={bDet.latkanR.x + 4} y2={bDet.latkanR.y + 21} stroke={fabTheme.outlineColor} strokeWidth="0.8" strokeLinecap="round" />
                       </g>
+                    )}
+
+                      </>
                     )}
 
                     {/* Lower Waist Dori & Latkans (if tieBack, deepBack, or cutOut) */}
