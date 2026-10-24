@@ -1288,6 +1288,57 @@ interface BlouseDetailsResult {
     </g>
   );
 
+  // Tassel (latkan): gold cap bead, rounded wrapped head, a bound neck, then a full skirt of
+  // fine threads that flare slightly and end unevenly. (x, y) is where it hangs from; L its length.
+  const tassel = (x: number, y: number, L: number, key: string) => {
+    const k = L / 16;
+    const capR = 1.25 * k;
+    const headTop = y + capR * 1.6;
+    const headBot = headTop + 4.2 * k;
+    const hw = 2.3 * k; // head half-width
+    const bandH = 1.3 * k;
+    const sTop = headBot + bandH;
+    const sBot = y + L;
+    const sw = 2.1 * k, bw = 3.4 * k; // skirt half-width at top and bottom
+    const n = 13;
+    const threads = Array.from({ length: n }, (_, i) => {
+      const f = i / (n - 1) - 0.5;
+      const x0 = x + f * 2 * sw;
+      const x1 = x + f * 2 * bw;
+      const end = sBot - (((i * 7) % 5) * 0.35 + Math.abs(f) * 1.2) * k;
+      const sway = (i % 3 - 1) * 0.25 * k;
+      return { d: `M ${x0} ${sTop} Q ${(x0 + x1) / 2 + sway} ${(sTop + end) / 2} ${x1} ${end}`, i };
+    });
+    return (
+      <g key={key} className="tassel">
+        {/* thread skirt: a soft base, then individual threads in light and dark gold */}
+        <path
+          d={`M ${x - sw} ${sTop} L ${x + sw} ${sTop} Q ${x + bw * 0.98} ${(sTop + sBot) / 2} ${x + bw} ${sBot - 1.2 * k} Q ${x} ${sBot + 0.4 * k} ${x - bw} ${sBot - 1.2 * k} Q ${x - bw * 0.98} ${(sTop + sBot) / 2} ${x - sw} ${sTop} Z`}
+          fill="url(#tassel-gold)"
+          opacity="0.95"
+        />
+        {threads.map((t) => (
+          <path key={t.i} d={t.d} fill="none" stroke={t.i % 3 === 0 ? '#7d5f22' : t.i % 3 === 1 ? '#f2dc9c' : '#c79f4c'} strokeWidth={0.32 * k} strokeLinecap="round" />
+        ))}
+        {/* wrapped head */}
+        <path
+          d={`M ${x - hw * 0.55} ${headTop} Q ${x - hw * 1.1} ${headTop + 1.6 * k} ${x - hw} ${headBot} L ${x + hw} ${headBot} Q ${x + hw * 1.1} ${headTop + 1.6 * k} ${x + hw * 0.55} ${headTop} Q ${x} ${headTop - 0.6 * k} ${x - hw * 0.55} ${headTop} Z`}
+          fill="url(#tassel-gold)"
+          stroke="#6b5222"
+          strokeWidth={0.22 * k}
+        />
+        {[0.3, 0.55, 0.8].map((f) => (
+          <path key={f} d={`M ${x - hw * (0.6 + f * 0.4)} ${headTop + f * (headBot - headTop)} Q ${x} ${headTop + f * (headBot - headTop) + 0.5 * k} ${x + hw * (0.6 + f * 0.4)} ${headTop + f * (headBot - headTop)}`} fill="none" stroke="#7d5f22" strokeWidth={0.18 * k} opacity="0.7" />
+        ))}
+        {/* bound neck */}
+        <rect x={x - sw - 0.25 * k} y={headBot} width={(sw + 0.25 * k) * 2} height={bandH} rx={0.4 * k} fill="#a9843c" stroke="#6b5222" strokeWidth={0.18 * k} />
+        <line x1={x - sw} y1={headBot + bandH / 2} x2={x + sw} y2={headBot + bandH / 2} stroke="#f2dc9c" strokeWidth={0.2 * k} />
+        {/* cap bead */}
+        <circle cx={x} cy={y + capR * 0.6} r={capR} fill="url(#tassel-bead)" stroke="#6b5222" strokeWidth={0.2 * k} />
+      </g>
+    );
+  };
+
   // Focus & Camera Zoom
   const f = FOCUS[activeCategory.slot] || FOCUS.topStyle;
   const isDetail = viewMode === 'detail';
@@ -1587,6 +1638,17 @@ interface BlouseDetailsResult {
               <stop offset="0.5" stopColor="#7a5444" stopOpacity="0" />
               <stop offset="1" stopColor="#7a5444" stopOpacity="0.3" />
             </linearGradient>
+            <linearGradient id="tassel-gold" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#9c7a33" />
+              <stop offset="0.35" stopColor="#e3c47a" />
+              <stop offset="0.55" stopColor="#f0d998" />
+              <stop offset="1" stopColor="#8c6c2b" />
+            </linearGradient>
+            <radialGradient id="tassel-bead" cx="0.35" cy="0.35" r="0.7">
+              <stop offset="0" stopColor="#fbeec2" />
+              <stop offset="0.5" stopColor="#d9b867" />
+              <stop offset="1" stopColor="#8c6c2b" />
+            </radialGradient>
             <linearGradient id="midriff-side-shade" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0" stopColor="#b9826a" stopOpacity="0.32" />
               <stop offset="0.22" stopColor="#b9826a" stopOpacity="0.06" />
@@ -1954,7 +2016,25 @@ interface BlouseDetailsResult {
                   className="transition-opacity duration-300"
                   transform={`translate(${ax} ${ay}) scale(${k}) translate(${-ax} ${-ay})`}
                 >
-                  {paintedImage(PAINTED.latkan)}
+                  {/* gold cord from the waistband with graduated beads, ending in a full tassel */}
+                  {(() => {
+                    const cordEnd = ay + 116;
+                    const beads = [ay + 22, ay + 46, ay + 68, ay + 88, ay + 104];
+                    return (
+                      <g>
+                        <path d={`M ${ax} ${ay} C ${ax - 1} ${ay + 40} ${ax + 1} ${ay + 80} ${ax} ${cordEnd}`} fill="none" stroke="#6b5222" strokeWidth="2.6" opacity="0.5" strokeLinecap="round" />
+                        <path d={`M ${ax} ${ay} C ${ax - 1} ${ay + 40} ${ax + 1} ${ay + 80} ${ax} ${cordEnd}`} fill="none" stroke="#c9a24e" strokeWidth="2" strokeLinecap="round" />
+                        <path d={`M ${ax} ${ay} C ${ax - 1} ${ay + 40} ${ax + 1} ${ay + 80} ${ax} ${cordEnd}`} fill="none" stroke="#f0d998" strokeWidth="0.9" strokeDasharray="1.4 1.4" strokeLinecap="round" />
+                        {beads.map((by, i) => (
+                          <g key={i}>
+                            <ellipse cx={ax} cy={by} rx={2.6 + i * 0.35} ry={2.9 + i * 0.4} fill="url(#tassel-bead)" stroke="#6b5222" strokeWidth="0.4" />
+                            <circle cx={ax} cy={by - 4.2 - i * 0.4} r="0.9" fill="#d9b867" stroke="#6b5222" strokeWidth="0.25" />
+                          </g>
+                        ))}
+                        {tassel(ax, cordEnd, 52, 'skirt-tassel')}
+                      </g>
+                    );
+                  })()}
                 </g>
               );
             })()}
@@ -2481,17 +2561,7 @@ interface BlouseDetailsResult {
                           <path d={d} stroke="#f0d998" strokeWidth={w * 0.5} strokeDasharray="1 1.1" />
                         </g>
                       );
-                      const latkan = (x: number, ty: number, key: string) => (
-                        <g key={key}>
-                          {/* gold cap bead, sage bell with gold rim, then a gold tassel */}
-                          <circle cx={x} cy={ty} r="1.5" fill="#d9b867" stroke="#6b5222" strokeWidth="0.4" />
-                          <path d={`M ${x} ${ty + 1.2} L ${x - 3.2} ${ty + 7.6} Q ${x} ${ty + 8.8} ${x + 3.2} ${ty + 7.6} Z`} fill={fabTheme.baseColor} stroke={fabTheme.outlineColor} strokeWidth="0.55" strokeLinejoin="round" />
-                          <path d={`M ${x - 3} ${ty + 7.5} Q ${x} ${ty + 8.7} ${x + 3} ${ty + 7.5}`} fill="none" stroke="#c9a24e" strokeWidth="0.8" />
-                          {[-2, -1, 0, 1, 2].map((k) => (
-                            <path key={k} d={`M ${x + k * 0.7} ${ty + 8.4} L ${x + k * 1.1} ${ty + 14 - Math.abs(k) * 0.6}`} stroke={k % 2 ? '#a9843c' : '#d9b867'} strokeWidth="0.55" strokeLinecap="round" />
-                          ))}
-                        </g>
-                      );
+                      const latkan = (x: number, ty: number, key: string) => tassel(x, ty, 15, key);
                       // knot sits a little below the cord line; tails swing slightly apart
                       const ky = y + 2.2;
                       const tl = cx - 7.5, tr = cx + 8; // clear of the potli buttons down the centre
@@ -2526,48 +2596,14 @@ interface BlouseDetailsResult {
                     {/* Upper Latkan Left */}
                     {bDet.latkanL && (
                       <g id="latkan-upper-left">
-                        <circle cx={bDet.latkanL.x} cy={bDet.latkanL.y} r="2.2" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
-                        <path
-                          d={`M ${bDet.latkanL.x} ${bDet.latkanL.y + 2} L ${bDet.latkanL.x - 5.5} ${bDet.latkanL.y + 13} Q ${bDet.latkanL.x} ${bDet.latkanL.y + 15} ${bDet.latkanL.x + 5.5} ${bDet.latkanL.y + 13} Z`}
-                          fill={fabTheme.baseColor}
-                          stroke={fabTheme.outlineColor}
-                          strokeWidth="1.1"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d={`M ${bDet.latkanL.x - 5} ${bDet.latkanL.y + 12.5} Q ${bDet.latkanL.x} ${bDet.latkanL.y + 14.5} ${bDet.latkanL.x + 5} ${bDet.latkanL.y + 12.5}`}
-                          fill="none"
-                          stroke={fabTheme.accentColor}
-                          strokeWidth="1.0"
-                        />
-                        <circle cx={bDet.latkanL.x} cy={bDet.latkanL.y + 15} r="1.3" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.6" />
-                        <line x1={bDet.latkanL.x - 3} y1={bDet.latkanL.y + 15} x2={bDet.latkanL.x - 4} y2={bDet.latkanL.y + 21} stroke={fabTheme.outlineColor} strokeWidth="0.8" strokeLinecap="round" />
-                        <line x1={bDet.latkanL.x} y1={bDet.latkanL.y + 16.5} x2={bDet.latkanL.x} y2={bDet.latkanL.y + 23} stroke={fabTheme.accentColor} strokeWidth="0.9" strokeLinecap="round" />
-                        <line x1={bDet.latkanL.x + 3} y1={bDet.latkanL.y + 15} x2={bDet.latkanL.x + 4} y2={bDet.latkanL.y + 21} stroke={fabTheme.outlineColor} strokeWidth="0.8" strokeLinecap="round" />
+                        {tassel(bDet.latkanL.x, bDet.latkanL.y, 15, 'upper-L')}
                       </g>
                     )}
 
                     {/* Upper Latkan Right */}
                     {bDet.latkanR && (
                       <g id="latkan-upper-right">
-                        <circle cx={bDet.latkanR.x} cy={bDet.latkanR.y} r="2.2" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
-                        <path
-                          d={`M ${bDet.latkanR.x} ${bDet.latkanR.y + 2} L ${bDet.latkanR.x - 5.5} ${bDet.latkanR.y + 13} Q ${bDet.latkanR.x} ${bDet.latkanR.y + 15} ${bDet.latkanR.x + 5.5} ${bDet.latkanR.y + 13} Z`}
-                          fill={fabTheme.baseColor}
-                          stroke={fabTheme.outlineColor}
-                          strokeWidth="1.1"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d={`M ${bDet.latkanR.x - 5} ${bDet.latkanR.y + 12.5} Q ${bDet.latkanR.x} ${bDet.latkanR.y + 14.5} ${bDet.latkanR.x + 5} ${bDet.latkanR.y + 12.5}`}
-                          fill="none"
-                          stroke={fabTheme.accentColor}
-                          strokeWidth="1.0"
-                        />
-                        <circle cx={bDet.latkanR.x} cy={bDet.latkanR.y + 15} r="1.3" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.6" />
-                        <line x1={bDet.latkanR.x - 3} y1={bDet.latkanR.y + 15} x2={bDet.latkanR.x - 4} y2={bDet.latkanR.y + 21} stroke={fabTheme.outlineColor} strokeWidth="0.8" strokeLinecap="round" />
-                        <line x1={bDet.latkanR.x} y1={bDet.latkanR.y + 16.5} x2={bDet.latkanR.x} y2={bDet.latkanR.y + 23} stroke={fabTheme.accentColor} strokeWidth="0.9" strokeLinecap="round" />
-                        <line x1={bDet.latkanR.x + 3} y1={bDet.latkanR.y + 15} x2={bDet.latkanR.x + 4} y2={bDet.latkanR.y + 21} stroke={fabTheme.outlineColor} strokeWidth="0.8" strokeLinecap="round" />
+                        {tassel(bDet.latkanR.x, bDet.latkanR.y, 15, 'upper-R')}
                       </g>
                     )}
 
@@ -2583,33 +2619,13 @@ interface BlouseDetailsResult {
                         {/* Lower Latkan Left */}
                         {bDet.lowerLatkanL && (
                           <g id="latkan-lower-left">
-                            <circle cx={bDet.lowerLatkanL.x} cy={bDet.lowerLatkanL.y} r="2.0" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
-                            <path
-                              d={`M ${bDet.lowerLatkanL.x} ${bDet.lowerLatkanL.y + 2} L ${bDet.lowerLatkanL.x - 4.5} ${bDet.lowerLatkanL.y + 11} Q ${bDet.lowerLatkanL.x} ${bDet.lowerLatkanL.y + 13} ${bDet.lowerLatkanL.x + 4.5} ${bDet.lowerLatkanL.y + 11} Z`}
-                              fill={fabTheme.baseColor}
-                              stroke={fabTheme.outlineColor}
-                              strokeWidth="1.0"
-                              strokeLinejoin="round"
-                            />
-                            <line x1={bDet.lowerLatkanL.x - 2} y1={bDet.lowerLatkanL.y + 12} x2={bDet.lowerLatkanL.x - 3} y2={bDet.lowerLatkanL.y + 17} stroke={fabTheme.outlineColor} strokeWidth="0.75" strokeLinecap="round" />
-                            <line x1={bDet.lowerLatkanL.x} y1={bDet.lowerLatkanL.y + 13} x2={bDet.lowerLatkanL.x} y2={bDet.lowerLatkanL.y + 19} stroke={fabTheme.accentColor} strokeWidth="0.85" strokeLinecap="round" />
-                            <line x1={bDet.lowerLatkanL.x + 2} y1={bDet.lowerLatkanL.y + 12} x2={bDet.lowerLatkanL.x + 3} y2={bDet.lowerLatkanL.y + 17} stroke={fabTheme.outlineColor} strokeWidth="0.75" strokeLinecap="round" />
+                            {tassel(bDet.lowerLatkanL.x, bDet.lowerLatkanL.y, 14, 'lower-L')}
                           </g>
                         )}
                         {/* Lower Latkan Right */}
                         {bDet.lowerLatkanR && (
                           <g id="latkan-lower-right">
-                            <circle cx={bDet.lowerLatkanR.x} cy={bDet.lowerLatkanR.y} r="2.0" fill={fabTheme.accentColor} stroke={fabTheme.outlineColor} strokeWidth="0.8" />
-                            <path
-                              d={`M ${bDet.lowerLatkanR.x} ${bDet.lowerLatkanR.y + 2} L ${bDet.lowerLatkanR.x - 4.5} ${bDet.lowerLatkanR.y + 11} Q ${bDet.lowerLatkanR.x} ${bDet.lowerLatkanR.y + 13} ${bDet.lowerLatkanR.x + 4.5} ${bDet.lowerLatkanR.y + 11} Z`}
-                              fill={fabTheme.baseColor}
-                              stroke={fabTheme.outlineColor}
-                              strokeWidth="1.0"
-                              strokeLinejoin="round"
-                            />
-                            <line x1={bDet.lowerLatkanR.x - 2} y1={bDet.lowerLatkanR.y + 12} x2={bDet.lowerLatkanR.x - 3} y2={bDet.lowerLatkanR.y + 17} stroke={fabTheme.outlineColor} strokeWidth="0.75" strokeLinecap="round" />
-                            <line x1={bDet.lowerLatkanR.x} y1={bDet.lowerLatkanR.y + 13} x2={bDet.lowerLatkanR.x} y2={bDet.lowerLatkanR.y + 19} stroke={fabTheme.accentColor} strokeWidth="0.85" strokeLinecap="round" />
-                            <line x1={bDet.lowerLatkanR.x + 2} y1={bDet.lowerLatkanR.y + 12} x2={bDet.lowerLatkanR.x + 3} y2={bDet.lowerLatkanR.y + 17} stroke={fabTheme.outlineColor} strokeWidth="0.75" strokeLinecap="round" />
+                            {tassel(bDet.lowerLatkanR.x, bDet.lowerLatkanR.y, 14, 'lower-R')}
                           </g>
                         )}
                       </g>
