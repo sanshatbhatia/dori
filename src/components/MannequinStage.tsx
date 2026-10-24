@@ -1171,7 +1171,8 @@ interface BlouseDetailsResult {
         return leftEdge[0][0];
       };
       const openTop = Math.min(...backPts.map((q) => q[1]));
-      const doriY = openTop + (neckLowestY - openTop) * 0.38;
+      // tied just below the top of the opening, across the upper back
+      const doriY = openTop + 7;
       const dori = plainV || hasLowerTie
         ? null
         : { y: doriY, xl: edgeX(doriY), xr: STAGE_W - edgeX(doriY), tailEnd: hem + 7 };
