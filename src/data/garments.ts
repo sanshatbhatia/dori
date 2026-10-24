@@ -75,13 +75,7 @@ export const GARMENTS: Record<GarmentKey, GarmentConfig> = {
       { id: 'sleeves', label: 'Sleeves', short: 'Sleeve', slot: 'sleeves', opts: SLEEVES },
       { id: 'blouseBack', label: 'Blouse Back', short: 'Back', slot: 'back', opts: BACKS },
       { id: 'skirt', label: 'Skirt', short: 'Skirt', slot: 'bottom', opts: BOTTOMS },
-      {
-        id: 'skirtLength',
-        label: 'Skirt Length',
-        short: 'Length',
-        slot: 'bottomLength',
-        opts: [O('tea', 'Tea'), O('ankle', 'Ankle'), O('floor', 'Floor'), O('trail', 'Trail')],
-      },
+      // (Skirt Length is left out of the MVP: every skirt is floor length)
       {
         id: 'dupattaDrape',
         label: 'Dupatta Drape',
@@ -125,7 +119,6 @@ export function getDefaults(gk: GarmentKey = 'lehenga'): SelectionState {
   s.sleeves = 'flared';
   s.blouseBack = 'deepBack';
   s.skirt = 'pleated';
-  s.skirtLength = 'floor';
   s.dupattaDrape = 'oneShoulder';
   return s;
 }
