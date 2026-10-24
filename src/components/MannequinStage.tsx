@@ -35,6 +35,7 @@ import {
   PAINTED_BACK,
   DRAPES,
   DRAPES_BACK,
+  type DrapePiece,
   KEYHOLE_BACK,
   TIE_BACK_WINDOW,
   CUT_OUT_BACK,
@@ -249,6 +250,75 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     const top = armAt(0);
     const cap = [top.p[0] + top.n[0] * (top.w + ease) - top.t[0] * 6, top.p[1] + top.n[1] * (top.w + ease) - top.t[1] * 6];
     return [PAINTED_ARM_L.armpit, ...inner, ...outer, cap, PAINTED_ARM_L.tip];
+  };
+
+  // Both-shoulders cape (left front panel) built on the figure so it rests on the body: a
+  // standing border up the side of the neck, along the shoulder seam, over the shoulder cap and
+  // down the outside of whichever sleeve is chosen to the elbow, then hanging straight from there
+  // to a hem that dips to a point at the outer corner. The lapel edge runs down beside the bust.
+  const capeFrontL = (): DrapePiece => {
+    const m = 2.5; // cloth thickness off the garment underneath
+    let over: number[][];
+    if (bodiceSleeveId === 'flared') {
+      const pts = PAINTED_FLARED_SLEEVE_L;
+      const i0 = pts.findIndex(([x, y]) => x === 81.2 && y === 261.1);
+      over = pts.slice(i0).reverse().map(([x, y]) => [x - m, y - m * 0.4]);
+      over.push([82.9 - m, 268.1]);
+    } else {
+      const spec = PAINTED_SLEEVES[bodiceSleeveId];
+      const sEnd = ARM_UPPER_LEN + 6;
+      over = Array.from({ length: 13 }, (_, i) => {
+        const sAt = -4 + ((sEnd + 4) * i) / 12;
+        const a = armAt(sAt);
+        let extra = 0;
+        if (spec && sAt <= spec.len) {
+          const flareFrom = spec.flareFrom ?? spec.len * 0.6;
+          const f = Math.max(0, (sAt - flareFrom) / Math.max(1, spec.len - flareFrom));
+          extra = spec.ease + spec.flare * Math.pow(f, 1.3) + spec.puff * Math.sin((Math.PI * Math.max(0, sAt)) / spec.len);
+        }
+        return [a.p[0] + a.n[0] * (a.w + extra + m), a.p[1] + a.n[1] * (a.w + extra + m)];
+      });
+      over.unshift([PAINTED_ARM_L.tip[0] - 1, PAINTED_ARM_L.tip[1] - m]);
+    }
+    const [ex, ey] = over[over.length - 1];
+    const hemY = 652;
+    // below the elbow the cloth hangs free, flaring a little toward the hem
+    const drop = [0.18, 0.4, 0.62, 0.84, 1].map((t) => {
+      const y = ey + (hemY - ey) * t;
+      return [ex - 10 * t - 3 * Math.sin(Math.PI * t), y];
+    });
+    const neck = [[213, 141], [208, 151]];
+    const shoulder = [[198, 154], [187, 156.5], [176, 158.5]];
+    const lapel = [[213, 141], [207, 158], [200, 180], [194.5, 205], [190.5, 235], [188.5, 270], [186.5, 330], [184.5, 420], [182.5, 510], [181, 594]];
+    const outerHem = drop[drop.length - 1];
+    const hem = [0.2, 0.4, 0.6, 0.8].map((t) => {
+      const x = outerHem[0] + (181 - outerHem[0]) * t;
+      const y = hemY - (hemY - 594) * Math.pow(t, 1.2) + Math.sin(t * Math.PI * 3) * 2.2;
+      return [x, y];
+    });
+    const outer = [...over, ...drop];
+    const poly = [...neck, ...shoulder, ...outer, ...hem, ...lapel.slice().reverse().slice(0, -1)];
+    // folds fall from the shoulder: they fan out from the shoulder cap to the hem, and a few run
+    // straight down beside the lapel
+    const tip = over[1];
+    const hemAt = (t: number) => [outerHem[0] + (181 - outerHem[0]) * t, hemY - (hemY - 594) * Math.pow(t, 1.2)];
+    const folds = [0.12, 0.3, 0.5].map((t, i) => {
+      const [hx, hy] = hemAt(t);
+      const sx = tip[0] + 6 + i * 6, sy = tip[1] + 4 + i * 2;
+      return [[sx, sy], [sx + (hx - sx) * 0.3 - 6, sy + (hy - sy) * 0.3], [sx + (hx - sx) * 0.65 - 3, sy + (hy - sy) * 0.65], [hx, hy - 4]];
+    });
+    [0.7, 0.86].forEach((t) => {
+      const [hx, hy] = hemAt(t);
+      const sx = 186 + t * 8;
+      folds.push([[sx, 165], [sx - 6, 240], [hx + 2, 400], [hx, hy - 4]]);
+    });
+    return {
+      poly,
+      borders: [lapel, [outerHem, ...hem, [181, 594]]],
+      folds,
+      corners: [outerHem, [181, 594]],
+      butis: true,
+    };
   };
 
   // Bare upper arm (shoulder to just past the elbow) that the painted forearm continues from
@@ -1938,6 +2008,18 @@ interface BlouseDetailsResult {
             )}
           </defs>
 
+          {/* The back of the both-shoulders cape, behind the figure: it shows (a second sheer layer)
+              in the gaps between the arms and the body and behind the neck */}
+          {painted && drapeId === 'bothShoulders' && !isBack && armPose === 'stretched' && (() => {
+            const c = capeFrontL();
+            return (
+              <g id="drape-cape-back" opacity={fade}>
+                <path d={svgPath(c.poly)} fill={fabTheme.drapeColor} opacity="0.5" />
+                <path d={svgPath(mir(c.poly))} fill={fabTheme.drapeColor} opacity="0.5" />
+                <path d={`M 205 150 Q 230 138 255 150 L 255 175 L 205 175 Z`} fill={fabTheme.drapeColor} opacity="0.7" />
+              </g>
+            );
+          })()}
           {/* Avatar Rear Hair (Layer Behind Shoulders & Torso) */}
           {!(painted && isBack) && <AvatarRenderer viewMode={viewMode} layer="rearHair" />}
 
@@ -3489,7 +3571,13 @@ interface BlouseDetailsResult {
           {/* Drapes styled after the references: sheer net with soft folds, a gold zari border with
               woven motifs, scattered butis and small tassels at the hem corners */}
           {painted && DRAPES[drapeId] && (() => {
-            const ps = (isBack ? DRAPES_BACK : DRAPES)[drapeId] || [];
+            const capeOnFigure = drapeId === 'bothShoulders' && !isBack && armPose === 'stretched';
+            const mirPiece = (p: DrapePiece): DrapePiece => ({
+              poly: mir(p.poly), borders: p.borders.map(mir), folds: p.folds.map(mir), corners: p.corners && mir(p.corners), butis: p.butis,
+            });
+            const ps = capeOnFigure
+              ? (() => { const c = capeFrontL(); return [c, mirPiece(c)]; })()
+              : (isBack ? DRAPES_BACK : DRAPES)[drapeId] || [];
             const open = (pts: number[][]) => {
               if (pts.length < 3) return 'M ' + pts.map((q) => q.join(' ')).join(' L ');
               let d = `M ${pts[0][0]} ${pts[0][1]}`;
@@ -3515,7 +3603,15 @@ interface BlouseDetailsResult {
             };
             return (
               <g id="drape-styled" opacity={fade}>
-                <g clipPath={isBack ? undefined : 'url(#drape-off-forearms-clip)'}>
+                <g clipPath={isBack || capeOnFigure ? undefined : 'url(#drape-off-forearms-clip)'}>
+                {capeOnFigure && (
+                  // soft shadow the lapel edge casts on the blouse and skirt beside it
+                  <g filter="url(#drape-fold-blur)" fill="none" strokeLinecap="round">
+                    {ps.map((p, i) => (
+                      <path key={i} d={open(p.borders[0].map(([x, y]) => [x + (x < STAGE_CX ? 4.5 : -4.5), y + 2]))} stroke="rgba(40,52,40,0.28)" strokeWidth="5" />
+                    ))}
+                  </g>
+                )}
                 {ps.map((p, i) => {
                   const outline = closed(p.poly);
                   const xs = p.poly.map((q) => q[0]), ys = p.poly.map((q) => q[1]);
@@ -3560,6 +3656,10 @@ interface BlouseDetailsResult {
                         ))}
                       </g>
                       <path d={outline} fill="none" stroke="rgba(110,86,52,0.5)" strokeWidth="0.6" />
+                      {capeOnFigure && (
+                        // where the cloth rests on the shoulder it catches the light
+                        <path d={open(p.poly.slice(0, 6))} fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.2" filter="url(#drape-fold-blur)" />
+                      )}
                       {(p.corners || []).map(([cx, cy], j) => tassel(cx, cy - 1, 16, `drape-tassel-${i}-${j}`))}
                     </g>
                   );
