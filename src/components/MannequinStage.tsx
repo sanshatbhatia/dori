@@ -831,9 +831,11 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
       const [lastT, hw] = scaledProfile[scaledProfile.length - 1];
       const cornerY = top + lastT * hh;
       const centerY = top + hh + (lastT < 1 ? 0 : 8);
-      for (let i = 1; i < 12; i++) {
-        const f = i / 12;
-        hem.push([STAGE_CX + hw - 2 * hw * f, cornerY + Math.sin(f * Math.PI) * (centerY - cornerY)]);
+      const hemSteps = bg === 'tiered' ? 44 : 12;
+      for (let i = 1; i < hemSteps; i++) {
+        const f = i / hemSteps;
+        const wave = bg === 'tiered' ? Math.sin(f * Math.PI * 22) * 1.4 : 0;
+        hem.push([STAGE_CX + hw - 2 * hw * f, cornerY + Math.sin(f * Math.PI) * (centerY - cornerY) + wave]);
       }
     }
 
@@ -1936,30 +1938,32 @@ interface BlouseDetailsResult {
                 const n = 40;
                 const pts = Array.from({ length: n + 1 }, (_, i) => {
                   const x = STAGE_CX - hw + (2 * hw * i) / n;
-                  return [x, y + sag(x, hw, 5) + (i % 2 ? 0.7 : -0.3)];
+                  return [x, y + sag(x, hw, 8) + (i % 2 ? 0.5 : -0.2)];
                 });
                 return { y, hw, pts };
               });
               const line = (pts: number[][]) => 'M ' + pts.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ');
               return (
                 <g id="tiered-skirt" clipPath="url(#skirt-clip)" fill="none" strokeLinecap="round">
-                  {/* gathers: soft folds from each tier's top, longer and more of them lower down */}
+                  {/* gathers: fine fold lines under the waistband and each seam, a few running longer */}
                   {tierTs.slice(0, 3).map((t0, ti) => {
                     const t1 = tierTs[ti + 1];
-                    const y0 = botTop + t0 * hh + (ti ? 2 : 6);
                     const span = (t1 - t0) * hh;
                     const hw0 = halfAt(t0 + 0.01), hw1 = halfAt(t1 - 0.004);
-                    const n = 6 + ti * 3;
+                    const n = 16 + ti * 6;
+                    const dip = ti ? 8 : 0;
+                    const y0 = botTop + t0 * hh + (ti ? 1.5 : 16);
                     return Array.from({ length: n }, (_, i) => {
                       const f = (i + 0.5) / n - 0.5;
-                      const x0 = STAGE_CX + f * 2 * hw0 * 0.92;
-                      const len = span * (0.35 + ((i * 7) % 5) * 0.13);
-                      const x1 = STAGE_CX + f * 2 * (hw0 + (hw1 - hw0) * (len / span)) * 0.95;
-                      const ys = y0 + sag(x0, hw0, ti ? 5 : 0);
+                      const x0 = STAGE_CX + f * 2 * hw0 * 0.94;
+                      const long = i % 4 === 1;
+                      const len = span * (long ? 0.55 + ((i * 5) % 3) * 0.12 : 0.14 + ((i * 7) % 4) * 0.05);
+                      const x1 = STAGE_CX + f * 2 * (hw0 + (hw1 - hw0) * (len / span)) * 0.96;
+                      const ys = y0 + sag(x0, hw0, dip);
                       return (
                         <g key={`${ti}-${i}`}>
-                          <path d={`M ${x0} ${ys} Q ${(x0 + x1) / 2 + (i % 2 ? 1.5 : -1.5)} ${ys + len / 2} ${x1} ${ys + len}`} stroke="rgba(20,40,28,0.13)" strokeWidth="1.3" />
-                          <path d={`M ${x0 + 2.2} ${ys + 1} Q ${(x0 + x1) / 2 + 2.2} ${ys + len / 2} ${x1 + 2.6} ${ys + len * 0.85}`} stroke="rgba(255,255,255,0.09)" strokeWidth="2" />
+                          <path d={`M ${x0} ${ys} Q ${(x0 + x1) / 2 + (i % 2 ? 0.6 : -0.6)} ${ys + len / 2} ${x1} ${ys + len}`} stroke={fabTheme.outlineColor} strokeWidth={long ? 0.75 : 0.6} opacity={long ? 0.28 : 0.38} />
+                          {long && <path d={`M ${x0 + 2} ${ys + 1} Q ${(x0 + x1) / 2 + 2} ${ys + len / 2} ${x1 + 2.3} ${ys + len * 0.85}`} stroke="rgba(255,255,255,0.1)" strokeWidth="1.8" />}
                         </g>
                       );
                     });
@@ -1967,8 +1971,8 @@ interface BlouseDetailsResult {
                   {/* each tier overhangs the next: shadow just below the seam, then the gathered seam */}
                   {seams.map((sm, i) => (
                     <g key={i}>
-                      <path d={`${line(sm.pts)} L ${sm.pts[sm.pts.length - 1][0]} ${sm.y + 14} L ${sm.pts[0][0]} ${sm.y + 14} Z`} fill="url(#tier-overhang)" stroke="none" transform="translate(0 0.5)" />
-                      <path d={line(sm.pts)} stroke={fabTheme.outlineColor} strokeWidth="0.9" opacity="0.5" />
+                      <path d={`${line(sm.pts)} L ${sm.pts[sm.pts.length - 1][0]} ${sm.y + 18} L ${sm.pts[0][0]} ${sm.y + 18} Z`} fill="url(#tier-overhang)" stroke="none" opacity="0.7" transform="translate(0 0.5)" />
+                      <path d={line(sm.pts)} stroke={fabTheme.outlineColor} strokeWidth="1" opacity="0.65" />
                       <path d={line(sm.pts.map(([x, y]) => [x, y - 1.6]))} stroke="rgba(255,255,255,0.22)" strokeWidth="1.1" />
                     </g>
                   ))}
