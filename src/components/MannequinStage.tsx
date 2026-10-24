@@ -3592,6 +3592,8 @@ interface BlouseDetailsResult {
               {paintedImage(PV.dupattaOneShoulder)}
             </g>
           )}
+          {/* the long hair falls over the one-shoulder dupatta */}
+          {painted && drapeId === 'oneShoulder' && !isBack && <AvatarRenderer viewMode={viewMode} layer="frontHair" />}
           {/* Drapes styled after the references: sheer net with soft folds, a gold zari border with
               woven motifs, scattered butis and small tassels at the hem corners */}
           {painted && DRAPES[drapeId] && (() => {
