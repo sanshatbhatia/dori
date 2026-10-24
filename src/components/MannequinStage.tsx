@@ -36,6 +36,7 @@ import {
   DRAPES,
   DRAPES_BACK,
   type DrapePiece,
+  CROSS_BODY_BACK_FALL,
   KEYHOLE_BACK,
   TIE_BACK_WINDOW,
   CUT_OUT_BACK,
@@ -2020,6 +2021,12 @@ interface BlouseDetailsResult {
               </g>
             );
           })()}
+          {/* Cross-body: the fall down the back from the shoulder, behind the figure (shows beside the arm) */}
+          {painted && drapeId === 'crossBody' && !isBack && (
+            <g id="drape-cross-back" opacity={fade}>
+              <path d={svgPath(CROSS_BODY_BACK_FALL)} fill={fabTheme.drapeColor} opacity="0.45" />
+            </g>
+          )}
           {/* Avatar Rear Hair (Layer Behind Shoulders & Torso) */}
           {!(painted && isBack) && <AvatarRenderer viewMode={viewMode} layer="rearHair" />}
 
@@ -3625,6 +3632,9 @@ interface BlouseDetailsResult {
                       <g clipPath={`url(#drape-styled-clip-${i})`} fill="none" strokeLinecap="round">
                         <rect x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill="url(#net-mesh)" opacity="0.35" />
                         <rect x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill="url(#drape-light)" />
+                        {p.strips && p.folds.slice(0, -1).map((f, j) => (
+                          <path key={`st${j}`} d={svgPath([...f, ...p.folds[j + 1].slice().reverse()])} fill={j % 2 ? 'rgba(70,55,35,0.12)' : 'rgba(255,255,255,0.2)'} stroke="none" filter="url(#drape-fold-blur)" />
+                        ))}
                         {/* folds: a soft shadow in each valley with a sheen on the ridge beside it */}
                         <g filter="url(#drape-fold-blur)">
                           {p.folds.map((f, j) => (
@@ -3661,6 +3671,22 @@ interface BlouseDetailsResult {
                         <path d={open(p.poly.slice(0, 6))} fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="2.2" filter="url(#drape-fold-blur)" />
                       )}
                       {(p.corners || []).map(([cx, cy], j) => tassel(cx, cy - 1, 16, `drape-tassel-${i}-${j}`))}
+                      {p.knot && (() => {
+                        // the cloth gathered and tucked at the hip: a bunched knot with creases running into it
+                        const [kx, ky] = p.knot;
+                        return (
+                          <g transform={`rotate(-38 ${kx} ${ky})`}>
+                            <ellipse cx={kx} cy={ky} rx="13" ry="7.5" fill={fabTheme.drapeColor} opacity="0.55" />
+                            <ellipse cx={kx} cy={ky} rx="13" ry="7.5" fill="rgba(96,74,44,0.08)" />
+                            {[-9, -4.5, 0, 4.5, 9].map((dx) => (
+                              <path key={dx} d={`M ${kx + dx} ${ky - 7} Q ${kx + dx * 0.6 + 1.5} ${ky} ${kx + dx * 0.9} ${ky + 7}`} fill="none" stroke="rgba(96,74,44,0.35)" strokeWidth="0.8" />
+                            ))}
+                            <path d={`M ${kx - 13} ${ky + 1} Q ${kx} ${ky + 10} ${kx + 13} ${ky + 1}`} fill="none" stroke="#c9a24e" strokeWidth="3.2" />
+                            <path d={`M ${kx - 13} ${ky + 1} Q ${kx} ${ky + 10} ${kx + 13} ${ky + 1}`} fill="none" stroke="#fff3cf" strokeWidth="1.2" strokeDasharray="2 1.6" />
+                            <ellipse cx={kx} cy={ky} rx="13" ry="7.5" fill="none" stroke="rgba(110,86,52,0.4)" strokeWidth="0.6" />
+                          </g>
+                        );
+                      })()}
                     </g>
                   );
                 })}

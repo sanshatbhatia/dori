@@ -950,7 +950,17 @@ export const CUT_OUT_BACK = { top: 163, bottom: 251, half: 36, upperY: 200, lowe
 // Dupatta drapes styled after the references (stage units). Each piece has its outline (drawn as a
 // smooth curve), the edges that carry the gold zari border, fold lines, the hem corners that carry
 // small tassels, and `butis` to scatter small motifs.
-export type DrapePiece = { poly: number[][]; borders: number[][][]; folds: number[][][]; corners?: number[][]; butis?: boolean };
+export type DrapePiece = {
+  poly: number[][];
+  borders: number[][][];
+  folds: number[][][];
+  corners?: number[][];
+  butis?: boolean;
+  /** shade the cloth between neighbouring folds alternately light and dark (pleats, cascades) */
+  strips?: boolean;
+  /** where the cloth is gathered into a knot */
+  knot?: number[];
+};
 const capeL: DrapePiece = {
   // over the shoulder like a cape, falling outside the arm to below the knee; embroidered front edge and
   // a softly waved hem
@@ -990,20 +1000,24 @@ const band: DrapePiece = {
 export const DRAPES: Record<string, DrapePiece[]> = {
   bothShoulders: [capeL, mirP(capeL)],
   crossBody: [
-    crossFall,
-    // the end, tucked at the right hip and falling down the skirt
+    // pleated band from the right shoulder across the bodice to the left hip; both edges show
+    // their zari border as the pleats fold
     {
-      poly: [[150, 318], [186, 334], [182, 440], [174, 560], [168, 654], [156, 660], [142, 656], [128, 664], [116, 662], [124, 540], [134, 430], [142, 340]],
-      borders: [[[142, 340], [134, 430], [124, 540], [116, 662]], [[116, 662], [128, 664], [142, 656], [156, 660], [168, 654]]],
-      folds: [[[160, 340], [154, 450], [146, 560], [138, 656]], [[172, 340], [168, 450], [160, 560], [156, 656]]],
-      corners: [[116, 662], [168, 654]],
+      poly: [[210,  150],  [224,  166],  [240,  188],  [260,  215],  [282,  244],  [304,  272],  [324,  298],  [300,  332],  [274,  310],  [244,  286],  [214,  258],  [190,  225],  [176,  190],  [168,  160]],
+      borders: [[[210,  150],  [224,  166],  [240,  188],  [260,  215],  [282,  244],  [304,  272],  [324,  298]], [[168,  160],  [176,  190],  [190,  225],  [214,  258],  [244,  286],  [274,  310],  [300,  332]]],
+      folds: [[[168,  160],  [176,  190],  [190,  225],  [214,  258],  [244,  286],  [274,  310],  [300,  332]],  [[175.6,  158.2],  [184.6,  185.7],  [199.0,  218.3],  [222.3,  250.3],  [250.8,  278.4],  [279.4,  303.2],  [304.3,  325.9]],  [[183.1,  156.4],  [193.3,  181.4],  [208.0,  211.7],  [230.6,  242.5],  [257.7,  270.9],  [284.8,  296.3],  [308.6,  319.8]],  [[190.7,  154.6],  [201.9,  177.0],  [217.0,  205.0],  [238.8,  234.8],  [264.5,  263.3],  [290.2,  289.5],  [313.0,  313.6]],  [[198.2,  152.8],  [210.6,  172.7],  [226.0,  198.4],  [247.1,  227.0],  [271.4,  255.8],  [295.6,  282.6],  [317.3,  307.5]],  [[205.0,  151.2],  [218.2,  168.9],  [234.0,  192.4],  [254.5,  220.2],  [277.4,  249.0],  [300.4,  276.6],  [321.1,  302.1]],  [[210,  150],  [224,  166],  [240,  188],  [260,  215],  [282,  244],  [304,  272],  [324,  298]]],
+      strips: true,
     },
-    // pleated swag across the front from the left shoulder, dipping in a soft curve down to the right hip
+    // gathered into a knot at the hip and falling in a cascade of loose folds, the border
+    // zig-zagging down the inner edge and along the hem
     {
-      poly: [[300, 172], [264, 216], [228, 256], [192, 290], [158, 318], [148, 352], [150, 384], [196, 372], [244, 344], [292, 300], [324, 244], [338, 192]],
-      borders: [[[338, 192], [324, 244], [292, 300], [244, 344], [196, 372], [150, 384]]],
-      folds: [[[307.6, 176], [276, 222], [240, 265], [202, 300], [156, 331]], [[315.2, 180], [288, 228], [252, 276], [210, 314], [154, 344]],
-        [[322.8, 184], [300, 234], [264, 288], [220, 330], [153, 358]], [[330.4, 188], [312, 240], [276, 298], [228, 344], [152, 371]]],
+      poly: [[322,  296],  [338,  330],  [346,  380],  [354,  440],  [364,  500],  [372,  545],  [382,  580],  [366,  600],  [350,  572],  [334,  596],  [318,  566],  [302,  588],  [290,  560],  [285,  528],  [298,  490],  [283,  450],  [297,  410],  [284,  372]],
+      borders: [[[300,  330],  [284,  372],  [297,  410],  [283,  450],  [298,  490],  [285,  528],  [290,  560]], [[290,  560],  [302,  588],  [318,  566],  [334,  596],  [350,  572],  [366,  600],  [382,  580]], [[322,  296],  [338,  330],  [346,  380],  [354,  440],  [364,  500],  [372,  545],  [382,  580]]],
+      folds: [[[300,  330],  [284,  372],  [297,  410],  [283,  450],  [298,  490],  [285,  528],  [290,  560]],  [[303.7,  324.3],  [303.3,  368.2],  [302.9,  412.2],  [302.6,  456.1],  [302.4,  500.1],  [302.2,  544.0],  [302.0,  588.0]],  [[307.3,  318.7],  [309.1,  359.9],  [311.0,  401.1],  [312.7,  442.4],  [314.5,  483.6],  [316.2,  524.8],  [318.0,  566.0]],  [[311.0,  313.0],  [315.0,  360.2],  [319.1,  407.3],  [322.9,  454.5],  [326.7,  501.7],  [330.4,  548.8],  [334.0,  596.0]],  [[314.7,  307.3],  [321.0,  351.4],  [327.2,  395.5],  [333.1,  439.6],  [338.9,  483.8],  [344.5,  527.9],  [350.0,  572.0]],  [[318.3,  301.7],  [326.8,  351.4],  [335.1,  401.1],  [343.2,  450.9],  [351.0,  500.6],  [358.7,  550.3],  [366.0,  600.0]],  [[322,  296],  [338,  330],  [346,  380],  [354,  440],  [364,  500],  [372,  545],  [382,  580]]],
+      strips: true,
+      corners: [[302, 588], [366, 600]],
+      knot: [311, 312],
+      butis: true,
     },
   ],
   aroundBody: [
@@ -1020,6 +1034,10 @@ export const DRAPES: Record<string, DrapePiece[]> = {
 
 // Back view: the cape spans the whole back from shoulder to shoulder; the cross-body shows only
 // its fall from the shoulder; the around-body band wraps across the back to the hip.
+// Cross-body: the part of the dupatta hanging down the back from the right shoulder, drawn behind
+// the figure in front view (it shows beside the arm)
+export const CROSS_BODY_BACK_FALL: number[][] = [[170,  160],  [206,  152],  [202,  250],  [198,  400],  [194,  560],  [178,  570],  [160,  566],  [150,  560],  [156,  400],  [162,  250]];
+
 export const DRAPES_BACK: Record<string, DrapePiece[]> = {
   bothShoulders: [
     {
@@ -1035,6 +1053,7 @@ export const DRAPES_BACK: Record<string, DrapePiece[]> = {
       butis: true,
     },
   ],
-  crossBody: [mirP(crossFall)],
+  // the fall hanging down the back from the right shoulder
+  crossBody: [crossFall],
   aroundBody: [mirP(band)],
 };
