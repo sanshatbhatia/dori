@@ -888,7 +888,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     if (botGeo !== 'tiered') return [];
     const hh = LENV[lenId] || 400;
     const top = botTop;
-    return [top + hh * 0.34, top + hh * 0.67];
+    return [top + hh * 0.24, top + hh * 0.56];
   };
 
   // Dupatta / Pallu Drape
@@ -1662,6 +1662,13 @@ interface BlouseDetailsResult {
               <stop offset="0.5" stopColor="#d9b867" />
               <stop offset="1" stopColor="#8c6c2b" />
             </radialGradient>
+            <filter id="tier-soften" x="-5%" y="-5%" width="110%" height="110%">
+              <feGaussianBlur stdDeviation="4" />
+            </filter>
+            <linearGradient id="tier-overhang" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#1e3326" stopOpacity="0.3" />
+              <stop offset="1" stopColor="#1e3326" stopOpacity="0" />
+            </linearGradient>
             <linearGradient id="midriff-side-shade" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0" stopColor="#b9826a" stopOpacity="0.32" />
               <stop offset="0.22" stopColor="#b9826a" stopOpacity="0.06" />
@@ -1860,7 +1867,12 @@ interface BlouseDetailsResult {
           {/* Skirt Texture & Fill Overlay */}
           <g clipPath="url(#skirt-clip)">
             {painted ? (
-              paintedImage(PV.skirt)
+              botGeo === 'tiered' ? (
+                // the painted pleats don't belong on a gathered tiered skirt: soften them away
+                <g filter="url(#tier-soften)">{paintedImage(PV.skirt)}</g>
+              ) : (
+                paintedImage(PV.skirt)
+              )
             ) : (
               <path
                 d={svgPath(currentGarment === 'shirt' ? botPts('trouser', 'floor', 300) : botPts(botGeo, lenId, botTop))}
@@ -1905,32 +1917,64 @@ interface BlouseDetailsResult {
               </g>
             ))}
 
-            {/* Skirt Horizontal Tier Lines */}
-            <g clipPath="url(#skirt-clip)">
-            {skirtTiers().map((ty, idx) => (
-              <g key={`skirt-tier-${idx}`}>
-                <line
-                  x1={STAGE_CX - 210}
-                  y1={ty}
-                  x2={STAGE_CX + 210}
-                  y2={ty}
-                  stroke={fabTheme.outlineColor}
-                  strokeWidth="1.3"
-                  strokeLinecap="round"
-                />
-                <line
-                  x1={STAGE_CX - 210}
-                  y1={ty + 2}
-                  x2={STAGE_CX + 210}
-                  y2={ty + 2}
-                  stroke={fabTheme.accentColor}
-                  strokeWidth="0.9"
-                  strokeDasharray={fabId === 'banarasi' ? '3 2' : undefined}
-                  opacity="0.8"
-                />
-              </g>
-            ))}
-            </g>
+            {/* Tiered skirt: gathered seams with a soft overhang shadow, and gathers fanning down each tier */}
+            {botGeo === 'tiered' && (() => {
+              const sk = BOT.tiered.profile;
+              const hh = LENV[lenId] || 400;
+              const halfAt = (tt: number) => {
+                for (let i = 0; i < sk.length - 1; i++) {
+                  const [t0, w0] = sk[i], [t1, w1] = sk[i + 1];
+                  if (tt >= t0 && tt <= t1) return (w0 + ((tt - t0) / (t1 - t0 || 1)) * (w1 - w0)) * fitK;
+                }
+                return sk[sk.length - 1][1] * fitK;
+              };
+              const tierTs = [0.028, 0.243, 0.563, 1];
+              const sag = (x: number, hw: number, amt: number) => amt * (1 - Math.min(1, ((x - STAGE_CX) / hw) ** 2));
+              const seams = [0.243, 0.563].map((tt) => {
+                const y = botTop + tt * hh;
+                const hw = halfAt(tt + 0.004) + 1;
+                const n = 40;
+                const pts = Array.from({ length: n + 1 }, (_, i) => {
+                  const x = STAGE_CX - hw + (2 * hw * i) / n;
+                  return [x, y + sag(x, hw, 5) + (i % 2 ? 0.7 : -0.3)];
+                });
+                return { y, hw, pts };
+              });
+              const line = (pts: number[][]) => 'M ' + pts.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ');
+              return (
+                <g id="tiered-skirt" clipPath="url(#skirt-clip)" fill="none" strokeLinecap="round">
+                  {/* gathers: soft folds from each tier's top, longer and more of them lower down */}
+                  {tierTs.slice(0, 3).map((t0, ti) => {
+                    const t1 = tierTs[ti + 1];
+                    const y0 = botTop + t0 * hh + (ti ? 2 : 6);
+                    const span = (t1 - t0) * hh;
+                    const hw0 = halfAt(t0 + 0.01), hw1 = halfAt(t1 - 0.004);
+                    const n = 6 + ti * 3;
+                    return Array.from({ length: n }, (_, i) => {
+                      const f = (i + 0.5) / n - 0.5;
+                      const x0 = STAGE_CX + f * 2 * hw0 * 0.92;
+                      const len = span * (0.35 + ((i * 7) % 5) * 0.13);
+                      const x1 = STAGE_CX + f * 2 * (hw0 + (hw1 - hw0) * (len / span)) * 0.95;
+                      const ys = y0 + sag(x0, hw0, ti ? 5 : 0);
+                      return (
+                        <g key={`${ti}-${i}`}>
+                          <path d={`M ${x0} ${ys} Q ${(x0 + x1) / 2 + (i % 2 ? 1.5 : -1.5)} ${ys + len / 2} ${x1} ${ys + len}`} stroke="rgba(20,40,28,0.13)" strokeWidth="1.3" />
+                          <path d={`M ${x0 + 2.2} ${ys + 1} Q ${(x0 + x1) / 2 + 2.2} ${ys + len / 2} ${x1 + 2.6} ${ys + len * 0.85}`} stroke="rgba(255,255,255,0.09)" strokeWidth="2" />
+                        </g>
+                      );
+                    });
+                  })}
+                  {/* each tier overhangs the next: shadow just below the seam, then the gathered seam */}
+                  {seams.map((sm, i) => (
+                    <g key={i}>
+                      <path d={`${line(sm.pts)} L ${sm.pts[sm.pts.length - 1][0]} ${sm.y + 14} L ${sm.pts[0][0]} ${sm.y + 14} Z`} fill="url(#tier-overhang)" stroke="none" transform="translate(0 0.5)" />
+                      <path d={line(sm.pts)} stroke={fabTheme.outlineColor} strokeWidth="0.9" opacity="0.5" />
+                      <path d={line(sm.pts.map(([x, y]) => [x, y - 1.6]))} stroke="rgba(255,255,255,0.22)" strokeWidth="1.1" />
+                    </g>
+                  ))}
+                </g>
+              );
+            })()}
 
             {/* 2D Game Hem Gotapatti / Zari Border Artwork */}
             {(() => {
