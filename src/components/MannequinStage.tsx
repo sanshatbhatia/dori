@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArmPose, Category, GarmentKey, SelectionState, ViewMode, BeltLatkanMode, LatkanBoxOrientation } from '../types';
 import { Sparkles, ArrowUpDown, ArrowLeftRight } from 'lucide-react';
 import {
@@ -1575,11 +1575,28 @@ interface BlouseDetailsResult {
   const fx = railOnLeft && !isDetail ? 29 : 0;
 
 
+  // Fit the figure to the space the stage has: the framing was tuned for a 402 × 589 stage, so
+  // scale from there when the Studio sits in a taller, shorter or wider screen
+  const stageBoxRef = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+  useEffect(() => {
+    const el = stageBoxRef.current;
+    if (!el) return;
+    const update = () => {
+      const s = Math.min(el.clientHeight / 589, el.clientWidth / 402);
+      if (s > 0) setFitScale(Math.max(0.6, Math.min(1.6, s)));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Active layer loading effect
   const isLayerLoading = (slotShort: string) => loadingSlot.toLowerCase() === slotShort.toLowerCase();
 
   return (
-    <div className="flex-1 relative overflow-hidden min-h-0 bg-[#ffffff]">
+    <div ref={stageBoxRef} className="flex-1 relative overflow-hidden min-h-0 bg-[#ffffff]">
       {/* Zoomable Stage Container */}
       <div
         id="mannequin-stage"
@@ -1589,7 +1606,7 @@ interface BlouseDetailsResult {
           height: `${STAGE_H}px`,
           marginLeft: `-${STAGE_W / 2}px`,
           marginTop: `-${STAGE_H / 2}px`,
-          transform: `scale(${k}) translate(${fx}px, ${410 - fy}px)`,
+          transform: `scale(${k * fitScale}) translate(${fx}px, ${410 - fy}px)`,
         }}
       >
         {/* Floor Shadow */}

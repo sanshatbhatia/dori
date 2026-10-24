@@ -344,44 +344,20 @@ export function DesignStudio({ initial, initialNotes = '', context, onExit, done
         onOpenHint={handleBack}
         size={context?.size}
         title={context?.title}
+        subtitle={context?.chips.slice(1).join(' · ')}
+        action={
+          onExit && (
+            <button
+              id="studio-done-btn"
+              onClick={() => void finish('done')}
+              disabled={busy}
+              className="flex-none h-9 px-3 rounded-xl bg-[#174d33] text-white text-[12.5px] font-sans font-semibold flex items-center gap-1 active:scale-95 transition-transform disabled:opacity-50"
+            >
+              <Check className="w-4 h-4" /> {busy ? '…' : doneLabel}
+            </button>
+          )
+        }
       />
-
-      {/* Order context and the actions that take the design back to the order */}
-      {onExit && (
-        <div className="flex-none flex items-center gap-1.5 px-3 py-2 border-b border-black/10 bg-white">
-          <div className="flex-1 min-w-0 flex gap-1 overflow-x-auto">
-            {context?.chips.map((c) => (
-              <span key={c} className="flex-none text-[10.5px] font-sans px-2 py-1 rounded-full border border-black/15 text-black/70 whitespace-nowrap">
-                {c}
-              </span>
-            ))}
-          </div>
-          <button
-            id="studio-notes-btn"
-            onClick={() => setNotesOpen(true)}
-            aria-label="Design notes"
-            className={`flex-none h-8 px-2.5 rounded-full border text-[12px] font-sans font-semibold flex items-center gap-1 ${notes ? 'border-[#174d33] text-[#174d33]' : 'border-black/15 text-black'}`}
-          >
-            <NotebookPen className="w-3.5 h-3.5" /> Notes
-          </button>
-          <button
-            id="studio-save-btn"
-            onClick={() => void finish('save')}
-            disabled={busy}
-            className="flex-none h-8 px-2.5 rounded-full border border-black/15 text-[12px] font-sans font-semibold flex items-center gap-1 disabled:opacity-40"
-          >
-            <Save className="w-3.5 h-3.5" /> Save
-          </button>
-          <button
-            id="studio-done-btn"
-            onClick={() => void finish('done')}
-            disabled={busy}
-            className="flex-none h-8 px-3 rounded-full bg-[#174d33] text-white text-[12px] font-sans font-semibold flex items-center gap-1 disabled:opacity-40"
-          >
-            <Check className="w-3.5 h-3.5" /> {busy ? 'Saving…' : doneLabel}
-          </button>
-        </div>
-      )}
 
       {/* Main Interactive Stage with Mannequin & Camera Focus */}
       <div ref={stageWrapRef} className="flex-1 relative overflow-hidden flex flex-col">
@@ -443,6 +419,33 @@ export function DesignStudio({ initial, initialNotes = '', context, onExit, done
         onRailChange={setRailMode}
         libraryMode={libraryMode}
         onLibChange={setLibraryMode}
+        extraItems={
+          onExit && (
+            <>
+              <button
+                id="studio-notes-btn"
+                onClick={() => (setMenuOpen(false), setNotesOpen(true))}
+                className="w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between text-[12.5px] hover:bg-black/5 cursor-pointer text-black"
+              >
+                <span className="flex items-center gap-2">
+                  <NotebookPen className="w-4 h-4 text-[#174d33]" />
+                  <span className="font-serif text-[14px] font-medium">Design notes</span>
+                </span>
+                {notes && <span className="w-2 h-2 rounded-full bg-[#174d33]" aria-label="has notes" />}
+              </button>
+              <button
+                id="studio-save-btn"
+                onClick={() => (setMenuOpen(false), void finish('save'))}
+                disabled={busy}
+                className="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-2 text-[12.5px] hover:bg-black/5 cursor-pointer text-black disabled:opacity-40"
+              >
+                <Save className="w-4 h-4 text-[#174d33]" />
+                <span className="font-serif text-[14px] font-medium">Save draft</span>
+              </button>
+              <div className="h-px bg-black/10 mx-2" />
+            </>
+          )
+        }
       />
 
       {/* Design Summary Modal */}

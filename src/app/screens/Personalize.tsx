@@ -87,7 +87,7 @@ const GARMENT_SIZE_KEYS: { key: keyof FitProfile['garmentSizes']; label: string 
   { key: 'dress', label: 'Dresses' },
 ];
 
-export const SizePicker: React.FC<{ profile: FitProfile; onChange: (p: Partial<FitProfile>) => void }> = ({ profile, onChange }) => {
+export const SizePicker: React.FC<{ profile: FitProfile; onChange: (p: Partial<FitProfile>) => void; required?: boolean }> = ({ profile, onChange, required }) => {
   const [guide, setGuide] = useState(false);
   const [perGarment, setPerGarment] = useState(Object.keys(profile.garmentSizes).length > 0);
   return (
@@ -99,7 +99,7 @@ export const SizePicker: React.FC<{ profile: FitProfile; onChange: (p: Partial<F
         </button>
       </div>
       <div className="flex flex-wrap gap-2 mb-4">
-        {SIZES.map((s) => (
+        {SIZES.filter((s) => !(required && s.id === 'unsure')).map((s) => (
           <Chip key={s.id} id={`size-${s.id}`} selected={profile.usualSize === s.id} onClick={() => onChange({ usualSize: s.id })}>
             {s.label}
           </Chip>
@@ -347,24 +347,28 @@ export const PersonalizeScreen: React.FC = () => {
     nav.reset({ name: 'home' });
   };
 
-  const next = async (skip = false) => {
+  // every step is required: the Studio's mannequin and the stylist both work from this profile
+  const next = async () => {
     setError('');
-    if (step === 0 && !skip) {
+    if (step === 0) {
       if (!name.trim()) return setError('Please enter your name.');
+      if (!profile.heightCm) return setError('Please enter your height.');
       if (!validHeight(profile.heightCm)) return setError('Enter a height between 120 and 215 cm.');
     }
-    if (step === 4 && !skip) {
+    if (step === 1 && (!profile.usualSize || profile.usualSize === 'unsure')) {
+      return setError('Choose the size closest to what you usually wear — the size guide can help. Your stylist confirms it later.');
+    }
+    if (step === 2 && !profile.bodyType) return setError('Choose the description closest to you, or “Unsure”.');
+    if (step === 4) {
       const e = validateAddress(address);
       setAddrErrors(e);
       if (Object.keys(e).length) return;
     }
     setLoading(true);
     try {
-      if (!skip) {
-        if (step === 0 && name.trim() !== customer.fullName) setCustomer(await api.updateProfile({ fullName: name }));
-        if (step <= 2) setCustomer(await api.updateFitProfile({ heightCm: profile.heightCm, heightUnit: profile.heightUnit, usualSize: profile.usualSize, garmentSizes: profile.garmentSizes, bodyType: profile.bodyType }));
-        if (step === 4) setCustomer(await api.saveAddress({ ...address, isDefault: true }));
-      }
+      if (step === 0 && name.trim() !== customer.fullName) setCustomer(await api.updateProfile({ fullName: name }));
+      if (step <= 2) setCustomer(await api.updateFitProfile({ heightCm: profile.heightCm, heightUnit: profile.heightUnit, usualSize: profile.usualSize, garmentSizes: profile.garmentSizes, bodyType: profile.bodyType }));
+      if (step === 4) setCustomer(await api.saveAddress({ ...address, isDefault: true }));
       if (step === STEPS.length - 1) await finish();
       else setStep(step + 1);
     } catch (e) {
@@ -382,24 +386,17 @@ export const PersonalizeScreen: React.FC = () => {
         [
           'A few details help us tailor suggestions and previews to you.',
           'Pick the size you usually wear. You can be more specific per garment.',
-          'Optional — this only personalises styling ideas. It never limits what you can order.',
+          'This only personalises styling ideas — it never limits what you can order. “Unsure” is fine.',
           'How Dori handles your measurements.',
-          'Required before you place an order. You can also add it later.',
+          'Where your finished outfits will be delivered.',
         ][step]
       }
       onBack={step > 0 ? () => setStep(step - 1) : undefined}
       progress={{ step: step + 1, total: STEPS.length, label: STEPS[step] }}
       footer={
-        <div className="flex flex-col gap-2">
-          <Button block loading={loading} id="personalize-continue" onClick={() => void next(false)}>
-            {step === STEPS.length - 1 ? 'Save and finish' : 'Save and continue'}
-          </Button>
-          {step !== 3 && (
-            <Button variant="ghost" block id="personalize-skip" onClick={() => void next(true)} disabled={loading}>
-              {step === 4 ? 'Add address later' : 'Skip for now'}
-            </Button>
-          )}
-        </div>
+        <Button block loading={loading} id="personalize-continue" onClick={() => void next()}>
+          {step === STEPS.length - 1 ? 'Save and finish' : 'Save and continue'}
+        </Button>
       }
     >
       <div className="pt-4">
@@ -412,7 +409,7 @@ export const PersonalizeScreen: React.FC = () => {
             <HeightPicker profile={profile} onChange={patch} />
           </>
         )}
-        {step === 1 && <SizePicker profile={profile} onChange={patch} />}
+        {step === 1 && <SizePicker profile={profile} onChange={patch} required />}
         {step === 2 && <BodyTypePicker value={profile.bodyType} onChange={(b) => patch({ bodyType: b })} />}
         {step === 3 && (
           <>

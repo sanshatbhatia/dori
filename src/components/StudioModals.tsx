@@ -20,6 +20,8 @@ interface MenuDropdownProps {
   onRailChange?: (r: RailMode) => void;
   libraryMode?: LibraryMode;
   onLibChange?: (l: LibraryMode) => void;
+  /** extra actions listed first (e.g. notes and save when the Studio is part of an order) */
+  extraItems?: React.ReactNode;
 }
 
 export const MenuDropdown: React.FC<MenuDropdownProps> = ({
@@ -34,6 +36,7 @@ export const MenuDropdown: React.FC<MenuDropdownProps> = ({
   onRailChange,
   libraryMode,
   onLibChange,
+  extraItems,
 }) => {
   if (!isOpen) return null;
 
@@ -43,6 +46,7 @@ export const MenuDropdown: React.FC<MenuDropdownProps> = ({
         className="absolute top-[90px] right-3 w-[240px] bg-[#ffffff] border border-[#000000]/20 rounded-2xl shadow-2xl overflow-hidden animate-fade z-50 p-1.5 flex flex-col gap-1"
         onClick={(e) => e.stopPropagation()}
       >
+        {extraItems}
         <button
           id="menu-design-summary"
           onClick={() => {

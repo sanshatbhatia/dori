@@ -19,6 +19,10 @@ interface StudioHeaderProps {
   onOpenHint?: () => void;
   size?: string;
   title?: string;
+  /** order context shown under the title, e.g. "Size M · Occasional · 4.5 m" */
+  subtitle?: string;
+  /** primary action at the end of the bar (e.g. Done, back to the order) */
+  action?: React.ReactNode;
 }
 
 export const StudioHeader: React.FC<StudioHeaderProps> = ({
@@ -32,6 +36,8 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
   onOpenHint,
   size,
   title,
+  subtitle,
+  action,
 }) => {
   const garmentConfig = GARMENTS[currentGarment];
 
@@ -56,7 +62,7 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
             {title || `${garmentConfig.name} Atelier`}
           </h1>
           <span className="block truncate text-[9.5px] uppercase tracking-[0.16em] text-black/60 font-sans font-medium" title="The preview is not to scale">
-            {size ? `Size ${size}` : 'Size not set'} · Preview, not to scale
+            {subtitle || `Bespoke Customizer · ${size ? `Size ${size}` : 'Size not set'}`}
           </span>
         </div>
 
@@ -102,6 +108,7 @@ export const StudioHeader: React.FC<StudioHeaderProps> = ({
         >
           <MoreHorizontal className="w-4 h-4" />
         </button>
+        {action}
       </div>
 
       {/* Garment Selector Strip (shown only if multiple garments available) */}

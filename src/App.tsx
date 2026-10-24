@@ -155,12 +155,16 @@ const Shell: React.FC = () => {
   const { status, customer } = useSession();
   const nav = useNav();
 
-  // first-time customers go to Personalization; returning ones to Home
+  // first-time customers go to Personalization; returning ones to Home. The profile (size, height,
+  // body type, address) must be complete before any other screen — the Studio's mannequin needs it.
+  const profileDone = !!customer?.onboarding.personalizationDone;
   useEffect(() => {
     if (status !== 'signed_in' || !customer) return;
-    if (nav.route.name === 'auth') nav.reset(customer.onboarding.personalizationDone ? { name: 'home' } : { name: 'personalize' });
+    if (!profileDone) {
+      if (nav.route.name !== 'personalize') nav.reset({ name: 'personalize' });
+    } else if (nav.route.name === 'auth' || nav.route.name === 'personalize') nav.reset({ name: 'home' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, customer?.id]);
+  }, [status, customer?.id, profileDone, nav.route.name]);
 
   // signing out (or an expired session) always lands on sign-in, never on a protected screen
   useEffect(() => {
