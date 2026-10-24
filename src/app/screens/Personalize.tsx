@@ -325,6 +325,15 @@ export const MeasurementsView: React.FC<{ profile: FitProfile }> = ({ profile })
 export const StylePicker: React.FC<{ value?: ClothingStyle[]; onChange: (v: ClothingStyle[]) => void }> = ({ value = [], onChange }) => {
   const [missing, setMissing] = useState<Record<string, boolean>>({});
   return (
+    <div>
+    <div className="flex items-center justify-between mb-3 px-3.5 py-2.5 rounded-2xl bg-[#174D33]/[0.06]">
+      <span className="flex items-center gap-2 text-[13px] font-medium">
+        <Check className="w-4 h-4 text-[#174D33]" /> You can select more than one style
+      </span>
+      <span id="style-count" className="text-[12px] font-semibold text-[#174D33]">
+        {value.length} selected
+      </span>
+    </div>
     <div className="grid grid-cols-2 gap-2.5">
       {CLOTHING_STYLES.map((st) => {
         const on = value.includes(st.id);
@@ -363,6 +372,7 @@ export const StylePicker: React.FC<{ value?: ClothingStyle[]; onChange: (v: Clot
           </button>
         );
       })}
+    </div>
     </div>
   );
 };
@@ -434,7 +444,7 @@ export const PersonalizeScreen: React.FC = () => {
           'A few details help us tailor suggestions and previews to you.',
           'Pick the size you usually wear. You can be more specific per garment.',
           'This only personalises styling ideas — it never limits what you can order. “Unsure” is fine.',
-          'What do you usually wear? Pick as many as you like.',
+          'What do you usually wear? Select all the styles that feel like you.',
           'How Dori handles your measurements.',
           'Where your finished outfits will be delivered.',
         ][step]
