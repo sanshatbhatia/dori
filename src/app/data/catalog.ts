@@ -6,7 +6,7 @@
 // Business configuration for the order journey. Labels, descriptions and availability live here so
 // the business can change them without touching the screens.
 
-import type { FabricType, Occasion, RequestStatus, SizeCode, StyleFamily, BodyType } from '../services/types';
+import type { FabricType, Occasion, RequestStatus, SizeCode, StyleFamily, BodyType, ClothingStyle } from '../services/types';
 
 export const FABRIC_TYPES: { id: FabricType; label: string; description: string }[] = [
   {
@@ -223,3 +223,22 @@ export const timelineFor = (garmentId: string): RequestStatus[] => {
 
 /** Before the order is confirmed it is a consultation request, not a production order */
 export const isProduction = (s: RequestStatus) => TIMELINE.indexOf(s) >= TIMELINE.indexOf('order_confirmed');
+
+/**
+ * Styles a customer usually wears. Each card shows a photo from public/assets/styles/<id>.jpg when one
+ * has been added (licensed images only), and a Dori line illustration until then.
+ */
+export const CLOTHING_STYLES: { id: ClothingStyle; label: string; description: string; silhouette: Silhouette }[] = [
+  { id: 'casual', label: 'Casual', description: 'Easy everyday pieces', silhouette: 'top' },
+  { id: 'formal', label: 'Formal', description: 'Tailored and polished', silhouette: 'jacket' },
+  { id: 'traditional', label: 'Traditional', description: 'Sarees, lehengas, suits', silhouette: 'saree' },
+  { id: 'indo_western', label: 'Indo-Western', description: 'Fusion of both worlds', silhouette: 'dhoti' },
+  { id: 'western', label: 'Western', description: 'Dresses, trousers, skirts', silhouette: 'dress' },
+  { id: 'party', label: 'Party wear', description: 'Statement evening looks', silhouette: 'gown' },
+  { id: 'sportswear', label: 'Sportswear', description: 'Active and athleisure', silhouette: 'coord' },
+  { id: 'ethnic_chic', label: 'Ethnic / contemporary chic', description: 'Modern takes on ethnic', silhouette: 'anarkali' },
+  { id: 'minimalist', label: 'Minimalist', description: 'Clean lines, few details', silhouette: 'shirt' },
+  { id: 'street', label: 'Street style', description: 'Relaxed and bold', silhouette: 'trousers' },
+  { id: 'resort', label: 'Resort / vacation', description: 'Light, flowing holiday wear', silhouette: 'kaftan' },
+  { id: 'retro', label: 'Retro', description: 'Vintage-inspired shapes', silhouette: 'skirt' },
+];

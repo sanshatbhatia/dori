@@ -7,14 +7,14 @@
 // discovery, and the (stylist-verified) measurement profile.
 
 import React, { useState } from 'react';
-import { Info, Lock, Ruler, Sparkles } from 'lucide-react';
-import { BODY_TYPES, SIZES, SIZE_GUIDE } from '../data/catalog';
+import { Check, Info, Lock, Ruler, Sparkles } from 'lucide-react';
+import { BODY_TYPES, CLOTHING_STYLES, SIZES, SIZE_GUIDE } from '../data/catalog';
 import { api } from '../services';
-import type { BodyType, FitProfile, SizeCode } from '../services/types';
+import type { BodyType, ClothingStyle, FitProfile, SizeCode } from '../services/types';
 import { useSession, useCustomer } from '../state/session';
 import { useNav } from '../nav';
 import { AddressForm, emptyAddress, validateAddress, type AddressInput } from '../ui/AddressForm';
-import { BodyShape } from '../ui/Silhouette';
+import { BodyShape, GarmentArt } from '../ui/Silhouette';
 import { Button, Chip, Choice, ErrorBanner, Field, Input, Note, Screen, SectionTitle, Sheet, formatDate, useToast } from '../ui/kit';
 
 // ---- shared pickers -------------------------------------------------------------------------
@@ -321,9 +321,55 @@ export const MeasurementsView: React.FC<{ profile: FitProfile }> = ({ profile })
   );
 };
 
+/** "What do you usually wear?" — pick any number of styles */
+export const StylePicker: React.FC<{ value?: ClothingStyle[]; onChange: (v: ClothingStyle[]) => void }> = ({ value = [], onChange }) => {
+  const [missing, setMissing] = useState<Record<string, boolean>>({});
+  return (
+    <div className="grid grid-cols-2 gap-2.5">
+      {CLOTHING_STYLES.map((st) => {
+        const on = value.includes(st.id);
+        return (
+          <button
+            key={st.id}
+            id={`style-${st.id}`}
+            aria-pressed={on}
+            onClick={() => onChange(on ? value.filter((x) => x !== st.id) : [...value, st.id])}
+            className={`relative text-left rounded-[20px] border overflow-hidden transition ${on ? 'border-[#174D33] ring-1 ring-[#174D33]' : 'border-black/10 hover:border-black/25'}`}
+          >
+            <span className="block aspect-[4/5] bg-[#174D33]/[0.05] relative">
+              {missing[st.id] ? (
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <GarmentArt silhouette={st.silhouette} className="h-3/4" />
+                </span>
+              ) : (
+                <img
+                  src={`/assets/styles/${st.id}.jpg`}
+                  alt=""
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={() => setMissing((m) => ({ ...m, [st.id]: true }))}
+                />
+              )}
+              <span
+                className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center border ${on ? 'bg-[#174D33] border-[#174D33] text-white' : 'bg-white/90 border-black/15'}`}
+              >
+                {on && <Check className="w-3.5 h-3.5" />}
+              </span>
+            </span>
+            <span className="block p-2.5">
+              <span className="block text-[13.5px] font-semibold leading-tight">{st.label}</span>
+              <span className="block text-[11.5px] text-black/55 mt-0.5">{st.description}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 // ---- onboarding flow ------------------------------------------------------------------------
 
-const STEPS = ['About you', 'Your size', 'Body type', 'Measurements', 'Delivery address'];
+const STEPS = ['About you', 'Your size', 'Body type', 'Your style', 'Measurements', 'Delivery address'];
 
 export const PersonalizeScreen: React.FC = () => {
   const customer = useCustomer();
@@ -359,7 +405,8 @@ export const PersonalizeScreen: React.FC = () => {
       return setError('Choose the size closest to what you usually wear — the size guide can help. Your stylist confirms it later.');
     }
     if (step === 2 && !profile.bodyType) return setError('Choose the description closest to you, or “Unsure”.');
-    if (step === 4) {
+    if (step === 3 && !profile.styles?.length) return setError('Pick at least one style you usually wear.');
+    if (step === 5) {
       const e = validateAddress(address);
       setAddrErrors(e);
       if (Object.keys(e).length) return;
@@ -367,8 +414,8 @@ export const PersonalizeScreen: React.FC = () => {
     setLoading(true);
     try {
       if (step === 0 && name.trim() !== customer.fullName) setCustomer(await api.updateProfile({ fullName: name }));
-      if (step <= 2) setCustomer(await api.updateFitProfile({ heightCm: profile.heightCm, heightUnit: profile.heightUnit, usualSize: profile.usualSize, garmentSizes: profile.garmentSizes, bodyType: profile.bodyType }));
-      if (step === 4) setCustomer(await api.saveAddress({ ...address, isDefault: true }));
+      if (step <= 3) setCustomer(await api.updateFitProfile({ heightCm: profile.heightCm, heightUnit: profile.heightUnit, usualSize: profile.usualSize, garmentSizes: profile.garmentSizes, bodyType: profile.bodyType, styles: profile.styles }));
+      if (step === 5) setCustomer(await api.saveAddress({ ...address, isDefault: true }));
       if (step === STEPS.length - 1) await finish();
       else setStep(step + 1);
     } catch (e) {
@@ -387,6 +434,7 @@ export const PersonalizeScreen: React.FC = () => {
           'A few details help us tailor suggestions and previews to you.',
           'Pick the size you usually wear. You can be more specific per garment.',
           'This only personalises styling ideas — it never limits what you can order. “Unsure” is fine.',
+          'What do you usually wear? Pick as many as you like.',
           'How Dori handles your measurements.',
           'Where your finished outfits will be delivered.',
         ][step]
@@ -411,7 +459,8 @@ export const PersonalizeScreen: React.FC = () => {
         )}
         {step === 1 && <SizePicker profile={profile} onChange={patch} required />}
         {step === 2 && <BodyTypePicker value={profile.bodyType} onChange={(b) => patch({ bodyType: b })} />}
-        {step === 3 && (
+        {step === 3 && <StylePicker value={profile.styles} onChange={(v) => patch({ styles: v })} />}
+        {step === 4 && (
           <>
             <MeasurementsView profile={customer.fitProfile} />
             <SectionTitle>How it works</SectionTitle>
@@ -422,7 +471,7 @@ export const PersonalizeScreen: React.FC = () => {
             </ol>
           </>
         )}
-        {step === 4 && <AddressForm value={address} onChange={setAddress} errors={addrErrors} />}
+        {step === 5 && <AddressForm value={address} onChange={setAddress} errors={addrErrors} />}
       </div>
     </Screen>
   );

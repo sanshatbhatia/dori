@@ -34,7 +34,7 @@ import {
   useToast,
 } from '../ui/kit';
 import { OtpStep } from './Auth';
-import { BodyTypePicker, HeightPicker, MeasurementsView, SizePicker, validHeight } from './Personalize';
+import { BodyTypePicker, HeightPicker, MeasurementsView, SizePicker, StylePicker, validHeight } from './Personalize';
 
 export const ProfileScreen: React.FC = () => {
   const nav = useNav();
@@ -349,7 +349,7 @@ export const FitScreen: React.FC = () => {
             setBusy(true);
             setError('');
             try {
-              setCustomer(await api.updateFitProfile({ heightCm: p.heightCm, heightUnit: p.heightUnit, usualSize: p.usualSize, garmentSizes: p.garmentSizes, bodyType: p.bodyType }));
+              setCustomer(await api.updateFitProfile({ heightCm: p.heightCm, heightUnit: p.heightUnit, usualSize: p.usualSize, garmentSizes: p.garmentSizes, bodyType: p.bodyType, styles: p.styles }));
               toast('Fit profile saved');
               nav.back();
             } catch (e) {
@@ -369,6 +369,8 @@ export const FitScreen: React.FC = () => {
         <SizePicker profile={p} onChange={patch} />
         <SectionTitle>Body type</SectionTitle>
         <BodyTypePicker value={p.bodyType} onChange={(b) => patch({ bodyType: b })} />
+        <SectionTitle>Your style</SectionTitle>
+        <StylePicker value={p.styles} onChange={(v) => patch({ styles: v })} />
         <SectionTitle>Measurements</SectionTitle>
         <MeasurementsView profile={c.fitProfile} />
       </div>

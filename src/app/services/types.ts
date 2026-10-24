@@ -25,6 +25,19 @@ export interface Address {
 export type SizeCode = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'custom' | 'unsure';
 export type BodyType = 'apple' | 'pear' | 'hourglass' | 'rectangle' | 'unsure';
 export type HeightUnit = 'cm' | 'ftin';
+export type ClothingStyle =
+  | 'casual'
+  | 'formal'
+  | 'traditional'
+  | 'indo_western'
+  | 'western'
+  | 'party'
+  | 'sportswear'
+  | 'ethnic_chic'
+  | 'minimalist'
+  | 'street'
+  | 'resort'
+  | 'retro';
 
 export interface Measurements {
   bust?: number;
@@ -47,6 +60,8 @@ export interface FitProfile {
   /** A customer's size often differs by garment, so it is kept per garment */
   garmentSizes: Partial<Record<'blouse' | 'kurti' | 'lehenga' | 'trousers' | 'dress', SizeCode>>;
   bodyType?: BodyType;
+  /** styles the customer usually wears (personalises suggestions only) */
+  styles?: ClothingStyle[];
   measurements?: Measurements;
   updatedAt?: ISODate;
 }
