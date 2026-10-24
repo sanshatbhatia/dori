@@ -283,21 +283,18 @@ export const BACK_CUTS: Record<string, { pts: number[][] }> = {
       [273.5, 155],
     ],
   },
+  // Keyhole back: a high, shallow round neck; the teardrop keyhole below it is drawn separately
   keyholeBack: {
     pts: [
-      [198, 150],
-      [212, 158],
-      [220, 166],
-      [221, 190],
-      [220, 225],
-      [224, 260],
-      [230, 274],
-      [236, 260],
-      [240, 225],
-      [239, 190],
-      [240, 166],
-      [248, 158],
-      [262, 150],
+      [188, 154],
+      [198, 156.5],
+      [209, 159],
+      [220, 160.6],
+      [230, 161.2],
+      [240, 160.6],
+      [251, 159],
+      [262, 156.5],
+      [272, 154],
     ],
   },
   tieBack: {
@@ -930,3 +927,6 @@ export const PAINTED_HEM_BACK_L: number[][] = [[11.3, 728.1], [18.3, 732.5], [25
 // centre; the neck cords cross in an X down to the top of the lacing
 export const HALTER_BACK_TOP: number[][] = [[181, 210], [205, 211], [230, 211.5], [255, 211], [279, 210]];
 export const HALTER_LACING = { top: 211.5, bottom: 259, gap: 6, loops: [216, 225.5, 235, 244.5] };
+
+// Teardrop keyhole below the back neck, closed at the top by a button and loop
+export const KEYHOLE_BACK = { top: 165, bottom: 236, half: 14, widest: 0.48 };

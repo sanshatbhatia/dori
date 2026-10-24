@@ -33,6 +33,7 @@ import {
   PAINTED,
   PAINTED_LATKAN_ANCHOR,
   PAINTED_BACK,
+  KEYHOLE_BACK,
   PAINTED_HEM_BACK_L,
   HALTER_STRAP_OUTER_L,
   HALTER_BACK_TOP,
@@ -1010,6 +1011,7 @@ interface BlouseDetailsResult {
   lowerLatkanR?: { x: number; y: number } | null;
   showPotli?: boolean;
   dori?: { y: number; xl: number; xr: number; tailEnd: number } | null;
+  keyhole?: boolean;
   potliYs?: number[];
   dartLeft?: string;
   dartRight?: string;
@@ -1156,7 +1158,8 @@ interface BlouseDetailsResult {
       // The painted deep V back is clean, with no ties
       const plainV = painted && backStyle === 'deepBack';
       const hasLowerTie = !plainV && (backStyle === 'tieBack' || backStyle === 'deepBack' || backStyle === 'cutOut');
-      const showPotli = !hasLowerTie && (backStyle === 'roundBack' || backStyle === 'squareBack' || backStyle === 'keyholeBack');
+      const keyhole = backStyle === 'keyholeBack';
+      const showPotli = !hasLowerTie && (backStyle === 'roundBack' || backStyle === 'squareBack');
       const potliYs = [182, 202, 222, 242, 262].filter((y) => y > neckLowestY + 4 && y < hem - 8);
 
       // Dori: cords tied to both edges of the back opening, knotted in a bow at the centre,
@@ -1173,7 +1176,7 @@ interface BlouseDetailsResult {
       const openTop = Math.min(...backPts.map((q) => q[1]));
       // tied just below the top of the opening, across the upper back
       const doriY = openTop + 7;
-      const dori = plainV || hasLowerTie
+      const dori = plainV || hasLowerTie || keyhole
         ? null
         : { y: doriY, xl: edgeX(doriY), xr: STAGE_W - edgeX(doriY), tailEnd: hem + 7 };
 
@@ -1199,6 +1202,7 @@ interface BlouseDetailsResult {
         showPotli,
         potliYs,
         dori,
+        keyhole,
         // Tailored Back Darts
         dartLeft: `M ${STAGE_CX - 34} ${Math.max(170, neckLowestY)} Q ${STAGE_CX - 30} 230 ${STAGE_CX - 26} ${hem}`,
         dartRight: `M ${STAGE_CX + 34} ${Math.max(170, neckLowestY)} Q ${STAGE_CX + 28} 230 ${STAGE_CX + 24} ${hem}`,
@@ -2550,6 +2554,33 @@ interface BlouseDetailsResult {
                       </g>
                     ))}
 
+                    {/* Keyhole: a teardrop opening below the neck, closed at the top with a fabric button
+                        and loop, and the centre-back seam running down from its point */}
+                    {bDet.keyhole && (() => {
+                      const { top, bottom, half, widest } = KEYHOLE_BACK;
+                      const cx = STAGE_CX;
+                      const mid = top + (bottom - top) * widest;
+                      const d = `M ${cx} ${top} C ${cx - half * 0.55} ${top + 2} ${cx - half} ${mid - 16} ${cx - half} ${mid} C ${cx - half} ${mid + 18} ${cx - 4} ${bottom - 12} ${cx} ${bottom} C ${cx + 4} ${bottom - 12} ${cx + half} ${mid + 18} ${cx + half} ${mid} C ${cx + half} ${mid - 16} ${cx + half * 0.55} ${top + 2} ${cx} ${top} Z`;
+                      const neckY = 161.2;
+                      return (
+                        <g id="keyhole-back">
+                          <clipPath id="keyhole-back-clip"><path d={d} /></clipPath>
+                          <g clipPath="url(#keyhole-back-clip)">
+                            {painted ? paintedImage(PV.skin) : <rect x={cx - half} y={top} width={half * 2} height={bottom - top} fill="#f3d8bc" />}
+                            {/* the blouse edge casts a soft shadow into the opening */}
+                            <path d={d} fill="none" stroke="rgba(90,50,40,0.22)" strokeWidth="5" />
+                          </g>
+                          <path d={d} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.8" opacity="0.65" />
+                          {/* centre-back seam from the point of the keyhole to the hem */}
+                          <path d={`M ${cx} ${bottom + 0.5} L ${cx} ${(TOP[topStyleId] || TOP.fitted).right.slice(-1)[0][1] - 1}`} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.7" opacity="0.45" />
+                          {/* neck closure: fabric loop and covered button */}
+                          <path d={`M ${cx - 3.2} ${neckY + 2.2} Q ${cx - 3.6} ${neckY - 0.6} ${cx - 0.8} ${neckY + 1.2}`} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.6" />
+                          <circle cx={cx + 0.6} cy={neckY + 2.1} r="1.9" fill={fabTheme.baseColor} stroke={fabTheme.outlineColor} strokeWidth="0.55" />
+                          <circle cx={cx + 0.1} cy={neckY + 1.6} r="0.6" fill="#ffffff" opacity="0.5" />
+                        </g>
+                      );
+                    })()}
+
                     {/* Upper dori: tied across the opening in a bow, tails ending in latkans */}
                     {bDet.dori && (() => {
                       const { y, xl, xr, tailEnd } = bDet.dori;
@@ -2587,7 +2618,7 @@ interface BlouseDetailsResult {
                     })()}
 
                     {/* Legacy upper dori (only when the back has no dori across its opening) */}
-                    {!bDet.dori && (
+                    {!bDet.dori && !bDet.keyhole && (
                       <>
                     {bDet.tieBow && <path d={bDet.tieBow} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />}
                     {bDet.doriLeft && <path d={bDet.doriLeft} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
