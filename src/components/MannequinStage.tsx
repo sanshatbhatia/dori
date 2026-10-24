@@ -34,6 +34,7 @@ import {
   PAINTED_LATKAN_ANCHOR,
   PAINTED_BACK,
   KEYHOLE_BACK,
+  TIE_BACK_WINDOW,
   PAINTED_HEM_BACK_L,
   HALTER_STRAP_OUTER_L,
   HALTER_BACK_TOP,
@@ -1012,6 +1013,7 @@ interface BlouseDetailsResult {
   showPotli?: boolean;
   dori?: { y: number; xl: number; xr: number; tailEnd: number } | null;
   keyhole?: boolean;
+  tieWindow?: boolean;
   potliYs?: number[];
   dartLeft?: string;
   dartRight?: string;
@@ -1157,7 +1159,9 @@ interface BlouseDetailsResult {
       const tieY = Math.min(neckLowestY + 12, 185);
       // The painted deep V back is clean, with no ties
       const plainV = painted && backStyle === 'deepBack';
-      const hasLowerTie = !plainV && (backStyle === 'tieBack' || backStyle === 'deepBack' || backStyle === 'cutOut');
+      // The tie back is an open window laced with tied cords (drawn on its own)
+      const tieWindow = backStyle === 'tieBack';
+      const hasLowerTie = !plainV && (backStyle === 'deepBack' || backStyle === 'cutOut');
       const keyhole = backStyle === 'keyholeBack';
       const showPotli = !hasLowerTie && (backStyle === 'roundBack' || backStyle === 'squareBack');
       const potliYs = [182, 202, 222, 242, 262].filter((y) => y > neckLowestY + 4 && y < hem - 8);
@@ -1176,7 +1180,7 @@ interface BlouseDetailsResult {
       const openTop = Math.min(...backPts.map((q) => q[1]));
       // tied just below the top of the opening, across the upper back
       const doriY = openTop + 7;
-      const dori = plainV || hasLowerTie || keyhole
+      const dori = plainV || hasLowerTie || keyhole || tieWindow
         ? null
         : { y: doriY, xl: edgeX(doriY), xr: STAGE_W - edgeX(doriY), tailEnd: hem + 7 };
 
@@ -1203,6 +1207,7 @@ interface BlouseDetailsResult {
         potliYs,
         dori,
         keyhole,
+        tieWindow,
         // Tailored Back Darts
         dartLeft: `M ${STAGE_CX - 34} ${Math.max(170, neckLowestY)} Q ${STAGE_CX - 30} 230 ${STAGE_CX - 26} ${hem}`,
         dartRight: `M ${STAGE_CX + 34} ${Math.max(170, neckLowestY)} Q ${STAGE_CX + 28} 230 ${STAGE_CX + 24} ${hem}`,
@@ -2524,7 +2529,7 @@ interface BlouseDetailsResult {
                 return (
                   <g id="blouse-back-details">
                     {/* Spine seam */}
-                    <path d={bDet.spine!} fill="none" stroke={fabTheme.outlineColor} strokeWidth={painted ? 0.8 : 1.1} opacity={painted ? 0.45 : 0.6} strokeLinecap="round" />
+                    {!bDet.tieWindow && <path d={bDet.spine!} fill="none" stroke={fabTheme.outlineColor} strokeWidth={painted ? 0.8 : 1.1} opacity={painted ? 0.45 : 0.6} strokeLinecap="round" />}
                     {/* Tailored back darts */}
                     {!painted && <path d={bDet.dartLeft!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />}
                     {!painted && <path d={bDet.dartRight!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />}
@@ -2553,6 +2558,50 @@ interface BlouseDetailsResult {
                         <circle cx={STAGE_CX + 0.5} cy={py - 0.5} r="0.65" fill="#ffffff" opacity="0.7" />
                       </g>
                     ))}
+
+                    {/* Tie back: an open window from below the shoulder blades through the hem, piped in
+                        gold, its sides drawn together by two rows of thin cords tied in bows */}
+                    {bDet.tieWindow && (() => {
+                      const { top, bottom, topHalf, bottomHalf, r, rows } = TIE_BACK_WINDOW;
+                      const cx = STAGE_CX;
+                      const xL = (y: number) => cx - topHalf + ((y - (top + r)) / (bottom - (top + r))) * (topHalf - bottomHalf);
+                      const win = `M ${cx - bottomHalf} ${bottom} L ${cx - topHalf} ${top + r} Q ${cx - topHalf} ${top} ${cx - topHalf + r} ${top} L ${cx + topHalf - r} ${top} Q ${cx + topHalf} ${top} ${cx + topHalf} ${top + r} L ${cx + bottomHalf} ${bottom} Z`;
+                      const edge = `M ${cx - bottomHalf + 0.3} ${bottom - 3.5} L ${cx - topHalf} ${top + r} Q ${cx - topHalf} ${top} ${cx - topHalf + r} ${top} L ${cx + topHalf - r} ${top} Q ${cx + topHalf} ${top} ${cx + topHalf} ${top + r} L ${cx + bottomHalf - 0.3} ${bottom - 3.5}`;
+                      const cord = (d: string, key: string) => (
+                        <g key={key} fill="none" strokeLinecap="round" strokeLinejoin="round">
+                          <path d={d} stroke="#1f3328" strokeWidth="1.05" opacity="0.6" />
+                          <path d={d} stroke="#3b5a47" strokeWidth="0.75" />
+                        </g>
+                      );
+                      return (
+                        <g id="tie-back-window">
+                          <clipPath id="tie-back-clip"><path d={win} /></clipPath>
+                          <g clipPath="url(#tie-back-clip)">
+                            {painted ? paintedImage(PV.skin) : <rect x={cx - topHalf} y={top} width={topHalf * 2} height={bottom - top} fill="#f3d8bc" />}
+                            <path d={edge} fill="none" stroke="rgba(90,50,40,0.22)" strokeWidth="5" />
+                          </g>
+                          <path d={edge} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.7" opacity="0.6" />
+                          <path d={edge} fill="none" stroke="#c8a24f" strokeWidth="0.9" transform="translate(0 0)" opacity="0.9" strokeLinecap="round" />
+                          {rows.map((y, i) => {
+                            const xl = xL(y) + 0.6, xr = 2 * cx - xL(y) - 0.6;
+                            const bx = cx - 4 + i * 2; // bows sit a little off centre, as tied by hand
+                            const by = y + 1.2;
+                            const tailLen = i === rows.length - 1 ? 34 : 15;
+                            return (
+                              <g key={i}>
+                                {cord(`M ${xl} ${y} Q ${(xl + bx) / 2} ${y + 2} ${bx} ${by}`, `l${i}`)}
+                                {cord(`M ${xr} ${y} Q ${(xr + bx) / 2} ${y + 2} ${bx} ${by}`, `r${i}`)}
+                                {cord(`M ${bx} ${by} C ${bx - 6} ${by - 9} ${bx - 14} ${by - 5} ${bx - 9} ${by - 0.5} C ${bx - 6} ${by + 2} ${bx - 2} ${by + 1} ${bx} ${by}`, `bl${i}`)}
+                                {cord(`M ${bx} ${by} C ${bx + 6} ${by - 8} ${bx + 15} ${by - 3} ${bx + 10} ${by + 1.5} C ${bx + 6} ${by + 3.5} ${bx + 2} ${by + 1.5} ${bx} ${by}`, `br${i}`)}
+                                {cord(`M ${bx} ${by} C ${bx - 2} ${by + tailLen * 0.4} ${bx - 6} ${by + tailLen * 0.7} ${bx - 5} ${by + tailLen}`, `tl${i}`)}
+                                {cord(`M ${bx} ${by} C ${bx + 2} ${by + tailLen * 0.45} ${bx + 4} ${by + tailLen * 0.8} ${bx + 6} ${by + tailLen + 3}`, `tr${i}`)}
+                                <circle cx={bx} cy={by} r="0.9" fill="#3b5a47" stroke="#1f3328" strokeWidth="0.3" />
+                              </g>
+                            );
+                          })}
+                        </g>
+                      );
+                    })()}
 
                     {/* Keyhole: a teardrop opening below the neck, closed at the top with a fabric button
                         and loop, and the centre-back seam running down from its point */}
@@ -2618,7 +2667,7 @@ interface BlouseDetailsResult {
                     })()}
 
                     {/* Legacy upper dori (only when the back has no dori across its opening) */}
-                    {!bDet.dori && !bDet.keyhole && (
+                    {!bDet.dori && !bDet.keyhole && !bDet.tieWindow && (
                       <>
                     {bDet.tieBow && <path d={bDet.tieBow} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />}
                     {bDet.doriLeft && <path d={bDet.doriLeft} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}

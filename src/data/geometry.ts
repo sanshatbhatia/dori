@@ -297,18 +297,20 @@ export const BACK_CUTS: Record<string, { pts: number[][] }> = {
       [272, 154],
     ],
   },
+  // Tie back: a wide, shallow round neck; the tied window lower down is drawn separately
   tieBack: {
     pts: [
-      [198, 148],
-      [206, 175],
-      [214, 212],
-      [220, 252],
-      [226, 280],
-      [234, 280],
-      [240, 252],
-      [246, 212],
-      [254, 175],
-      [262, 148],
+      [188, 154],
+      [196, 159],
+      [205, 164],
+      [214, 167.5],
+      [222, 169.3],
+      [230, 170],
+      [238, 169.3],
+      [246, 167.5],
+      [255, 164],
+      [264, 159],
+      [272, 154],
     ],
   },
   cutOut: {
@@ -930,3 +932,7 @@ export const HALTER_LACING = { top: 211.5, bottom: 259, gap: 6, loops: [216, 225
 
 // Teardrop keyhole below the back neck, closed at the top by a button and loop
 export const KEYHOLE_BACK = { top: 165, bottom: 236, half: 14, widest: 0.48 };
+
+// Tie back window: open from below the shoulder blades down through the hem, its sides
+// drawn together by two rows of tied cords
+export const TIE_BACK_WINDOW = { top: 198, bottom: 262, topHalf: 36, bottomHalf: 29, r: 9, rows: [231, 250] };
