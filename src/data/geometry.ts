@@ -510,8 +510,8 @@ export const BOT: Record<string, { profile: [number, number][]; scallop?: boolea
   panelled: { profile: [[0, 40], [0.028, 43.2], [0.12, 80], [0.24, 102], [0.5, 146], [0.75, 186], [1, 216]], scallop: true },
   flared: { profile: [[0, 40], [0.028, 43.2], [0.12, 78], [0.24, 96], [0.48, 126], [0.72, 176], [1, 222]] },
   straight: { profile: [[0, 40], [0.028, 43.2], [0.12, 72], [0.24, 82], [0.45, 88], [0.75, 94], [1, 102]] },
-  // three gathered tiers, each fuller than the one above (seams at 0.24 and 0.56 of the length)
-  tiered: { profile: [[0, 40], [0.028, 43.2], [0.07, 52], [0.24, 74], [0.246, 79], [0.4, 98], [0.56, 117], [0.566, 123], [0.78, 152], [1, 182]] },
+  // three gathered tiers, each a little deeper and fuller than the one above (seams at 0.29 and 0.62)
+  tiered: { profile: [[0, 40], [0.028, 43.2], [0.08, 52], [0.29, 77], [0.296, 82], [0.45, 98], [0.62, 117], [0.626, 123], [0.8, 150], [1, 184]] },
   mermaid: { profile: [[0, 40], [0.028, 43.2], [0.12, 74], [0.24, 82], [0.42, 82], [0.6, 80], [0.72, 88], [0.84, 146], [1, 210]] },
   trouser: { profile: [[0, 40], [0.028, 43.2], [0.12, 72], [0.24, 80], [0.5, 78], [1, 74]] },
 };

@@ -890,7 +890,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     if (botGeo !== 'tiered') return [];
     const hh = LENV[lenId] || 400;
     const top = botTop;
-    return [top + hh * 0.24, top + hh * 0.56];
+    return [top + hh * 0.29, top + hh * 0.62];
   };
 
   // Dupatta / Pallu Drape
@@ -1930,9 +1930,9 @@ interface BlouseDetailsResult {
                 }
                 return sk[sk.length - 1][1] * fitK;
               };
-              const tierTs = [0.028, 0.243, 0.563, 1];
+              const tierTs = [0.028, 0.293, 0.623, 1];
               const sag = (x: number, hw: number, amt: number) => amt * (1 - Math.min(1, ((x - STAGE_CX) / hw) ** 2));
-              const seams = [0.243, 0.563].map((tt) => {
+              const seams = [0.293, 0.623].map((tt) => {
                 const y = botTop + tt * hh;
                 const hw = halfAt(tt + 0.004) + 1;
                 const n = 40;
@@ -1945,29 +1945,54 @@ interface BlouseDetailsResult {
               const line = (pts: number[][]) => 'M ' + pts.map((q) => `${q[0].toFixed(1)} ${q[1].toFixed(1)}`).join(' L ');
               return (
                 <g id="tiered-skirt" clipPath="url(#skirt-clip)" fill="none" strokeLinecap="round">
-                  {/* gathers: fine fold lines under the waistband and each seam, a few running longer */}
+                  {/* gathers: a dense row of short fold lines just under the waistband and each seam (where
+                      the fabric is gathered in), and a few long soft folds running down each tier */}
                   {tierTs.slice(0, 3).map((t0, ti) => {
                     const t1 = tierTs[ti + 1];
                     const span = (t1 - t0) * hh;
                     const hw0 = halfAt(t0 + 0.01), hw1 = halfAt(t1 - 0.004);
-                    const n = 16 + ti * 6;
                     const dip = ti ? 8 : 0;
-                    const y0 = botTop + t0 * hh + (ti ? 1.5 : 16);
-                    return Array.from({ length: n }, (_, i) => {
-                      const f = (i + 0.5) / n - 0.5;
-                      const x0 = STAGE_CX + f * 2 * hw0 * 0.94;
-                      const long = i % 4 === 1;
-                      const len = span * (long ? 0.55 + ((i * 5) % 3) * 0.12 : 0.14 + ((i * 7) % 4) * 0.05);
-                      const x1 = STAGE_CX + f * 2 * (hw0 + (hw1 - hw0) * (len / span)) * 0.96;
-                      const ys = y0 + sag(x0, hw0, dip);
-                      return (
-                        <g key={`${ti}-${i}`}>
-                          <path d={`M ${x0} ${ys} Q ${(x0 + x1) / 2 + (i % 2 ? 0.6 : -0.6)} ${ys + len / 2} ${x1} ${ys + len}`} stroke={fabTheme.outlineColor} strokeWidth={long ? 0.75 : 0.6} opacity={long ? 0.28 : 0.38} />
-                          {long && <path d={`M ${x0 + 2} ${ys + 1} Q ${(x0 + x1) / 2 + 2} ${ys + len / 2} ${x1 + 2.3} ${ys + len * 0.85}`} stroke="rgba(255,255,255,0.1)" strokeWidth="1.8" />}
-                        </g>
-                      );
-                    });
+                    const y0 = botTop + t0 * hh + (ti ? 1.2 : 16);
+                    const at = (f: number, d: number) => {
+                      const x0 = STAGE_CX + f * 2 * hw0 * 0.95;
+                      const x1 = STAGE_CX + f * 2 * (hw0 + (hw1 - hw0) * (d / span)) * 0.96;
+                      return { x0, x1, ys: y0 + sag(x0, hw0, dip) };
+                    };
+                    const nShort = 26 + ti * 8;
+                    const nLong = 5 + ti * 2;
+                    return (
+                      <g key={ti}>
+                        {Array.from({ length: nShort }, (_, i) => {
+                          const f = (i + 0.5) / nShort - 0.5;
+                          const len = 4 + ((i * 7) % 5) * 1.6 + ti * 1.5;
+                          const { x0, x1, ys } = at(f, len);
+                          return <path key={`s${i}`} d={`M ${x0} ${ys} L ${x1} ${ys + len}`} stroke={fabTheme.outlineColor} strokeWidth="0.5" opacity="0.42" />;
+                        })}
+                        {Array.from({ length: nLong }, (_, i) => {
+                          const f = (i + 0.5) / nLong - 0.5 + (i % 2 ? 0.02 : -0.02);
+                          const len = span * (0.6 + ((i * 3) % 3) * 0.12);
+                          const { x0, x1, ys } = at(f, len);
+                          return (
+                            <g key={`l${i}`}>
+                              <path d={`M ${x0} ${ys + 3} Q ${(x0 + x1) / 2 + (i % 2 ? 1 : -1)} ${ys + len / 2} ${x1} ${ys + len}`} stroke={fabTheme.outlineColor} strokeWidth="0.6" opacity="0.22" />
+                              <path d={`M ${x0 + 2.2} ${ys + 4} Q ${(x0 + x1) / 2 + 2.4} ${ys + len / 2} ${x1 + 2.6} ${ys + len * 0.9}`} stroke="rgba(255,255,255,0.1)" strokeWidth="2" />
+                            </g>
+                          );
+                        })}
+                      </g>
+                    );
                   })}
+                  {/* hem stitching just above the wavy hem */}
+                  {(() => {
+                    const hw = halfAt(1) - 1;
+                    const n = 44;
+                    const yb = botTop + hh;
+                    const pts = Array.from({ length: n + 1 }, (_, i) => {
+                      const f = i / n;
+                      return [STAGE_CX - hw + 2 * hw * f, yb + Math.sin(f * Math.PI) * 8 + Math.sin(f * Math.PI * 22) * 1.4 - 5];
+                    });
+                    return <path d={line(pts)} stroke={fabTheme.outlineColor} strokeWidth="0.5" opacity="0.35" strokeDasharray="1.6 1.2" />;
+                  })()}
                   {/* each tier overhangs the next: shadow just below the seam, then the gathered seam */}
                   {seams.map((sm, i) => (
                     <g key={i}>
