@@ -2022,9 +2022,9 @@ interface BlouseDetailsResult {
             );
           })()}
           {/* Cross-body: the fall down the back from the shoulder, behind the figure (shows beside the arm) */}
-          {painted && drapeId === 'crossBody' && !isBack && (
+          {painted && (drapeId === 'crossBody' || drapeId === 'aroundBody') && !isBack && (
             <g id="drape-cross-back" opacity={fade}>
-              <path d={svgPath(CROSS_BODY_BACK_FALL)} fill={fabTheme.drapeColor} opacity="0.45" />
+              <path d={svgPath(drapeId === 'aroundBody' ? mir(CROSS_BODY_BACK_FALL) : CROSS_BODY_BACK_FALL)} fill={fabTheme.drapeColor} opacity="0.45" />
             </g>
           )}
           {/* Avatar Rear Hair (Layer Behind Shoulders & Torso) */}
@@ -2428,7 +2428,7 @@ interface BlouseDetailsResult {
 
             {/* Lehenga Latkan, hooked onto the waistband: heavy is a three-tier cluster of silk tassels
                 on beaded strands, light a small cascade of gold filigree balls and crystal beads */}
-            {currentGarment === 'lehenga' && beltLatkan !== 'none' && !isBack && (() => {
+            {currentGarment === 'lehenga' && beltLatkan !== 'none' && !isBack && !(painted && drapeId === 'aroundBody') && (() => {
               const [ax, ay] = PAINTED_LATKAN_ANCHOR;
               const hook = (
                 <g>
@@ -3581,14 +3581,11 @@ interface BlouseDetailsResult {
             const capeOnFigure = drapeId === 'bothShoulders' && !isBack && armPose === 'stretched';
             const mirPiece = (p: DrapePiece): DrapePiece => ({
               poly: mir(p.poly), borders: p.borders.map(mir), folds: p.folds.map(mir), corners: p.corners && mir(p.corners), butis: p.butis, strips: p.strips,
+              clipToSkirt: p.clipToSkirt, shadowEdges: p.shadowEdges,
             });
-            // around body: the shoulder fall is the fitted cape panel on the left shoulder
-            const fallOnFigure = drapeId === 'aroundBody' && !isBack && armPose === 'stretched';
             const ps = capeOnFigure
               ? (() => { const c = capeFrontL(); return [c, mirPiece(c)]; })()
-              : fallOnFigure
-                ? [...DRAPES.aroundBody.slice(0, -1), mirPiece(capeFrontL())]
-                : (isBack ? DRAPES_BACK : DRAPES)[drapeId] || [];
+              : (isBack ? DRAPES_BACK : DRAPES)[drapeId] || [];
             const open = (pts: number[][]) => {
               if (pts.length < 3) return 'M ' + pts.map((q) => q.join(' ')).join(' L ');
               let d = `M ${pts[0][0]} ${pts[0][1]}`;
@@ -3614,7 +3611,7 @@ interface BlouseDetailsResult {
             };
             return (
               <g id="drape-styled" opacity={fade}>
-                <g clipPath={isBack || capeOnFigure || fallOnFigure ? undefined : 'url(#drape-off-forearms-clip)'}>
+                <g clipPath={isBack || capeOnFigure ? undefined : 'url(#drape-off-forearms-clip)'}>
                 {capeOnFigure && (
                   // soft shadow the lapel edge casts on the blouse and skirt beside it
                   <g filter="url(#drape-fold-blur)" fill="none" strokeLinecap="round">
@@ -3627,7 +3624,7 @@ interface BlouseDetailsResult {
                 <g filter="url(#drape-fold-blur)" fill="none" strokeLinecap="round">
                   {ps.flatMap((p, i) =>
                     (p.shadowEdges || []).map((e) => (
-                      <path key={`sh${i}-${e}`} d={open(p.borders[e].map(([x, y]) => [x + (x < STAGE_CX ? 3 : -3), y + 3.5]))} stroke="rgba(40,52,40,0.3)" strokeWidth="5" />
+                      <path key={`sh${i}-${e}`} d={open(p.borders[e].map(([x, y]) => [x + (x < STAGE_CX ? 3 : -3), y + 3.5]))} stroke="rgba(40,52,40,0.3)" strokeWidth="5" clipPath={p.clipToSkirt ? 'url(#skirt-clip)' : undefined} />
                     )),
                   )}
                 </g>
@@ -3638,7 +3635,7 @@ interface BlouseDetailsResult {
                   const butis: number[][] = [];
                   if (p.butis) for (let k = 0; k < 46; k++) butis.push([x0 + (((k * 37) % 29) / 29) * (x1 - x0), y0 + 24 + (((k * 53) % 41) / 41) * (y1 - y0 - 50)]);
                   return (
-                    <g key={i}>
+                    <g key={i} clipPath={p.clipToSkirt ? 'url(#skirt-clip)' : undefined}>
                       <clipPath id={`drape-styled-clip-${i}`}><path d={outline} /></clipPath>
                       <path d={outline} fill={fabTheme.drapeColor} opacity="0.55" />
                       <g clipPath={`url(#drape-styled-clip-${i})`} fill="none" strokeLinecap="round">
@@ -3703,6 +3700,29 @@ interface BlouseDetailsResult {
                   );
                 })}
                 </g>
+                {drapeId === 'aroundBody' && (
+                  // gold waist belt closing the wrap: a chain band with small studs and a clasp at the front
+                  <g id="drape-waist-belt" clipPath="url(#skirt-clip)" fill="none" strokeLinecap="round">
+                    <path d="M 120 281 Q 230 290 340 281" stroke="#6b5222" strokeWidth="5.6" opacity="0.6" />
+                    <path d="M 120 281 Q 230 290 340 281" stroke="#c9a24e" strokeWidth="4.4" />
+                    <path d="M 120 281 Q 230 290 340 281" stroke="#f3dc9a" strokeWidth="1.6" strokeDasharray="1.6 1.4" />
+                    {[-44, -33, -22, -11, 11, 22, 33, 44].map((dx) => (
+                      <circle key={dx} cx={230 + dx} cy={285.4 - (dx * dx) / 1330} r="1.3" fill="url(#tassel-bead)" stroke="#6b5222" strokeWidth="0.2" />
+                    ))}
+                    {!isBack && (
+                      <g>
+                        <ellipse cx="230" cy="285.5" rx="7" ry="5" fill="url(#tassel-bead)" stroke="#6b5222" strokeWidth="0.4" />
+                        <ellipse cx="230" cy="285.5" rx="3.6" ry="2.4" fill="#e9cf87" stroke="#8a6a2f" strokeWidth="0.3" />
+                        <circle cx="230" cy="285.5" r="1.1" fill="#a33a3a" />
+                      </g>
+                    )}
+                  </g>
+                )}
+                {/* with the wrap the latkan hangs from the belt, over the cloth */}
+                {drapeId === 'aroundBody' && !isBack && beltLatkan !== 'none' && (() => {
+                  const [ax, ay] = PAINTED_LATKAN_ANCHOR;
+                  return <g id="waist-latkan" data-size={beltLatkan}>{beltLatkan === 'heavy' ? heavyLatkan(ax, ay + 2) : lightLatkan(ax, ay + 2)}</g>;
+                })()}
                 {/* the long hair falls over the dupatta */}
                 {isBack ? paintedImage(PAINTED_BACK.head) : <AvatarRenderer viewMode={viewMode} layer="frontHair" />}
               </g>

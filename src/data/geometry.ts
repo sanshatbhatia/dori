@@ -962,6 +962,8 @@ export type DrapePiece = {
   knot?: number[];
   /** borders (by index) whose edge casts a soft shadow on the garment underneath */
   shadowEdges?: number[];
+  /** clip to the skirt's outline (cloth wrapped over the skirt) */
+  clipToSkirt?: boolean;
 };
 const capeL: DrapePiece = {
   // over the shoulder like a cape, falling outside the arm to below the knee; embroidered front edge and
@@ -976,6 +978,8 @@ const capeL: DrapePiece = {
   butis: true,
 };
 const mirP = (p: DrapePiece): DrapePiece => ({
+  ...p,
+  knot: p.knot && [460 - p.knot[0], p.knot[1]],
   poly: p.poly.map(([x, y]) => [460 - x, y]),
   borders: p.borders.map((b) => b.map(([x, y]) => [460 - x, y])),
   folds: p.folds.map((b) => b.map(([x, y]) => [460 - x, y])),
@@ -1026,30 +1030,34 @@ export const DRAPES: Record<string, DrapePiece[]> = {
 
 // Back view: the cape spans the whole back from shoulder to shoulder; the cross-body shows only
 // its fall from the shoulder; the around-body band wraps across the back to the hip.
-// Around body (after the reference): a fall from the left shoulder, a pleated swag across the
-// front of the skirt, and the end falling in a cascade at the right hip. In front view the fall
-// is rebuilt on the figure (the cape panel, mirrored) when the arms are stretched.
-const aroundSwag: DrapePiece = {
-  // the other end comes round from behind the right hip, narrow where it turns and opening into a
-  // pleated swag across the front of the skirt, rising to the left hip under the fall
-  poly: [[162,  330],  [198,  366],  [240,  388],  [284,  380],  [320,  350],  [340,  320],  [350,  356],  [328,  400],  [288,  438],  [240,  448],  [194,  424],  [160,  352]],
-  borders: [[[162,  330],  [198,  366],  [240,  388],  [284,  380],  [320,  350],  [340,  320]], [[160,  352],  [194,  424],  [240,  448],  [288,  438],  [328,  400],  [350,  356]]],
-  folds: [[[162,  330],  [198,  366],  [240,  388],  [284,  380],  [320,  350],  [340,  320]],  [[161.6,  334.4],  [197.2,  377.6],  [240.0,  400.0],  [284.8,  391.6],  [321.6,  360.0],  [342.0,  327.2]],  [[161.2,  338.8],  [196.4,  389.2],  [240.0,  412.0],  [285.6,  403.2],  [323.2,  370.0],  [344.0,  334.4]],  [[160.8,  343.2],  [195.6,  400.8],  [240.0,  424.0],  [286.4,  414.8],  [324.8,  380.0],  [346.0,  341.6]],  [[160.4,  347.6],  [194.8,  412.4],  [240.0,  436.0],  [287.2,  426.4],  [326.4,  390.0],  [348.0,  348.8]],  [[160,  352],  [194,  424],  [240,  448],  [288,  438],  [328,  400],  [350,  356]]],
+// Around body (half-saree style, after the reference): the pallu runs pleated from the left
+// shoulder across the bodice to the right waist, a gold belt closes it at the waist, and below the
+// belt the dupatta wraps over the skirt in two panels that open in an inverted V at the front.
+// The wrap panels are clipped to the chosen skirt's outline so they always sit on it.
+const aroundPallu: DrapePiece = {
+  poly: [[250,  150],  [240,  175],  [226,  205],  [210,  235],  [194,  262],  [180,  286],  [232,  288],  [246,  270],  [262,  248],  [278,  220],  [290,  190],  [293,  158]],
+  borders: [[[250,  150],  [240,  175],  [226,  205],  [210,  235],  [194,  262],  [180,  286]], [[293,  158],  [290,  190],  [278,  220],  [262,  248],  [246,  270],  [232,  288]]],
+  folds: [[[250,  150],  [240,  175],  [226,  205],  [210,  235],  [194,  262],  [180,  286]],  [[258.6,  151.6],  [250.0,  178.0],  [236.4,  208.0],  [220.4,  237.6],  [204.4,  263.6],  [190.4,  286.4]],  [[267.2,  153.2],  [260.0,  181.0],  [246.8,  211.0],  [230.8,  240.2],  [214.8,  265.2],  [200.8,  286.8]],  [[275.8,  154.8],  [270.0,  184.0],  [257.2,  214.0],  [241.2,  242.8],  [225.2,  266.8],  [211.2,  287.2]],  [[284.4,  156.4],  [280.0,  187.0],  [267.6,  217.0],  [251.6,  245.4],  [235.6,  268.4],  [221.6,  287.6]],  [[293,  158],  [290,  190],  [278,  220],  [262,  248],  [246,  270],  [232,  288]]],
   strips: true,
-  shadowEdges: [1],
 };
-const aroundCascade: DrapePiece = {
-  // gathered at the right hip and hanging straight down on the skirt in loose folds
-  poly: [[156,  318],  [151,  370],  [146,  430],  [140,  490],  [134,  540],  [128,  580],  [138,  602],  [148,  578],  [160,  604],  [172,  576],  [186,  598],  [196,  572],  [186,  530],  [192,  492],  [182,  452],  [189,  414],  [180,  376]],
-  borders: [[[180,  376],  [189,  414],  [182,  452],  [192,  492],  [186,  530],  [196,  572]], [[196,  572],  [186,  598],  [172,  576],  [160,  604],  [148,  578],  [138,  602],  [128,  580]], [[156,  318],  [151,  370],  [146,  430],  [140,  490],  [134,  540],  [128,  580]]],
-  folds: [[[186,  336],  [180,  376],  [189,  414],  [182,  452],  [192,  492],  [186,  530],  [196,  572]],  [[181.0,  333.0],  [181.9,  377.2],  [182.9,  421.3],  [183.7,  465.5],  [184.5,  509.7],  [185.3,  553.8],  [186.0,  598.0]],  [[176.0,  330.0],  [175.3,  371.0],  [174.7,  412.0],  [173.9,  453.0],  [173.3,  494.0],  [172.7,  535.0],  [172.0,  576.0]],  [[171.0,  327.0],  [169.0,  373.2],  [167.0,  419.3],  [165.2,  465.5],  [163.4,  511.7],  [161.6,  557.8],  [160.0,  604.0]],  [[166.0,  324.0],  [162.7,  366.3],  [159.5,  408.7],  [156.4,  451.0],  [153.5,  493.3],  [150.7,  535.7],  [148.0,  578.0]],  [[161.0,  321.0],  [156.8,  367.8],  [152.6,  414.7],  [148.7,  461.5],  [145.0,  508.3],  [141.4,  555.2],  [138.0,  602.0]],  [[156.0,  318.0],  [151.8,  361.3],  [147.7,  410.0],  [143.0,  460.0],  [138.0,  506.7],  [133.0,  546.7],  [128.0,  580.0]]],
+const aroundWrapL: DrapePiece = {
+  poly: [[0,  276],  [231,  276],  [226,  330],  [214,  400],  [198,  470],  [178,  540],  [156,  610],  [132,  680],  [100,  688],  [66,  684],  [30,  690],  [0,  686]],
+  borders: [[[231,  282],  [226,  330],  [214,  400],  [198,  470],  [178,  540],  [156,  610],  [132,  680]], [[132,  680],  [100,  688],  [66,  684],  [30,  690],  [0,  686]]],
+  folds: [[[226,  290],  [207.0,  377.5],  [188.0,  465.0],  [169.0,  552.5],  [150,  640]],  [[214,  290],  [190.0,  388.5],  [166.0,  487.0],  [142.0,  585.5],  [118,  684]],  [[202,  290],  [172.5,  389.0],  [143.0,  488.0],  [113.5,  587.0],  [84,  686]],  [[190,  292],  [154.5,  391.0],  [119.0,  490.0],  [83.5,  589.0],  [48,  688]],  [[180,  292],  [139.0,  391.0],  [98.0,  490.0],  [57.0,  589.0],  [16,  688]]],
   strips: true,
-  corners: [[186, 598], [138, 602]],
-  knot: [168, 336],
   butis: true,
+  clipToSkirt: true,
   shadowEdges: [0],
 };
-DRAPES.aroundBody = [aroundSwag, aroundCascade, crossFall];
+DRAPES.aroundBody = [aroundWrapL, mirP(aroundWrapL), aroundPallu];
+const aroundWrapBack: DrapePiece = {
+  // from behind, the wrap covers the back of the skirt
+  poly: [[0,  276],  [460,  276],  [460,  686],  [430,  690],  [396,  684],  [362,  690],  [330,  684],  [298,  690],  [264,  684],  [230,  690],  [196,  684],  [162,  690],  [128,  684],  [94,  690],  [60,  684],  [30,  690],  [0,  686]],
+  borders: [[[460,  686],  [430,  690],  [396,  684],  [362,  690],  [330,  684],  [298,  690],  [264,  684],  [230,  690],  [196,  684],  [162,  690],  [128,  684],  [94,  690],  [60,  684],  [30,  690],  [0,  686]]],
+  folds: [[[184,  290],  [180.32,  400],  [174.8,  540],  [169.28,  686]],  [[206,  290],  [204.08,  400],  [201.2,  540],  [198.32,  686]],  [[230,  290],  [230.0,  400],  [230.0,  540],  [230.0,  686]],  [[254,  290],  [255.92,  400],  [258.8,  540],  [261.68,  686]],  [[276,  290],  [279.68,  400],  [285.2,  540],  [290.72,  686]]],
+  butis: true,
+  clipToSkirt: true,
+};
 
 // Cross-body: the part of the dupatta hanging down the back from the right shoulder, drawn behind
 // the figure in front view (it shows beside the arm)
@@ -1072,6 +1080,6 @@ export const DRAPES_BACK: Record<string, DrapePiece[]> = {
   ],
   // the fall hanging down the back from the right shoulder
   crossBody: [crossFall],
-  // from the left shoulder across the back to the right hip, with the shoulder fall
-  aroundBody: [band, mirP(crossFall)],
+  // the wrap over the back of the skirt, and the pallu hanging down the back from the left shoulder
+  aroundBody: [aroundWrapBack, mirP(crossFall)],
 };
