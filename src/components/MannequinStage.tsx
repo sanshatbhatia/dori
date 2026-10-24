@@ -1579,7 +1579,7 @@ interface BlouseDetailsResult {
   const isLayerLoading = (slotShort: string) => loadingSlot.toLowerCase() === slotShort.toLowerCase();
 
   return (
-    <div className="flex-1 relative overflow-hidden min-h-0 bg-[#f7f4ef]">
+    <div className="flex-1 relative overflow-hidden min-h-0 bg-[#ffffff]">
       {/* Zoomable Stage Container */}
       <div
         id="mannequin-stage"
@@ -3786,7 +3786,7 @@ interface BlouseDetailsResult {
           <>
             {/* Center back seam */}
             <div
-              className="absolute left-[229px] top-[160px] w-0 border-l-[1.5px] border-[#2b2724]/30"
+              className="absolute left-[229px] top-[160px] w-0 border-l-[1.5px] border-[#000000]/30"
               style={{ height: `${hemBack - 168}px` }}
             />
             {/* Fabric button closures */}
@@ -3799,7 +3799,7 @@ interface BlouseDetailsResult {
               .map((y, idx) => (
                 <div
                   key={idx}
-                  className="absolute left-[224px] w-[11px] h-[11px] rounded-full bg-[#f7f4ef] border border-[#2b2724]/40 shadow-xs"
+                  className="absolute left-[224px] w-[11px] h-[11px] rounded-full bg-[#ffffff] border border-[#000000]/40 shadow-xs"
                   style={{ top: `${y}px` }}
                 />
               ))}
@@ -3811,7 +3811,7 @@ interface BlouseDetailsResult {
       <div className="absolute top-2 left-2.5 right-2.5 flex flex-wrap items-center justify-between gap-1.5 z-20 pointer-events-none">
         <div className="flex flex-wrap items-center gap-1.5 pointer-events-auto">
           {/* View Switcher Controls (Front | Detail | Back) */}
-          <div className="flex rounded-lg overflow-hidden border border-[#3c342c]/20 bg-[#f7f4ef]/90 backdrop-blur-md shadow-xs">
+          <div className="flex rounded-lg overflow-hidden border border-[#000000]/20 bg-[#ffffff]/90 backdrop-blur-md shadow-xs">
             {(['front', 'detail', 'back'] as ViewMode[]).map((mode) => {
               const isCurrent = viewMode === mode;
               return (
@@ -3832,7 +3832,7 @@ interface BlouseDetailsResult {
           </div>
 
           {/* Arm Pose Switcher (Resting | Stretched with Gravity Drape) */}
-          <div className="flex rounded-lg overflow-hidden border border-[#3c342c]/20 bg-[#f7f4ef]/90 backdrop-blur-md shadow-xs">
+          <div className="flex rounded-lg overflow-hidden border border-[#000000]/20 bg-[#ffffff]/90 backdrop-blur-md shadow-xs">
             <button
               id="stage-pose-btn-resting"
               onClick={() => setArmPose('resting')}
@@ -3872,13 +3872,13 @@ interface BlouseDetailsResult {
           {latkanBoxOrientation === 'horizontal' ? (
             <div
               id="stage-latkan-horizontal-box"
-              className="flex items-center rounded-lg overflow-hidden border border-[#3c342c]/20 bg-[#f7f4ef]/90 backdrop-blur-md shadow-xs animate-fade"
+              className="flex items-center rounded-lg overflow-hidden border border-[#000000]/20 bg-[#ffffff]/90 backdrop-blur-md shadow-xs animate-fade"
             >
               <div
                 title="Belt & Latkan Customization (Horizontal Box)"
-                className="flex items-center gap-1 px-1.5 py-1 text-[9px] uppercase tracking-wider font-semibold text-[#174d33] border-r border-[#3c342c]/15 bg-[#174d33]/5"
+                className="flex items-center gap-1 px-1.5 py-1 text-[9px] uppercase tracking-wider font-semibold text-[#174d33] border-r border-[#000000]/15 bg-[#174d33]/5"
               >
-                <Sparkles className="w-2.5 h-2.5 text-[#b68235]" />
+                <Sparkles className="w-2.5 h-2.5 text-[#174d33]" />
                 <span className="hidden xs:inline">Belt</span>
                 <span>Latkan</span>
               </div>
@@ -3904,7 +3904,7 @@ interface BlouseDetailsResult {
                 id="stage-latkan-switch-to-vertical"
                 onClick={() => setLatkanBoxOrientation('vertical')}
                 title="Switch Latkan to Vertical Floating Box"
-                className="px-1 py-1 text-[#5a534c] hover:bg-black/5 hover:text-[#174d33] border-l border-[#3c342c]/15 transition-colors"
+                className="px-1 py-1 text-black/60 hover:bg-black/5 hover:text-[#174d33] border-l border-[#000000]/15 transition-colors"
               >
                 <ArrowUpDown className="w-2.5 h-2.5" />
               </button>
@@ -3915,19 +3915,19 @@ interface BlouseDetailsResult {
               id="stage-latkan-vert-indicator"
               onClick={() => setLatkanBoxOrientation('horizontal')}
               title="Latkan is currently in the floating vertical box on the right. Click to switch to horizontal box."
-              className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#3c342c]/20 bg-[#f7f4ef]/90 backdrop-blur-md shadow-xs pointer-events-auto text-[9px] font-semibold text-[#174d33] hover:bg-black/5 transition-all"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg border border-[#000000]/20 bg-[#ffffff]/90 backdrop-blur-md shadow-xs pointer-events-auto text-[9px] font-semibold text-[#174d33] hover:bg-black/5 transition-all"
             >
-              <Sparkles className="w-2.5 h-2.5 text-[#b68235]" />
+              <Sparkles className="w-2.5 h-2.5 text-[#174d33]" />
               <span>Latkan: <span className="capitalize">{beltLatkan}</span></span>
-              <ArrowLeftRight className="w-2.5 h-2.5 text-[#5a534c]" />
+              <ArrowLeftRight className="w-2.5 h-2.5 text-black/60" />
             </button>
           )}
         </div>
 
         {/* Rendering Feedback */}
         {loadingSlot && (
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#3c342c]/20 bg-[#f7f4ef]/95 font-mono text-[9px] uppercase tracking-wider text-[#5a534c] shadow-xs pointer-events-auto">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#b68235] animate-ping" />
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#000000]/20 bg-[#ffffff]/95 font-mono text-[9px] uppercase tracking-wider text-black/60 shadow-xs pointer-events-auto">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#174d33] animate-ping" />
             <span>{loadingSlot}</span>
           </div>
         )}
@@ -3938,11 +3938,11 @@ interface BlouseDetailsResult {
         <aside
           id="floating-latkan-vertical-box"
           aria-label="Floating Latkan Vertical Box"
-          className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5 p-1.5 rounded-[22px] bg-[#eae9e9]/88 backdrop-blur-md border border-[#3c342c]/18 shadow-md z-30 pointer-events-auto select-none animate-fade"
+          className="absolute right-3 top-1/2 -translate-y-1/2 flex flex-col items-center gap-1.5 p-1.5 rounded-[22px] bg-white/80 backdrop-blur-md border border-[#000000]/18 shadow-md z-30 pointer-events-auto select-none animate-fade"
         >
           {/* Box Header Label */}
-          <div className="flex flex-col items-center gap-0.5 pb-1 border-b border-[#3c342c]/15 w-full text-center">
-            <Sparkles className="w-3.5 h-3.5 text-[#b68235]" />
+          <div className="flex flex-col items-center gap-0.5 pb-1 border-b border-[#000000]/15 w-full text-center">
+            <Sparkles className="w-3.5 h-3.5 text-[#174d33]" />
             <span className="text-[7.5px] uppercase tracking-wider font-bold text-[#174d33] leading-none">
               Latkan
             </span>
@@ -3976,7 +3976,7 @@ interface BlouseDetailsResult {
             id="stage-latkan-switch-to-horizontal"
             onClick={() => setLatkanBoxOrientation('horizontal')}
             title="Switch Latkan to Horizontal Top Box"
-            className="w-[48px] py-1 flex items-center justify-center gap-0.5 text-[#5a534c] hover:bg-black/5 hover:text-[#174d33] rounded-lg border-t border-[#3c342c]/12 mt-0.5 transition-colors text-[8px]"
+            className="w-[48px] py-1 flex items-center justify-center gap-0.5 text-black/60 hover:bg-black/5 hover:text-[#174d33] rounded-lg border-t border-[#000000]/12 mt-0.5 transition-colors text-[8px]"
           >
             <ArrowLeftRight className="w-3 h-3" />
             <span>Horiz</span>

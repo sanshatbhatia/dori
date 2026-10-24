@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { Category, ComponentOption, GarmentKey, LibraryMode, SelectionState } from '../types';
 import { checkCompatibilityReason } from '../data/garments';
+import { optionThumb, thumbFit } from '../data/optionThumbs';
 import { ChevronUp, X } from 'lucide-react';
 
 interface DesignLibraryProps {
@@ -42,6 +43,10 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
   };
 
   const renderOptionGlyph = (optId: string, name: string, isBig = false) => {
+    const thumb = optionThumb(activeCategory.id, optId);
+    if (thumb) {
+      return <img src={thumb} alt="" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} rounded-md object-cover`} />;
+    }
     if (optId === 'peplum') {
       return (
         <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>
@@ -76,7 +81,7 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
       return (
         <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>
           {/* Gathered halter: ruched neck casing, braided neck cords, deep cut armholes */}
-          <path d="M 16 4 Q 20 9 17 12 M 24 4 Q 20 9 23 12" fill="none" stroke="#b68235" strokeWidth="1.1" strokeDasharray="1 0.8" />
+          <path d="M 16 4 Q 20 9 17 12 M 24 4 Q 20 9 23 12" fill="none" stroke="#174d33" strokeWidth="1.1" strokeDasharray="1 0.8" />
           <path
             d="M 16.5 12 L 23.5 12 L 29 21 L 28.5 33 L 11.5 33 L 11 21 Z"
             fill="currentColor"
@@ -102,7 +107,7 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
             strokeWidth="1.2"
             strokeLinejoin="round"
           />
-          <path d="M 15 7.5 L 20 22 L 25 7.5" fill="none" stroke="#b68235" strokeWidth="1" strokeLinejoin="round" />
+          <path d="M 15 7.5 L 20 22 L 25 7.5" fill="none" stroke="#174d33" strokeWidth="1" strokeLinejoin="round" />
           <path d="M 16 23 Q 16.5 27 16.5 31.5 M 24 23 Q 23.5 27 23.5 31.5" fill="none" stroke="currentColor" strokeWidth="0.75" opacity="0.6" />
         </svg>
       );
@@ -119,7 +124,7 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
             strokeWidth="1.2"
             strokeLinejoin="round"
           />
-          <path d="M 15 7.5 Q 15.5 15 20 21 Q 24.5 15 25 7.5" fill="none" stroke="#b68235" strokeWidth="1" />
+          <path d="M 15 7.5 Q 15.5 15 20 21 Q 24.5 15 25 7.5" fill="none" stroke="#174d33" strokeWidth="1" />
           <path d="M 16 23 Q 16.5 27 16.5 31.5 M 24 23 Q 23.5 27 23.5 31.5" fill="none" stroke="currentColor" strokeWidth="0.75" opacity="0.6" />
         </svg>
       );
@@ -129,13 +134,13 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
         <svg viewBox="0 0 40 40" className={`${isBig ? 'w-8 h-8' : 'w-7 h-7'} text-[#174d33]`}>
           {/* Cropped choli with an embroidered hem band */}
           <path d="M 15 11 Q 20 15 25 11 L 25.5 21 L 14.5 21 Z" fill="currentColor" fillOpacity="0.35" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" />
-          <path d="M 14.5 19 L 25.5 19" stroke="#b68235" strokeWidth="1.4" />
+          <path d="M 14.5 19 L 25.5 19" stroke="#174d33" strokeWidth="1.4" />
           {/* Open jacket with gold-bordered front edges and sleeves */}
-          <path d="M 15 10 L 11 10.5 L 5 22 L 9 24 L 11.5 19 L 11 33 L 17 33 L 16 18 Z" fill="#f4ede4" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-          <path d="M 25 10 L 29 10.5 L 35 22 L 31 24 L 28.5 19 L 29 33 L 23 33 L 24 18 Z" fill="#f4ede4" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
-          <path d="M 15.3 10.5 L 16.3 18 L 17 32.5" stroke="#b68235" strokeWidth="1.2" fill="none" />
-          <path d="M 24.7 10.5 L 23.7 18 L 23 32.5" stroke="#b68235" strokeWidth="1.2" fill="none" />
-          <path d="M 11.3 32.4 L 16.8 32.4 M 23.2 32.4 L 28.7 32.4" stroke="#b68235" strokeWidth="1.2" />
+          <path d="M 15 10 L 11 10.5 L 5 22 L 9 24 L 11.5 19 L 11 33 L 17 33 L 16 18 Z" fill="#ffffff" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+          <path d="M 25 10 L 29 10.5 L 35 22 L 31 24 L 28.5 19 L 29 33 L 23 33 L 24 18 Z" fill="#ffffff" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" />
+          <path d="M 15.3 10.5 L 16.3 18 L 17 32.5" stroke="#174d33" strokeWidth="1.2" fill="none" />
+          <path d="M 24.7 10.5 L 23.7 18 L 23 32.5" stroke="#174d33" strokeWidth="1.2" fill="none" />
+          <path d="M 11.3 32.4 L 16.8 32.4 M 23.2 32.4 L 28.7 32.4" stroke="#174d33" strokeWidth="1.2" />
         </svg>
       );
     }
@@ -152,10 +157,10 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
             strokeLinejoin="round"
           />
           {/* Topstitched boning seams */}
-          <path d="M 18 13.5 Q 18 24 19 31.5" stroke="#b68235" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
-          <path d="M 22 13.5 Q 22 24 21 31.5" stroke="#b68235" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
-          <path d="M 15 14 Q 15.5 23 16.5 29" stroke="#b68235" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
-          <path d="M 25 14 Q 24.5 23 23.5 29" stroke="#b68235" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
+          <path d="M 18 13.5 Q 18 24 19 31.5" stroke="#174d33" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
+          <path d="M 22 13.5 Q 22 24 21 31.5" stroke="#174d33" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
+          <path d="M 15 14 Q 15.5 23 16.5 29" stroke="#174d33" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
+          <path d="M 25 14 Q 24.5 23 23.5 29" stroke="#174d33" strokeWidth="0.8" strokeDasharray="1.4 0.9" fill="none" />
         </svg>
       );
     }
@@ -169,13 +174,13 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
   // 1. CARDS MODE: Horizontal card collection
   if (libraryMode === 'cards') {
     return (
-      <div id="design-library-cards" className="flex-none pt-2 pb-3.5 border-t border-[#3c342c]/15 bg-[#fffdf9] z-10">
+      <div id="design-library-cards" className="flex-none pt-2 pb-3.5 border-t border-[#000000]/15 bg-[#ffffff] z-10">
         {/* Category Header */}
         <div className="flex items-baseline justify-between gap-2 px-3.5 pb-2">
-          <h2 className="font-serif text-[17px] font-semibold text-[#2b2724] leading-none">
+          <h2 className="font-serif text-[17px] font-semibold text-[#000000] leading-none">
             {activeCategory.label}
           </h2>
-          <span className="text-[9.5px] uppercase tracking-[0.14em] text-[#5a534c] font-sans font-medium">
+          <span className="text-[9.5px] uppercase tracking-[0.14em] text-black/60 font-sans font-medium">
             {activeCategory.opts.length} options
           </span>
         </div>
@@ -194,38 +199,47 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
                 onClick={() => handleCardClick(opt)}
                 className={`flex-none w-[108px] p-1 rounded-xl text-left transition-all cursor-pointer ${
                   isSelected
-                    ? 'bg-[#f7f4ef] border-[1.5px] border-[#174d33] shadow-xs'
-                    : 'border border-[#3c342c]/15 hover:bg-black/5'
+                    ? 'bg-[#ffffff] border-[1.5px] border-[#174d33] shadow-xs'
+                    : 'border border-[#000000]/15 hover:bg-black/5'
                 } ${isUnavailable ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 {/* Preview Thumbnail Box */}
                 <div
-                  className={`relative h-[82px] w-full rounded-lg overflow-hidden bg-[#fffdf9] flex flex-col items-center justify-center p-2 border border-black/5 ${
+                  className={`relative h-[82px] w-full rounded-lg overflow-hidden bg-[#ffffff] flex flex-col items-center justify-center p-2 border border-black/5 ${
                     isUnavailable ? 'grayscale' : ''
                   }`}
                 >
                   {/* Option Badge */}
                   {isSelected && (
-                    <span className="absolute left-1.5 top-1.5 px-1.5 py-0.5 rounded-md font-mono text-[8.5px] uppercase tracking-wider bg-[#174d33] text-[#f7f4ef] font-medium shadow-xs">
+                    <span className="absolute z-10 left-1.5 top-1.5 px-1.5 py-0.5 rounded-md font-mono text-[8.5px] uppercase tracking-wider bg-[#174d33] text-[#ffffff] font-medium shadow-xs">
                       Selected
                     </span>
                   )}
                   {isUnavailable && (
-                    <span className="absolute left-1.5 top-1.5 px-1.5 py-0.5 rounded-md font-mono text-[8.5px] uppercase tracking-wider bg-[#b68235] text-[#f7f4ef] font-medium shadow-xs">
+                    <span className="absolute z-10 left-1.5 top-1.5 px-1.5 py-0.5 rounded-md font-mono text-[8.5px] uppercase tracking-wider bg-[#174d33] text-[#ffffff] font-medium shadow-xs">
                       Locked
                     </span>
                   )}
 
-                  {/* Stylized Visual Icon Representing the cut */}
-                  <div className="w-10 h-10 rounded-lg bg-[#5b8f72]/15 border border-[#5b8f72]/30 flex items-center justify-center">
-                    {renderOptionGlyph(opt.id, opt.name, true)}
-                  </div>
+                  {/* Rendered preview of this option, or a drawn glyph where none exists */}
+                  {optionThumb(activeCategory.id, opt.id) ? (
+                    <img
+                      src={optionThumb(activeCategory.id, opt.id)!}
+                      alt={`${opt.name} preview`}
+                      className={`absolute inset-0 w-full h-full ${thumbFit(activeCategory.id)}`}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-[#174d33]/15 border border-[#174d33]/30 flex items-center justify-center">
+                      {renderOptionGlyph(opt.id, opt.name, true)}
+                    </div>
+                  )}
                 </div>
 
                 {/* Option Name */}
                 <div
                   className={`mt-1.5 text-[11px] text-center truncate font-sans ${
-                    isSelected ? 'text-[#174d33] font-semibold' : 'text-[#3d3833]'
+                    isSelected ? 'text-[#174d33] font-semibold' : 'text-[#000000]'
                   }`}
                 >
                   {opt.name}
@@ -241,17 +255,17 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
   // 2. FILMSTRIP MODE: Edge-to-edge frames
   if (libraryMode === 'filmstrip') {
     return (
-      <div id="design-library-filmstrip" className="flex-none pb-2.5 bg-[#fffdf9] border-t border-[#3c342c]/15 z-10">
+      <div id="design-library-filmstrip" className="flex-none pb-2.5 bg-[#ffffff] border-t border-[#000000]/15 z-10">
         <div className="flex items-baseline justify-between px-3.5 py-2">
-          <h2 className="font-serif text-[17px] font-semibold text-[#2b2724] leading-none">
+          <h2 className="font-serif text-[17px] font-semibold text-[#000000] leading-none">
             {activeCategory.label}
           </h2>
-          <span className="text-[11px] text-[#5a534c] italic font-serif">
+          <span className="text-[11px] text-black/60 italic font-serif">
             {activeOpt.name}
           </span>
         </div>
 
-        <div className="flex overflow-x-auto border-y border-[#3c342c]/15">
+        <div className="flex overflow-x-auto border-y border-[#000000]/15">
           {activeCategory.opts.map((opt) => {
             const isSelected = selectedOptId === opt.id;
             const incompatibleReason = checkCompatibilityReason(currentGarment, activeCategory, opt.id, selection);
@@ -262,26 +276,26 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
                 key={opt.id}
                 id={`filmstrip-opt-${opt.id}`}
                 onClick={() => handleCardClick(opt)}
-                className={`relative flex-none w-[90px] h-[112px] overflow-hidden border-r border-[#3c342c]/15 transition-all cursor-pointer flex flex-col justify-between p-2 ${
-                  isSelected ? 'bg-[#f7f4ef]' : 'bg-[#fffdf9]'
+                className={`relative flex-none w-[90px] h-[112px] overflow-hidden border-r border-[#000000]/15 transition-all cursor-pointer flex flex-col justify-between p-2 ${
+                  isSelected ? 'bg-[#ffffff]' : 'bg-[#ffffff]'
                 } ${isUnavailable ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
               >
                 {/* Top active marker */}
                 <div
                   className={`absolute left-0 right-0 top-0 h-[3px] ${
-                    isSelected ? 'bg-[#174d33]' : isUnavailable ? 'bg-[#b68235]' : 'bg-transparent'
+                    isSelected ? 'bg-[#174d33]' : isUnavailable ? 'bg-[#174d33]' : 'bg-transparent'
                   }`}
                 />
 
                 <div className="w-full flex-1 flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-full bg-[#5b8f72]/15 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-[#174d33]/15 flex items-center justify-center">
                     {renderOptionGlyph(opt.id, opt.name, false)}
                   </div>
                 </div>
 
                 <div
                   className={`text-[10px] text-center truncate w-full ${
-                    isSelected ? 'text-[#174d33] font-semibold' : 'text-[#3c342c]'
+                    isSelected ? 'text-[#174d33] font-semibold' : 'text-[#000000]'
                   }`}
                 >
                   {opt.name}
@@ -296,20 +310,20 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
 
   // 3. TRAY MODE: Expandable drawer
   return (
-    <div id="design-library-tray" className="flex-none bg-[#fffdf9] border-t border-[#3c342c]/15 z-10">
+    <div id="design-library-tray" className="flex-none bg-[#ffffff] border-t border-[#000000]/15 z-10">
       {/* Collapsed Bar */}
       <div
         onClick={() => setTrayOpen(true)}
         className="p-3 px-3.5 flex items-center gap-3 cursor-pointer hover:bg-black/2 active:bg-black/5"
       >
-        <div className="w-[42px] h-[42px] rounded-xl bg-[#f7f4ef] border border-[#3c342c]/15 flex items-center justify-center">
+        <div className="w-[42px] h-[42px] rounded-xl bg-[#ffffff] border border-[#000000]/15 flex items-center justify-center">
           {renderOptionGlyph(activeOpt.id, activeOpt.name, true)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[9.5px] uppercase tracking-[0.16em] text-[#5a534c] font-sans">
+          <div className="text-[9.5px] uppercase tracking-[0.16em] text-black/60 font-sans">
             {activeCategory.label}
           </div>
-          <div className="font-serif text-[19px] font-semibold text-[#2b2724] leading-tight truncate">
+          <div className="font-serif text-[19px] font-semibold text-[#000000] leading-tight truncate">
             {activeOpt.name}
           </div>
         </div>
@@ -322,22 +336,22 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
       {/* Expanded Modal Bottom Sheet */}
       {trayOpen && (
         <div className="absolute inset-0 z-50 flex flex-col justify-end bg-black/40 animate-fade">
-          <div className="bg-[#f7f4ef] rounded-t-[26px] p-4 pt-3 border-t border-[#3c342c]/20 shadow-2xl animate-sheet max-h-[75%] flex flex-col">
+          <div className="bg-[#ffffff] rounded-t-[26px] p-4 pt-3 border-t border-[#000000]/20 shadow-2xl animate-sheet max-h-[75%] flex flex-col">
             {/* Grab Handle */}
             <div className="w-11 h-1 rounded-full bg-black/20 mx-auto mb-3" />
 
-            <div className="flex items-center justify-between pb-3 border-b border-[#3c342c]/15 mb-3">
+            <div className="flex items-center justify-between pb-3 border-b border-[#000000]/15 mb-3">
               <div>
-                <span className="text-[9.5px] uppercase tracking-wider text-[#5a534c]">
+                <span className="text-[9.5px] uppercase tracking-wider text-black/60">
                   Choose {activeCategory.label}
                 </span>
-                <h3 className="font-serif text-[20px] font-semibold text-[#2b2724] leading-tight">
+                <h3 className="font-serif text-[20px] font-semibold text-[#000000] leading-tight">
                   {activeCategory.label} Collection
                 </h3>
               </div>
               <button
                 onClick={() => setTrayOpen(false)}
-                className="w-8 h-8 rounded-full border border-[#3c342c]/20 flex items-center justify-center text-[#5a534c] hover:bg-black/5"
+                className="w-8 h-8 rounded-full border border-[#000000]/20 flex items-center justify-center text-black/60 hover:bg-black/5"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -358,15 +372,15 @@ export const DesignLibrary: React.FC<DesignLibraryProps> = ({
                     className={`p-2 rounded-xl text-center border transition-all cursor-pointer flex flex-col items-center ${
                       isSelected
                         ? 'bg-white border-[#174d33] shadow-xs ring-1 ring-[#174d33]'
-                        : 'bg-[#fffdf9] border-[#3c342c]/15 hover:bg-white'
+                        : 'bg-[#ffffff] border-[#000000]/15 hover:bg-white'
                     } ${isUnavailable ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
-                    <div className="w-8 h-8 rounded-lg bg-[#5b8f72]/15 flex items-center justify-center mb-1">
+                    <div className="w-8 h-8 rounded-lg bg-[#174d33]/15 flex items-center justify-center mb-1">
                       {renderOptionGlyph(opt.id, opt.name, false)}
                     </div>
                     <span
                       className={`text-[11px] truncate w-full ${
-                        isSelected ? 'text-[#174d33] font-semibold' : 'text-[#2b2724]'
+                        isSelected ? 'text-[#174d33] font-semibold' : 'text-[#000000]'
                       }`}
                     >
                       {opt.name}

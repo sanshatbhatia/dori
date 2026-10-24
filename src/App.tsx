@@ -3,369 +3,226 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import {
-  GarmentKey,
-  HistoryStep,
-  LibraryMode,
-  RailMode,
-  SelectionState,
-  ViewMode,
-  ArmPose,
-  Category,
-  BeltLatkanMode,
-  LatkanBoxOrientation,
-} from './types';
-import { GARMENTS, getDefaults, checkCompatibilityReason, categoryUnavailableReason, PREFERRED_WITH } from './data/garments';
+// Dori customer app shell: session, navigation and the screens around the existing Design Studio.
+
+import React, { useEffect } from 'react';
+import { Bookmark, Compass, FlaskConical, Home, PackageSearch, UserRound } from 'lucide-react';
 import { PhoneFrame } from './components/PhoneFrame';
-import { StudioHeader } from './components/StudioHeader';
-import { MannequinStage } from './components/MannequinStage';
-import { ComponentRail } from './components/ComponentRail';
-import { DesignLibrary } from './components/DesignLibrary';
+import { NavProvider, useNav, type Route } from './app/nav';
+import { IS_DEMO, demoBackend } from './app/services';
+import { OrderDraftProvider } from './app/state/orderDraft';
+import { SessionProvider, useSession } from './app/state/session';
+import { Spinner, ToastProvider } from './app/ui/kit';
+import { AuthFlow, Wordmark } from './app/screens/Auth';
+import { PersonalizeScreen } from './app/screens/Personalize';
+import { HomeScreen, NotificationsScreen } from './app/screens/Home';
+import { OrderStepScreen } from './app/screens/OrderFlow';
+import { StudioScreen } from './app/screens/StudioScreen';
+import { ReferenceScreen } from './app/screens/Reference';
+import { ConfirmationScreen, ConsultationScreen, DesignSummaryScreen, NextActionScreen, ReviewScreen, UrgencyScreen } from './app/screens/Checkout';
+import { RequestScreen, RescheduleScreen, TrackListScreen } from './app/screens/Tracking';
+import { SavedScreen } from './app/screens/Saved';
+import { ExploreItemScreen, ExploreScreen } from './app/screens/Explore';
 import {
-  MenuDropdown,
-  DesignSummaryModal,
-  ResetConfirmModal,
-  WelcomeHintModal,
-  ToastNotification,
-} from './components/StudioModals';
-import { FOCUS } from './data/geometry';
+  AddressEditScreen,
+  AddressesScreen,
+  DemoToolsScreen,
+  FitScreen,
+  LegalScreen,
+  NotifPrefsScreen,
+  PhoneChangeScreen,
+  ProfileEditScreen,
+  ProfileScreen,
+  SecurityScreen,
+} from './app/screens/Profile';
 
-export default function App() {
-  const [currentGarment, setCurrentGarment] = useState<GarmentKey>('lehenga');
-  const [selections, setSelections] = useState<Record<GarmentKey, SelectionState>>({
-    lehenga: getDefaults('lehenga'),
-  });
+const TABS = [
+  { route: { name: 'home' } as Route, label: 'Home', icon: Home },
+  { route: { name: 'explore' } as Route, label: 'Explore', icon: Compass },
+  { route: { name: 'saved' } as Route, label: 'Saved', icon: Bookmark },
+  { route: { name: 'track' } as Route, label: 'Orders', icon: PackageSearch },
+  { route: { name: 'profile' } as Route, label: 'Profile', icon: UserRound },
+];
+const TAB_ROUTES = new Set(TABS.map((t) => t.route.name));
 
-  const [activeCatIndex, setActiveCatIndex] = useState<number>(1); // e.g. Neckline by default
-  const [viewMode, setViewMode] = useState<ViewMode>('front');
-  const [armPose, setArmPose] = useState<ArmPose>('stretched');
-  const [railMode, setRailMode] = useState<RailMode>('circles');
-  const [libraryMode, setLibraryMode] = useState<LibraryMode>('cards');
-  const [beltLatkan, setBeltLatkan] = useState<BeltLatkanMode>('heavy');
-  const [latkanBoxOrientation, setLatkanBoxOrientation] = useState<LatkanBoxOrientation>('horizontal');
+const TabBar: React.FC = () => {
+  const nav = useNav();
+  return (
+    <nav className="flex-none flex border-t border-black/[0.07] bg-white px-2 pt-1.5 pb-1 font-sans" aria-label="Main">
+      {TABS.map(({ route, label, icon: Icon }) => {
+        const active = nav.route.name === route.name;
+        return (
+          <button
+            key={label}
+            id={`tab-${route.name}`}
+            onClick={() => nav.reset(route.name === 'home' ? [route] : [{ name: 'home' }, route])}
+            aria-current={active ? 'page' : undefined}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-1 text-[10.5px] font-medium ${active ? 'text-[#174D33]' : 'text-black/45'}`}
+          >
+            <Icon className={`w-5 h-5 ${active ? 'stroke-[2.2]' : 'stroke-[1.7]'}`} />
+            {label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+};
 
-  // Undo / Redo history
-  const [history, setHistory] = useState<HistoryStep[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+const DemoBanner: React.FC = () =>
+  IS_DEMO ? (
+    <div className="flex-none flex items-center justify-center gap-1.5 h-6 bg-[#174D33] text-white text-[10.5px] font-sans font-semibold tracking-wider uppercase">
+      <FlaskConical className="w-3 h-3" /> Test mode · demo data on this device
+    </div>
+  ) : null;
 
-  // Notifications and feedback
-  const [toast, setToast] = useState<string>('');
-  const [loadingSlot, setLoadingSlot] = useState<string>('');
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+/** shown beside the phone on wide screens, for presenting the demo */
+const SidePanel: React.FC = () => (
+  <div className="rounded-3xl bg-white p-5 font-sans text-black">
+    <Wordmark size={36} />
+    <p className="text-[13px] text-black/60 mt-2 leading-relaxed">Custom-fashion design, styling and managed tailoring.</p>
+    <div className="mt-4 p-3 rounded-2xl bg-[#174D33]/[0.06] text-[12.5px] leading-relaxed">
+      <b className="block mb-1">Test mode</b>
+      Sign in with any Indian mobile number (e.g. 98765 43210) and the code <b>123456</b>. Data stays in this browser. Use Profile → Demo tools and
+      the demo controls on each request to move it through the workflow.
+    </div>
+  </div>
+);
 
-  // Modals
-  const [menuOpen, setMenuOpen] = useState<boolean>(false);
-  const [showSummary, setShowSummary] = useState<boolean>(false);
-  const [showReset, setShowReset] = useState<boolean>(false);
-  const [showHint, setShowHint] = useState<boolean>(false);
+const Screens: React.FC = () => {
+  const nav = useNav();
+  const r = nav.route;
+  switch (r.name) {
+    case 'personalize':
+      return <PersonalizeScreen />;
+    case 'home':
+      return <HomeScreen />;
+    case 'notifications':
+      return <NotificationsScreen />;
+    case 'order':
+      return <OrderStepScreen key={r.step} step={r.step} />;
+    case 'reference':
+      return <ReferenceScreen />;
+    case 'design-summary':
+      return <DesignSummaryScreen />;
+    case 'next-action':
+      return <NextActionScreen />;
+    case 'urgency':
+      return <UrgencyScreen />;
+    case 'consultation':
+      return <ConsultationScreen />;
+    case 'review':
+      return <ReviewScreen />;
+    case 'confirmation':
+      return <ConfirmationScreen requestId={r.requestId} />;
+    case 'track':
+      return <TrackListScreen />;
+    case 'request':
+      return <RequestScreen key={r.id} id={r.id} />;
+    case 'reschedule':
+      return <RescheduleScreen id={r.id} />;
+    case 'saved':
+      return <SavedScreen />;
+    case 'explore':
+      return <ExploreScreen />;
+    case 'explore-item':
+      return <ExploreItemScreen key={r.id} id={r.id} />;
+    case 'profile':
+      return <ProfileScreen />;
+    case 'profile-edit':
+      return <ProfileEditScreen />;
+    case 'addresses':
+      return <AddressesScreen />;
+    case 'address-edit':
+      return <AddressEditScreen id={r.id} />;
+    case 'phone-change':
+      return <PhoneChangeScreen />;
+    case 'fit':
+      return <FitScreen />;
+    case 'notif-prefs':
+      return <NotifPrefsScreen />;
+    case 'security':
+      return <SecurityScreen />;
+    case 'legal':
+      return <LegalScreen doc={r.doc} />;
+    case 'demo-tools':
+      return <DemoToolsScreen />;
+    default:
+      return <HomeScreen />;
+  }
+};
 
-  const currentSelection = selections[currentGarment];
-  const garmentConfig = GARMENTS[currentGarment];
-  const categories = garmentConfig.cats;
-  const activeCategory = categories[Math.min(activeCatIndex, categories.length - 1)];
+const Shell: React.FC = () => {
+  const { status, customer } = useSession();
+  const nav = useNav();
 
-  // Flash toast message
-  const flashToast = useCallback((msg: string) => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    setToast(msg);
-    toastTimeoutRef.current = setTimeout(() => {
-      setToast('');
-    }, 3600);
-  }, []);
-
-  // Flash loading animation for current slot
-  const flashLoading = useCallback((slotShort: string) => {
-    if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
-    setLoadingSlot(slotShort);
-    loadingTimeoutRef.current = setTimeout(() => {
-      setLoadingSlot('');
-    }, 650);
-  }, []);
-
+  // first-time customers go to Personalization; returning ones to Home
   useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
-    };
-  }, []);
+    if (status !== 'signed_in' || !customer) return;
+    if (nav.route.name === 'auth') nav.reset(customer.onboarding.personalizationDone ? { name: 'home' } : { name: 'personalize' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, customer?.id]);
 
-  // Select Option with cascade validation and history
-  const handleSelectOption = useCallback(
-    (cat: Category, optId: string) => {
-      const sel = selections[currentGarment];
-      if (sel[cat.id] === optId) return;
-
-      const reason = checkCompatibilityReason(currentGarment, cat, optId, sel);
-      if (reason) {
-        flashToast(reason);
-        return;
-      }
-
-      const next = { ...sel, [cat.id]: optId };
-      let cascadeNote = '';
-
-      // Check if other components are broken by this selection
-      garmentConfig.cats.forEach((otherCat) => {
-        if (otherCat.id === cat.id) return;
-        if (checkCompatibilityReason(currentGarment, otherCat, next[otherCat.id], next)) {
-          const preferredId = PREFERRED_WITH[`${cat.id}:${optId}`]?.[otherCat.id];
-          const isValid = (id: string) => !checkCompatibilityReason(currentGarment, otherCat, id, next);
-          const validAlt =
-            (preferredId && isValid(preferredId) ? otherCat.opts.find((o) => o.id === preferredId) : undefined) ||
-            otherCat.opts.find((o) => isValid(o.id));
-          if (validAlt) {
-            if (!cascadeNote) {
-              cascadeNote = `${otherCat.label} switched to ${validAlt.name} so the seams align.`;
-            }
-            next[otherCat.id] = validAlt.id;
-          }
-        }
-      });
-
-      // Update history stack
-      const newHistory = history.slice(0, historyIndex + 1).concat([{ g: currentGarment, sel: next, beltLatkan }]);
-
-      setSelections((prev) => ({ ...prev, [currentGarment]: next }));
-      setHistory(newHistory);
-      setHistoryIndex(newHistory.length - 1);
-      flashLoading(cat.short);
-
-      if (cascadeNote) {
-        flashToast(cascadeNote);
-      }
-    },
-    [currentGarment, garmentConfig.cats, history, historyIndex, selections, beltLatkan, flashLoading, flashToast]
-  );
-
-  // Set Belt (Latkan) Mode with History
-  const handleSetBeltLatkan = useCallback(
-    (mode: BeltLatkanMode) => {
-      setBeltLatkan(mode);
-      const newHistory = history.slice(0, historyIndex + 1).concat([
-        { g: currentGarment, sel: selections[currentGarment], beltLatkan: mode },
-      ]);
-      setHistory(newHistory);
-      setHistoryIndex(newHistory.length - 1);
-      flashToast(`Belt (Latkan): ${mode === 'none' ? 'None (Clean Waist)' : `${mode.toUpperCase()} size`}`);
-    },
-    [currentGarment, history, historyIndex, selections, flashToast]
-  );
-
-  // Undo
-  const handleUndo = useCallback(() => {
-    if (historyIndex > 0) {
-      const prevStep = history[historyIndex - 1];
-      setHistoryIndex(historyIndex - 1);
-      setCurrentGarment(prevStep.g);
-      setSelections((prev) => ({ ...prev, [prevStep.g]: prevStep.sel }));
-      if (prevStep.beltLatkan) {
-        setBeltLatkan(prevStep.beltLatkan);
-      }
-    } else if (historyIndex === 0) {
-      setHistoryIndex(-1);
-      setSelections((prev) => ({ ...prev, [currentGarment]: getDefaults(currentGarment) }));
-      setBeltLatkan(currentGarment === 'lehenga' ? 'heavy' : 'none');
-    }
-  }, [currentGarment, history, historyIndex]);
-
-  // Redo
-  const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const nextStep = history[historyIndex + 1];
-      setHistoryIndex(historyIndex + 1);
-      setCurrentGarment(nextStep.g);
-      setSelections((prev) => ({ ...prev, [nextStep.g]: nextStep.sel }));
-      if (nextStep.beltLatkan) {
-        setBeltLatkan(nextStep.beltLatkan);
-      }
-    }
-  }, [history, historyIndex]);
-
-  // Garment Tab Switch
-  const handleSelectGarment = useCallback((gk: GarmentKey) => {
-    setCurrentGarment(gk);
-    setActiveCatIndex(1); // Set to neckline or second slot
-    setViewMode('front'); // Show full design on tab switch
-  }, []);
-
-  // Category selection on rail
-  const handleSelectCategoryIndex = useCallback(
-    (index: number) => {
-      const cat = garmentConfig.cats[index];
-      const unavailable = cat && categoryUnavailableReason(cat, selections[currentGarment]);
-      if (unavailable) {
-        flashToast(unavailable);
-        return;
-      }
-      setActiveCatIndex(index);
-      if (cat) {
-        const focusConf = FOCUS[cat.slot];
-        if (focusConf) {
-          setViewMode(focusConf.view);
-        }
-      }
-      setMenuOpen(false);
-    },
-    [garmentConfig.cats, selections, currentGarment, flashToast]
-  );
-
-  // Categories that can't be used with the current design (e.g. no dupatta with a jacket)
-  const unavailableCategoryIds = categories
-    .filter((c) => categoryUnavailableReason(c, currentSelection))
-    .map((c) => c.id);
-
-  // If undo/redo or a change makes the open category unavailable, move back to the blouse
+  // signing out (or an expired session) always lands on sign-in, never on a protected screen
   useEffect(() => {
-    if (unavailableCategoryIds.includes(activeCategory.id)) setActiveCatIndex(0);
-  }, [unavailableCategoryIds.join(','), activeCategory.id]);
+    if (status === 'signed_out' && nav.route.name !== 'auth') nav.reset({ name: 'auth' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
-  // Reset category
-  const handleResetCategory = useCallback(() => {
-    setMenuOpen(false);
-    const defaults = getDefaults(currentGarment);
-    const defaultOptId = defaults[activeCategory.id];
-    if (currentSelection[activeCategory.id] !== defaultOptId) {
-      handleSelectOption(activeCategory, defaultOptId);
-      flashToast(`${activeCategory.label} reset to studio default.`);
-    }
-  }, [activeCategory, currentGarment, currentSelection, handleSelectOption, flashToast]);
+  // demo stand-in for the backend assignment job: run it while the app is open
+  useEffect(() => {
+    if (!IS_DEMO || status !== 'signed_in') return;
+    const t = setInterval(() => demoBackend.demo.tick(), 30000);
+    return () => clearInterval(t);
+  }, [status]);
 
-  // Reset all
-  const handleResetAll = useCallback(() => {
-    setShowReset(false);
-    setSelections((prev) => ({ ...prev, [currentGarment]: getDefaults(currentGarment) }));
-    flashToast('Design reset. Undo still holds your history.');
-  }, [currentGarment, flashToast]);
+  if (status === 'loading') {
+    return (
+      <PhoneFrame sidePanel={<SidePanel />}>
+        <div className="flex-1 flex items-center justify-center bg-white">
+          <Spinner label="Opening Dori" />
+        </div>
+      </PhoneFrame>
+    );
+  }
 
-  // Confirm save
-  const handleSave = useCallback(() => {
-    setShowSummary(false);
-    flashToast('Design saved to your Dori atelier portfolio.');
-  }, [flashToast]);
+  // protected screens need a session
+  if (status === 'signed_out' || !customer) {
+    return (
+      <PhoneFrame sidePanel={<SidePanel />}>
+        <ToastProvider>
+          <DemoBanner />
+          <AuthFlow />
+        </ToastProvider>
+      </PhoneFrame>
+    );
+  }
+
+  if (nav.route.name === 'auth') return null;
+
+  // the Design Studio brings its own frame, panels and controls
+  if (nav.route.name === 'studio') return <StudioScreen />;
 
   return (
-    <PhoneFrame
-      activeRail={railMode}
-      activeLib={libraryMode}
-      onRailChange={setRailMode}
-      onLibChange={setLibraryMode}
-      viewMode={viewMode}
-      onSetViewMode={setViewMode}
-      armPose={armPose}
-      onSetArmPose={setArmPose}
-      beltLatkan={beltLatkan}
-      onSetBeltLatkan={handleSetBeltLatkan}
-      latkanBoxOrientation={latkanBoxOrientation}
-      onSetLatkanBoxOrientation={setLatkanBoxOrientation}
-      onResetFocus={() => setViewMode('front')}
-      onOpenSummary={() => setShowSummary(true)}
-      currentGarment={currentGarment}
-      onSelectGarment={handleSelectGarment}
-      activeCategoryLabel={activeCategory.label}
-      selectedOptionName={activeCategory.opts.find((o) => o.id === currentSelection[activeCategory.id])?.name}
-    >
-      {/* Studio Header (Back, Garment Name, Undo/Redo, Menu, Garment Tabs) */}
-      <StudioHeader
-        currentGarment={currentGarment}
-        onSelectGarment={handleSelectGarment}
-        canUndo={historyIndex >= 0}
-        canRedo={historyIndex < history.length - 1}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onToggleMenu={() => setMenuOpen(!menuOpen)}
-        onOpenHint={() => setShowHint(true)}
-      />
-
-      {/* Main Interactive Stage with Mannequin & Camera Focus */}
-      <div className="flex-1 relative overflow-hidden flex flex-col">
-        <MannequinStage
-          currentGarment={currentGarment}
-          selection={currentSelection}
-          activeCategory={activeCategory}
-          viewMode={viewMode}
-          onSetViewMode={setViewMode}
-          armPose={armPose}
-          onSetArmPose={setArmPose}
-          beltLatkan={beltLatkan}
-          onSetBeltLatkan={handleSetBeltLatkan}
-          latkanBoxOrientation={latkanBoxOrientation}
-          onSetLatkanBoxOrientation={setLatkanBoxOrientation}
-          loadingSlot={loadingSlot}
-          railOnLeft={railMode === 'circles'}
-          onSelectCategorySlot={(slot) => {
-            const idx = categories.findIndex((c) => c.slot === slot);
-            if (idx >= 0 && !unavailableCategoryIds.includes(categories[idx].id)) {
-              handleSelectCategoryIndex(idx);
-              flashToast(`Selected ${categories[idx].label} to customize`);
-            }
-          }}
-        />
-
-        {/* Component Rail (Floating Circles, Labelled Rail, or Thumb Arc) */}
-        <ComponentRail
-          railMode={railMode}
-          currentGarment={currentGarment}
-          categories={categories}
-          activeCategoryIndex={activeCatIndex}
-          onSelectCategoryIndex={handleSelectCategoryIndex}
-          selection={currentSelection}
-          unavailableIds={unavailableCategoryIds}
-        />
-      </div>
-
-      {/* Design Library Carousel / Tray */}
-      <DesignLibrary
-        libraryMode={libraryMode}
-        currentGarment={currentGarment}
-        activeCategory={activeCategory}
-        selection={currentSelection}
-        onSelectOption={handleSelectOption}
-        onFlashToast={flashToast}
-      />
-
-      {/* Menu Dropdown with Complete Controls */}
-      <MenuDropdown
-        isOpen={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        onOpenSummary={() => setShowSummary(true)}
-        onOpenHelp={() => setShowHint(true)}
-        onResetCategory={handleResetCategory}
-        onAskResetAll={() => setShowReset(true)}
-        categoryLabel={activeCategory.label}
-        railMode={railMode}
-        onRailChange={setRailMode}
-        libraryMode={libraryMode}
-        onLibChange={setLibraryMode}
-      />
-
-      {/* Design Summary Modal */}
-      <DesignSummaryModal
-        isOpen={showSummary}
-        onClose={() => setShowSummary(false)}
-        currentGarment={currentGarment}
-        selection={currentSelection}
-        beltLatkan={beltLatkan}
-        onSave={handleSave}
-      />
-
-      {/* Reset Confirmation Dialog */}
-      <ResetConfirmModal
-        isOpen={showReset}
-        onConfirm={handleResetAll}
-        onCancel={() => setShowReset(false)}
-      />
-
-      {/* First-visit Studio Welcome Guidance */}
-      <WelcomeHintModal
-        isOpen={showHint}
-        onDismiss={() => setShowHint(false)}
-        garmentName={garmentConfig.name}
-      />
-
-      {/* Floating Action Feedback Toast */}
-      <ToastNotification message={toast} />
+    <PhoneFrame sidePanel={<SidePanel />}>
+      <ToastProvider>
+        <DemoBanner />
+        <div className="flex-1 min-h-0 flex flex-col relative">
+          <Screens />
+        </div>
+        {TAB_ROUTES.has(nav.route.name) && <TabBar />}
+      </ToastProvider>
     </PhoneFrame>
+  );
+};
+
+export default function App() {
+  return (
+    <SessionProvider>
+      <NavProvider initial={{ name: 'auth' }}>
+        <OrderDraftProvider>
+          <Shell />
+        </OrderDraftProvider>
+      </NavProvider>
+    </SessionProvider>
   );
 }

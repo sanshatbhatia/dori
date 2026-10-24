@@ -29,6 +29,11 @@ interface PhoneFrameProps {
   onSelectGarment?: (g: GarmentKey) => void;
   activeCategoryLabel?: string;
   selectedOptionName?: string;
+  /** the Studio's spec sheet and settings beside the phone (desktop) */
+  studioPanels?: boolean;
+  studioSize?: string;
+  /** shown beside the phone on desktop when the Studio panels aren't */
+  sidePanel?: React.ReactNode;
 }
 
 export const PHONE_BASE_W = 402;
@@ -54,6 +59,9 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
   onSelectGarment,
   activeCategoryLabel,
   selectedOptionName,
+  studioPanels = false,
+  studioSize,
+  sidePanel,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number>(1);
@@ -105,67 +113,77 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
 
   const garmentConfig = GARMENTS[currentGarment];
 
+  // On a phone the app fills the screen; the device mockup is only for larger screens
+  if (isMobileViewport) {
+    return (
+      <div ref={containerRef} id="atelier-viewport" className="relative w-full h-[100dvh] overflow-hidden bg-white text-black font-body select-none">
+        <div
+          id="phone-screen-container"
+          className="relative w-full h-full flex flex-col overflow-hidden bg-white"
+          style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
       id="atelier-viewport"
-      className="relative w-full h-screen overflow-hidden bg-[#1a1715] text-[#2b2724] font-body flex items-center justify-center select-none"
+      className="relative w-full h-screen overflow-hidden bg-black text-black font-body flex items-center justify-center select-none"
     >
-      {/* Background Subtle Atelier Lighting */}
-      <div
-        className="absolute inset-0 pointer-events-none opacity-50"
-        style={{
-          background:
-            'radial-gradient(ellipse at 50% 45%, rgba(182, 130, 53, 0.09) 0%, rgba(23, 77, 51, 0.08) 40%, rgba(26, 23, 21, 0.98) 80%)',
-        }}
-      />
 
       {/* Desktop Workspace Container */}
       <div className="relative w-full h-full flex items-center justify-center gap-6 px-4 z-10">
         {/* Left Side Atelier Spec Sheet (visible on desktop) */}
-        {showSidePanels && !isMobileViewport && (
+        {showSidePanels && !isMobileViewport && !studioPanels && sidePanel && (
+          <aside className="w-[260px] flex-none hidden lg:flex flex-col animate-fade">{sidePanel}</aside>
+        )}
+        {showSidePanels && !isMobileViewport && studioPanels && (
           <aside
             id="desktop-left-atelier-card"
-            className="w-[220px] flex-none hidden lg:flex flex-col gap-3 p-3.5 rounded-2xl bg-[#24201d]/90 border border-white/10 backdrop-blur-md text-[#e8e2dc] shadow-xl animate-fade"
+            className="w-[220px] flex-none hidden lg:flex flex-col gap-3 p-3.5 rounded-2xl bg-white border border-black/10 text-black shadow-xl animate-fade"
           >
-            <div className="flex items-center gap-2 pb-2 border-b border-white/10">
-              <div className="w-7 h-7 rounded-lg bg-[#174d33] flex items-center justify-center text-[#a1d6b6]">
+            <div className="flex items-center gap-2 pb-2 border-b border-black/10">
+              <div className="w-7 h-7 rounded-lg bg-[#174d33] flex items-center justify-center text-white">
                 <Scissors className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="font-serif text-[14px] font-semibold text-white leading-tight">
+                <h3 className="font-serif text-[14px] font-semibold text-black leading-tight">
                   Dori Atelier
                 </h3>
-                <span className="text-[9px] uppercase tracking-wider text-[#b68235] font-mono">
+                <span className="text-[9px] uppercase tracking-wider text-[#174d33] font-mono">
                   Bespoke Studio
                 </span>
               </div>
             </div>
 
             {/* Active Garment Info */}
-            <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-black/20 border border-white/5">
-              <span className="text-[9.5px] uppercase tracking-wider text-[#9f9891] font-sans">
+            <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-[#174d33]/5 border border-black/5">
+              <span className="text-[9.5px] uppercase tracking-wider text-black/50 font-sans">
                 Active Silhouette
               </span>
-              <span className="font-serif text-[15px] font-bold text-white">
+              <span className="font-serif text-[15px] font-bold text-black">
                 {garmentConfig.name}
               </span>
-              <span className="text-[10px] text-[#b8b0a8] leading-tight">
+              <span className="text-[10px] text-black/60 leading-tight">
                 {garmentConfig.desc}
               </span>
             </div>
 
             {/* Current Component Seam */}
             {activeCategoryLabel && (
-              <div className="flex flex-col gap-1 p-2 rounded-xl bg-black/20 border border-white/5">
-                <span className="text-[9.5px] uppercase tracking-wider text-[#9f9891] font-sans">
+              <div className="flex flex-col gap-1 p-2 rounded-xl bg-[#174d33]/5 border border-black/5">
+                <span className="text-[9.5px] uppercase tracking-wider text-black/50 font-sans">
                   Focused Seam
                 </span>
-                <span className="text-[12px] font-semibold text-[#a1d6b6]">
+                <span className="text-[12px] font-semibold text-[#174d33]">
                   {activeCategoryLabel}
                 </span>
                 {selectedOptionName && (
-                  <span className="text-[11px] text-[#d6cfc7] font-mono">
+                  <span className="text-[11px] text-black/70 font-mono">
                     {selectedOptionName}
                   </span>
                 )}
@@ -173,12 +191,12 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
             )}
 
             {/* Belt (Latkan) Status Badge */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-black/20 border border-white/5">
+            <div className="flex items-center justify-between p-2 rounded-xl bg-[#174d33]/5 border border-black/5">
               <div className="flex flex-col">
-                <span className="text-[9.5px] uppercase tracking-wider text-[#9f9891] font-sans">
+                <span className="text-[9.5px] uppercase tracking-wider text-black/50 font-sans">
                   Belt (Latkan)
                 </span>
-                <span className="text-[11.5px] font-semibold text-[#f5d485] capitalize">
+                <span className="text-[11.5px] font-semibold text-[#174d33] capitalize">
                   {beltLatkan === 'none' ? 'None' : `${beltLatkan} Size`}
                 </span>
               </div>
@@ -190,7 +208,7 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
                     onSetBeltLatkan(nextMode);
                   }}
                   title="Toggle Belt (Latkan)"
-                  className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-[9.5px] font-mono text-white transition-colors"
+                  className="px-2 py-0.5 rounded-lg bg-black/5 hover:bg-black/10 text-[9.5px] font-mono text-black transition-colors"
                 >
                   Cycle
                 </button>
@@ -198,24 +216,24 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
             </div>
 
             {/* Active Garment Indicator */}
-            <div className="flex flex-col gap-1 p-2 rounded-xl bg-black/20 border border-white/5">
-              <span className="text-[9.5px] uppercase tracking-wider text-[#9f9891] font-sans">
+            <div className="flex flex-col gap-1 p-2 rounded-xl bg-[#174d33]/5 border border-black/5">
+              <span className="text-[9.5px] uppercase tracking-wider text-black/50 font-sans">
                 Active Garment
               </span>
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#10b981]" />
-                <span className="text-[12px] font-semibold text-white">Lehenga</span>
+                <span className="w-2 h-2 rounded-full bg-[#174d33]" />
+                <span className="text-[12px] font-semibold text-black">Lehenga</span>
               </div>
-              <span className="text-[9.5px] text-[#9f9891] font-sans leading-tight">
+              <span className="text-[9.5px] text-black/50 font-sans leading-tight">
                 Bespoke Bridal & Festive Studio
               </span>
             </div>
 
             {/* Atelier Proportions */}
-            <div className="flex items-center justify-between pt-2 border-t border-white/10 text-[9.5px] font-mono text-[#8e8780]">
+            <div className="flex items-center justify-between pt-2 border-t border-black/10 text-[9.5px] font-mono text-black/50">
               <span className="flex items-center gap-1">
-                <Ruler className="w-3 h-3 text-[#b68235]" />
-                Size XL
+                <Ruler className="w-3 h-3 text-[#174d33]" />
+                {studioSize ? `Size ${studioSize}` : 'Size not set'}
               </span>
               <span>Made-to-Measure</span>
             </div>
@@ -243,7 +261,7 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
             {/* iOS Device Frame Container */}
             <div
               id="phone-screen-container"
-              className="relative w-full h-full overflow-hidden bg-[#f7f4ef] text-[#2b2724] font-body rounded-[48px] shadow-[0_32px_80px_rgba(0,0,0,0.65),0_0_0_12px_#272422,0_0_0_13px_rgba(255,255,255,0.15)] ring-1 ring-black/40"
+              className="relative w-full h-full overflow-hidden bg-white text-black font-body rounded-[48px] shadow-[0_32px_80px_rgba(0,0,0,0.65),0_0_0_12px_#272422,0_0_0_13px_rgba(255,255,255,0.15)] ring-1 ring-black/40"
               style={{ boxSizing: 'border-box' }}
             >
               {/* iOS Dynamic Island */}
@@ -255,7 +273,7 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
               </div>
 
               {/* iOS Status Bar */}
-              <div className="absolute top-0 left-0 right-0 z-40 h-[46px] px-7 flex items-center justify-between pointer-events-none text-[#2b2724] font-sans">
+              <div className="absolute top-0 left-0 right-0 z-40 h-[46px] px-7 flex items-center justify-between pointer-events-none text-black font-sans">
                 <span className="text-[14px] font-semibold tracking-tight">{currentTime}</span>
                 <div className="flex items-center gap-1.5 pt-0.5">
                   {/* Cellular Signal */}
@@ -294,7 +312,7 @@ export const PhoneFrame: React.FC<PhoneFrameProps> = ({
         </div>
 
         {/* Right Side Settings Bar (outside the phone on desktop, making the space useful) */}
-        {showSidePanels && !isMobileViewport && onSetViewMode && onSetArmPose && onRailChange && onLibChange && (
+        {showSidePanels && !isMobileViewport && studioPanels && onSetViewMode && onSetArmPose && onRailChange && onLibChange && (
           <aside
             id="desktop-right-settings-card"
             className="w-[220px] flex-none hidden md:flex flex-col gap-3 animate-fade"
