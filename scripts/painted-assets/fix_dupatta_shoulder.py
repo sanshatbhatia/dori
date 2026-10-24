@@ -45,7 +45,7 @@ def largest_piece(mask):
 PATH = 'public/assets/painted/dupatta-one-shoulder.png'
 X0, Y0, W, H = 261.0, 145.0, 228.7, 598.0  # placement in stage units (geometry.ts PAINTED.dupattaOneShoulder)
 # region over the shoulder that the cloth should cover, in stage units
-SHOULDER = [(282, 148), (300, 148), (310, 157), (316, 171), (318, 192), (315, 214), (309, 234), (305, 262), (300, 300), (288, 300), (284, 250), (282, 200)]
+SHOULDER = [(283, 157), (293, 160), (299, 164), (304, 171), (307, 180), (308, 190), (305, 199), (300, 207), (297, 214), (296, 240), (295, 285), (289, 300), (284, 250), (282, 200)]
 
 im = Image.open(PATH).convert('RGBA')
 a = np.asarray(im).astype(float)
@@ -57,6 +57,24 @@ alpha = a[..., 3]
 solid = alpha > 40
 keep = blur(largest_piece(solid).astype(float), 2) > 0
 a[..., 3] = np.where(keep, alpha, 0)
+
+# the white fringe left where the hair (and the sleeve) were cut out of the painting: whitish,
+# see-through pixels along the cloth's edge
+al = a[..., 3]
+lum0 = a[..., :3].mean(-1)
+chroma0 = a[..., :3].max(-1) - a[..., :3].min(-1)
+near_edge = blur((al < 30).astype(float), 3) > 0.02
+fringe = near_edge & (al > 0) & (lum0 > 214) & (chroma0 < 24)
+a[..., 3] = np.where(fringe, 0, al)
+
+# the painted strip widened over the top of the sleeve and stopped in a straight line where the
+# sleeve began; taper it along a diagonal instead, so the cloth narrows smoothly into its fall
+yy0, xx0 = np.mgrid[0:h, 0:w]
+ys0, xs0 = Y0 + yy0 / sy, X0 + xx0 / sx
+taper_x = 309 - (ys0 - 184) * 10 / 42
+taper = (ys0 > 184) & (ys0 < 232) & (xs0 > taper_x)
+soft = np.clip((xs0 - taper_x) / 1.2, 0, 1)
+a[..., 3] = np.where(taper, a[..., 3] * (1 - soft), a[..., 3])
 
 # fill the hole over the shoulder
 poly = Image.new('L', (w, h), 0)
@@ -73,11 +91,13 @@ CREAM = np.array([214.0, 206.0, 190.0])
 yy, xx = np.mgrid[0:h, 0:w]
 ys = Y0 + yy / sy
 xs = X0 + xx / sx
-light = 1.0 + 0.03 * np.clip((200 - ys) / 50, -1, 1) - 0.05 * np.clip((300 - xs) / 18, 0, 1)
+# soft folds running down from the shoulder, as in the painted cloth
+fold = np.exp(-(((xs - 0.25 * (ys - 160)) - 296) / 3.2) ** 2) + 0.7 * np.exp(-(((xs - 0.12 * (ys - 160)) - 302) / 2.6) ** 2)
+light = 1.0 + 0.03 * np.clip((200 - ys) / 50, -1, 1) - 0.05 * np.clip((300 - xs) / 18, 0, 1) - 0.06 * fold
 fill = CREAM[None, None, :] * light[..., None]
 # soften the new edge so it blends with the painted cloth
-edge = blur(region.astype(float), 1)
+edge = blur(blur(region.astype(float), 2), 2)
 a[..., :3] = np.where(hole[..., None], fill, a[..., :3])
-a[..., 3] = np.where(hole, np.maximum(a[..., 3], 225 * np.clip(edge * 1.6, 0, 1)), a[..., 3])
+a[..., 3] = np.where(hole, np.maximum(a[..., 3], 205 * np.clip(edge * 1.4, 0, 1)), a[..., 3])
 Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).save(PATH)
 print('filled', int(hole.sum()), 'px')
