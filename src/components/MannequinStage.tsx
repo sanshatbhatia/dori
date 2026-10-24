@@ -3582,9 +3582,13 @@ interface BlouseDetailsResult {
             const mirPiece = (p: DrapePiece): DrapePiece => ({
               poly: mir(p.poly), borders: p.borders.map(mir), folds: p.folds.map(mir), corners: p.corners && mir(p.corners), butis: p.butis,
             });
+            // around body: the shoulder fall is the fitted cape panel on the left shoulder
+            const fallOnFigure = drapeId === 'aroundBody' && !isBack && armPose === 'stretched';
             const ps = capeOnFigure
               ? (() => { const c = capeFrontL(); return [c, mirPiece(c)]; })()
-              : (isBack ? DRAPES_BACK : DRAPES)[drapeId] || [];
+              : fallOnFigure
+                ? [...DRAPES.aroundBody.slice(0, -1), mirPiece(capeFrontL())]
+                : (isBack ? DRAPES_BACK : DRAPES)[drapeId] || [];
             const open = (pts: number[][]) => {
               if (pts.length < 3) return 'M ' + pts.map((q) => q.join(' ')).join(' L ');
               let d = `M ${pts[0][0]} ${pts[0][1]}`;
@@ -3610,7 +3614,7 @@ interface BlouseDetailsResult {
             };
             return (
               <g id="drape-styled" opacity={fade}>
-                <g clipPath={isBack || capeOnFigure ? undefined : 'url(#drape-off-forearms-clip)'}>
+                <g clipPath={isBack || capeOnFigure || fallOnFigure ? undefined : 'url(#drape-off-forearms-clip)'}>
                 {capeOnFigure && (
                   // soft shadow the lapel edge casts on the blouse and skirt beside it
                   <g filter="url(#drape-fold-blur)" fill="none" strokeLinecap="round">
