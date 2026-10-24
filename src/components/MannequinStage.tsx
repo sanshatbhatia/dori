@@ -33,6 +33,7 @@ import {
   PAINTED,
   PAINTED_LATKAN_ANCHOR,
   PAINTED_BACK,
+  DRAPES,
   KEYHOLE_BACK,
   TIE_BACK_WINDOW,
   CUT_OUT_BACK,
@@ -3321,7 +3322,59 @@ interface BlouseDetailsResult {
               {paintedImage(PV.dupattaOneShoulder)}
             </g>
           )}
-          {!(painted && drapeId === 'oneShoulder') && pieces.map((pts, i) => (
+          {/* Drapes styled after the references: sheer cloth with folds, gold zari borders, butis */}
+          {painted && DRAPES[drapeId] && (() => {
+            const ps = DRAPES[drapeId].map((p) => (isBack ? { ...p, poly: mir(p.poly), borders: p.borders.map(mir), folds: p.folds.map(mir) } : p));
+            const smooth = (pts: number[][]) => {
+              if (pts.length < 3) return 'M ' + pts.map((q) => q.join(' ')).join(' L ');
+              let d = `M ${pts[0][0]} ${pts[0][1]}`;
+              for (let i = 1; i < pts.length - 1; i++) {
+                const m = [(pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2];
+                d += ` Q ${pts[i][0]} ${pts[i][1]} ${m[0]} ${m[1]}`;
+              }
+              const l = pts[pts.length - 1];
+              return d + ` L ${l[0]} ${l[1]}`;
+            };
+            return (
+              <g id="drape-styled" opacity={fade}>
+                {ps.map((p, i) => {
+                  const xs = p.poly.map((q) => q[0]), ys = p.poly.map((q) => q[1]);
+                  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+                  const butis: number[][] = [];
+                  if (p.butis) for (let k = 0; k < 40; k++) butis.push([x0 + (((k * 37) % 29) / 29) * (x1 - x0), y0 + 20 + (((k * 53) % 41) / 41) * (y1 - y0 - 40)]);
+                  return (
+                    <g key={i}>
+                      <clipPath id={`drape-styled-clip-${i}`}><path d={svgPath(p.poly)} /></clipPath>
+                      <path d={svgPath(p.poly)} fill={fabTheme.drapeColor} opacity="0.6" />
+                      <g clipPath={`url(#drape-styled-clip-${i})`} fill="none" strokeLinecap="round">
+                        {p.folds.map((f, j) => (
+                          <g key={j}>
+                            <path d={smooth(f)} stroke="rgba(120,95,60,0.22)" strokeWidth="2.6" />
+                            <path d={smooth(f.map(([x, y]) => [x + 2.4, y]))} stroke="rgba(255,255,255,0.45)" strokeWidth="1.6" />
+                          </g>
+                        ))}
+                        {butis.map(([bx, by], j) => (
+                          <path key={`b${j}`} d={`M ${bx} ${by - 1.6} L ${bx + 1.2} ${by} L ${bx} ${by + 1.6} L ${bx - 1.2} ${by} Z`} fill="#c8a24f" opacity="0.7" stroke="none" />
+                        ))}
+                        {/* zari border: a band of gold with fine work along its inner side */}
+                        {p.borders.map((b, j) => (
+                          <g key={`z${j}`}>
+                            <path d={smooth(b)} stroke="#b8923f" strokeWidth="10" opacity="0.85" />
+                            <path d={smooth(b)} stroke="#e8cf8a" strokeWidth="5" strokeDasharray="1.2 1.6" />
+                            <path d={smooth(b)} stroke="#8a6a2f" strokeWidth="0.5" opacity="0.6" />
+                          </g>
+                        ))}
+                      </g>
+                      <path d={svgPath(p.poly)} fill="none" stroke="rgba(120,95,60,0.45)" strokeWidth="0.7" strokeLinejoin="round" />
+                    </g>
+                  );
+                })}
+                {/* the long hair falls over the dupatta */}
+                <AvatarRenderer viewMode={viewMode} layer="frontHair" />
+              </g>
+            );
+          })()}
+          {!(painted && (drapeId === 'oneShoulder' || DRAPES[drapeId])) && pieces.map((pts, i) => (
             <g key={`drape-piece-${i}`} id={`drape-${i}`}>
               <clipPath id={`drape-clip-${i}`}>
                 <path d={svgPath(pts)} />
