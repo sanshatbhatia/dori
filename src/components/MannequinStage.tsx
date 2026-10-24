@@ -3580,7 +3580,7 @@ interface BlouseDetailsResult {
           {painted && DRAPES[drapeId] && (() => {
             const capeOnFigure = drapeId === 'bothShoulders' && !isBack && armPose === 'stretched';
             const mirPiece = (p: DrapePiece): DrapePiece => ({
-              poly: mir(p.poly), borders: p.borders.map(mir), folds: p.folds.map(mir), corners: p.corners && mir(p.corners), butis: p.butis,
+              poly: mir(p.poly), borders: p.borders.map(mir), folds: p.folds.map(mir), corners: p.corners && mir(p.corners), butis: p.butis, strips: p.strips,
             });
             // around body: the shoulder fall is the fitted cape panel on the left shoulder
             const fallOnFigure = drapeId === 'aroundBody' && !isBack && armPose === 'stretched';
@@ -3623,6 +3623,14 @@ interface BlouseDetailsResult {
                     ))}
                   </g>
                 )}
+                {/* soft shadows the cloth's edges cast on the skirt beneath */}
+                <g filter="url(#drape-fold-blur)" fill="none" strokeLinecap="round">
+                  {ps.flatMap((p, i) =>
+                    (p.shadowEdges || []).map((e) => (
+                      <path key={`sh${i}-${e}`} d={open(p.borders[e].map(([x, y]) => [x + (x < STAGE_CX ? 3 : -3), y + 3.5]))} stroke="rgba(40,52,40,0.3)" strokeWidth="5" />
+                    )),
+                  )}
+                </g>
                 {ps.map((p, i) => {
                   const outline = closed(p.poly);
                   const xs = p.poly.map((q) => q[0]), ys = p.poly.map((q) => q[1]);
@@ -3679,7 +3687,7 @@ interface BlouseDetailsResult {
                         // the cloth gathered and tucked at the hip: a bunched knot with creases running into it
                         const [kx, ky] = p.knot;
                         return (
-                          <g transform={`rotate(-38 ${kx} ${ky})`}>
+                          <g transform={`rotate(${kx < STAGE_CX ? 38 : -38} ${kx} ${ky})`}>
                             <ellipse cx={kx} cy={ky} rx="13" ry="7.5" fill={fabTheme.drapeColor} opacity="0.55" />
                             <ellipse cx={kx} cy={ky} rx="13" ry="7.5" fill="rgba(96,74,44,0.08)" />
                             {[-9, -4.5, 0, 4.5, 9].map((dx) => (

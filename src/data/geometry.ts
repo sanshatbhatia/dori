@@ -960,6 +960,8 @@ export type DrapePiece = {
   strips?: boolean;
   /** where the cloth is gathered into a knot */
   knot?: number[];
+  /** borders (by index) whose edge casts a soft shadow on the garment underneath */
+  shadowEdges?: number[];
 };
 const capeL: DrapePiece = {
   // over the shoulder like a cape, falling outside the arm to below the knee; embroidered front edge and
@@ -1028,15 +1030,26 @@ export const DRAPES: Record<string, DrapePiece[]> = {
 // front of the skirt, and the end falling in a cascade at the right hip. In front view the fall
 // is rebuilt on the figure (the cape panel, mirrored) when the arms are stretched.
 const aroundSwag: DrapePiece = {
-  // the other end comes round from behind the right hip and swags across the front of the skirt,
-  // pleated, rising to the left hip under the fall
-  poly: [[154,  318],  [196,  366],  [240,  388],  [284,  380],  [320,  350],  [340,  320],  [350,  356],  [328,  400],  [288,  438],  [240,  448],  [194,  424],  [150,  366]],
-  borders: [[[154,  318],  [196,  366],  [240,  388],  [284,  380],  [320,  350],  [340,  320]], [[150,  366],  [194,  424],  [240,  448],  [288,  438],  [328,  400],  [350,  356]]],
-  folds: [[[154,  318],  [196,  366],  [240,  388],  [284,  380],  [320,  350],  [340,  320]],  [[153.2,  327.6],  [195.6,  377.6],  [240.0,  400.0],  [284.8,  391.6],  [321.6,  360.0],  [342.0,  327.2]],  [[152.4,  337.2],  [195.2,  389.2],  [240.0,  412.0],  [285.6,  403.2],  [323.2,  370.0],  [344.0,  334.4]],  [[151.6,  346.8],  [194.8,  400.8],  [240.0,  424.0],  [286.4,  414.8],  [324.8,  380.0],  [346.0,  341.6]],  [[150.8,  356.4],  [194.4,  412.4],  [240.0,  436.0],  [287.2,  426.4],  [326.4,  390.0],  [348.0,  348.8]],  [[150,  366],  [194,  424],  [240,  448],  [288,  438],  [328,  400],  [350,  356]]],
+  // the other end comes round from behind the right hip, narrow where it turns and opening into a
+  // pleated swag across the front of the skirt, rising to the left hip under the fall
+  poly: [[162,  330],  [198,  366],  [240,  388],  [284,  380],  [320,  350],  [340,  320],  [350,  356],  [328,  400],  [288,  438],  [240,  448],  [194,  424],  [160,  352]],
+  borders: [[[162,  330],  [198,  366],  [240,  388],  [284,  380],  [320,  350],  [340,  320]], [[160,  352],  [194,  424],  [240,  448],  [288,  438],  [328,  400],  [350,  356]]],
+  folds: [[[162,  330],  [198,  366],  [240,  388],  [284,  380],  [320,  350],  [340,  320]],  [[161.6,  334.4],  [197.2,  377.6],  [240.0,  400.0],  [284.8,  391.6],  [321.6,  360.0],  [342.0,  327.2]],  [[161.2,  338.8],  [196.4,  389.2],  [240.0,  412.0],  [285.6,  403.2],  [323.2,  370.0],  [344.0,  334.4]],  [[160.8,  343.2],  [195.6,  400.8],  [240.0,  424.0],  [286.4,  414.8],  [324.8,  380.0],  [346.0,  341.6]],  [[160.4,  347.6],  [194.8,  412.4],  [240.0,  436.0],  [287.2,  426.4],  [326.4,  390.0],  [348.0,  348.8]],  [[160,  352],  [194,  424],  [240,  448],  [288,  438],  [328,  400],  [350,  356]]],
   strips: true,
+  shadowEdges: [1],
 };
-const aroundCascade: DrapePiece = { ...mirP(DRAPES.crossBody[1]), knot: undefined };
-DRAPES.aroundBody = [aroundCascade, aroundSwag, crossFall];
+const aroundCascade: DrapePiece = {
+  // gathered at the right hip and hanging straight down on the skirt in loose folds
+  poly: [[156,  318],  [151,  370],  [146,  430],  [140,  490],  [134,  540],  [128,  580],  [138,  602],  [148,  578],  [160,  604],  [172,  576],  [186,  598],  [196,  572],  [186,  530],  [192,  492],  [182,  452],  [189,  414],  [180,  376]],
+  borders: [[[180,  376],  [189,  414],  [182,  452],  [192,  492],  [186,  530],  [196,  572]], [[196,  572],  [186,  598],  [172,  576],  [160,  604],  [148,  578],  [138,  602],  [128,  580]], [[156,  318],  [151,  370],  [146,  430],  [140,  490],  [134,  540],  [128,  580]]],
+  folds: [[[186,  336],  [180,  376],  [189,  414],  [182,  452],  [192,  492],  [186,  530],  [196,  572]],  [[181.0,  333.0],  [181.9,  377.2],  [182.9,  421.3],  [183.7,  465.5],  [184.5,  509.7],  [185.3,  553.8],  [186.0,  598.0]],  [[176.0,  330.0],  [175.3,  371.0],  [174.7,  412.0],  [173.9,  453.0],  [173.3,  494.0],  [172.7,  535.0],  [172.0,  576.0]],  [[171.0,  327.0],  [169.0,  373.2],  [167.0,  419.3],  [165.2,  465.5],  [163.4,  511.7],  [161.6,  557.8],  [160.0,  604.0]],  [[166.0,  324.0],  [162.7,  366.3],  [159.5,  408.7],  [156.4,  451.0],  [153.5,  493.3],  [150.7,  535.7],  [148.0,  578.0]],  [[161.0,  321.0],  [156.8,  367.8],  [152.6,  414.7],  [148.7,  461.5],  [145.0,  508.3],  [141.4,  555.2],  [138.0,  602.0]],  [[156.0,  318.0],  [151.8,  361.3],  [147.7,  410.0],  [143.0,  460.0],  [138.0,  506.7],  [133.0,  546.7],  [128.0,  580.0]]],
+  strips: true,
+  corners: [[186, 598], [138, 602]],
+  knot: [168, 336],
+  butis: true,
+  shadowEdges: [0],
+};
+DRAPES.aroundBody = [aroundSwag, aroundCascade, crossFall];
 
 // Cross-body: the part of the dupatta hanging down the back from the right shoulder, drawn behind
 // the figure in front view (it shows beside the arm)
