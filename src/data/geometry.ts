@@ -512,7 +512,8 @@ export const BOT: Record<string, { profile: [number, number][]; scallop?: boolea
   straight: { profile: [[0, 40], [0.028, 43.2], [0.12, 72], [0.24, 82], [0.45, 88], [0.75, 94], [1, 102]] },
   // three gathered tiers, each a little deeper and fuller than the one above (seams at 0.29 and 0.62)
   tiered: { profile: [[0, 40], [0.028, 43.2], [0.08, 52], [0.29, 77], [0.296, 82], [0.45, 98], [0.62, 117], [0.626, 123], [0.8, 150], [1, 184]] },
-  mermaid: { profile: [[0, 40], [0.028, 43.2], [0.12, 74], [0.24, 82], [0.42, 82], [0.6, 80], [0.72, 88], [0.84, 146], [1, 210]] },
+  // fitted through the hips and thighs to the knee, then flaring out into a wide hem
+  mermaid: { profile: [[0, 40], [0.028, 43.2], [0.1, 62], [0.2, 72], [0.32, 70], [0.44, 61], [0.53, 59], [0.6, 64], [0.68, 84], [0.78, 124], [0.89, 172], [1, 212]] },
   trouser: { profile: [[0, 40], [0.028, 43.2], [0.12, 72], [0.24, 80], [0.5, 78], [1, 74]] },
 };
 

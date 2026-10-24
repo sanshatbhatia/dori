@@ -831,10 +831,10 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
       const [lastT, hw] = scaledProfile[scaledProfile.length - 1];
       const cornerY = top + lastT * hh;
       const centerY = top + hh + (lastT < 1 ? 0 : 8);
-      const hemSteps = bg === 'tiered' ? 44 : 12;
+      const hemSteps = bg === 'tiered' || bg === 'mermaid' ? 44 : 12;
       for (let i = 1; i < hemSteps; i++) {
         const f = i / hemSteps;
-        const wave = bg === 'tiered' ? Math.sin(f * Math.PI * 22) * 1.4 : 0;
+        const wave = bg === 'tiered' ? Math.sin(f * Math.PI * 22) * 1.4 : bg === 'mermaid' ? Math.sin(f * Math.PI * 16) * 2.2 : 0;
         hem.push([STAGE_CX + hw - 2 * hw * f, cornerY + Math.sin(f * Math.PI) * (centerY - cornerY) + wave]);
       }
     }
@@ -1869,7 +1869,7 @@ interface BlouseDetailsResult {
           {/* Skirt Texture & Fill Overlay */}
           <g clipPath="url(#skirt-clip)">
             {painted ? (
-              botGeo === 'tiered' ? (
+              botGeo === 'tiered' || botGeo === 'mermaid' ? (
                 // the painted pleats don't belong on a gathered tiered skirt: soften them away
                 <g filter="url(#tier-soften)">{paintedImage(PV.skirt)}</g>
               ) : (
@@ -1918,6 +1918,72 @@ interface BlouseDetailsResult {
                 )}
               </g>
             ))}
+
+            {/* Mermaid skirt: curved panel seams that hug the hips and flare below the knee, godet folds
+                in the flare, tonal leaf embroidery up each panel and a scatter of sequins */}
+            {botGeo === 'mermaid' && (() => {
+              const sk = BOT.mermaid.profile;
+              const hh = LENV[lenId] || 400;
+              const halfAt = (tt: number) => {
+                for (let i = 0; i < sk.length - 1; i++) {
+                  const [t0, w0] = sk[i], [t1, w1] = sk[i + 1];
+                  if (tt >= t0 && tt <= t1) return (w0 + ((tt - t0) / (t1 - t0 || 1)) * (w1 - w0)) * fitK;
+                }
+                return sk[sk.length - 1][1] * fitK;
+              };
+              const Y = (tt: number) => botTop + tt * hh + (tt > 0.9 ? Math.sin(Math.PI * 0.5) * 6 * ((tt - 0.9) / 0.1) : 0);
+              const seamAt = (f: number, tt: number) => [STAGE_CX + f * halfAt(tt) * 0.98, Y(tt)];
+              const path = (f: number, t0: number, t1: number, n = 30) =>
+                'M ' + Array.from({ length: n + 1 }, (_, i) => seamAt(f, t0 + ((t1 - t0) * i) / n).map((v) => v.toFixed(1)).join(' ')).join(' L ');
+              const seams = [-0.62, -0.2, 0.2, 0.62];
+              const godets = [-0.86, -0.41, 0, 0.41, 0.86];
+              // deterministic sequin scatter
+              const sequins: number[][] = [];
+              for (let i = 0; i < 140; i++) {
+                const tt = 0.06 + (((i * 37) % 97) / 97) * 0.92;
+                const f = ((((i * 53) % 89) / 89) * 2 - 1) * 0.92;
+                sequins.push([STAGE_CX + f * halfAt(tt), Y(tt), (i % 3) * 0.25 + 0.5]);
+              }
+              return (
+                <g id="mermaid-skirt" clipPath="url(#skirt-clip)" fill="none" strokeLinecap="round">
+                  {/* soft shading: the fitted part rounds over the hips, the flare falls into shade at the sides */}
+                  {seams.map((f, i) => (
+                    <path key={`sh${i}`} d={path(f, 0.03, 1)} stroke="rgba(15,35,24,0.12)" strokeWidth="6" />
+                  ))}
+                  {/* godet folds opening out below the knee */}
+                  {godets.map((f, i) => (
+                    <g key={`g${i}`}>
+                      <path d={path(f, 0.6, 0.99)} stroke="rgba(15,35,24,0.18)" strokeWidth="1.2" />
+                      <path d={path(f + 0.06, 0.62, 0.99)} stroke="rgba(255,255,255,0.12)" strokeWidth="2.4" />
+                    </g>
+                  ))}
+                  {/* tonal leaf embroidery: chevrons climbing each panel */}
+                  {[-0.41, 0, 0.41].map((f, pi) =>
+                    Array.from({ length: 12 }, (_, i) => {
+                      const tt = 0.08 + i * 0.075;
+                      const [x, y] = seamAt(f, tt);
+                      const w = Math.max(5, halfAt(tt) * 0.12);
+                      return (
+                        <path
+                          key={`c${pi}-${i}`}
+                          d={`M ${x - w} ${y + w * 0.9} L ${x} ${y} L ${x + w} ${y + w * 0.9}`}
+                          stroke="rgba(25,55,38,0.35)"
+                          strokeWidth="0.7"
+                        />
+                      );
+                    })
+                  )}
+                  {/* panel seams */}
+                  {seams.map((f, i) => (
+                    <path key={`s${i}`} d={path(f, 0.03, 1)} stroke={fabTheme.outlineColor} strokeWidth="0.75" opacity="0.5" />
+                  ))}
+                  {/* sequins catching the light */}
+                  {sequins.map(([x, y, r], i) => (
+                    <circle key={`q${i}`} cx={x} cy={y} r={r} fill={i % 4 ? '#dfe9e2' : '#f6f2e4'} opacity={0.55} stroke="none" />
+                  ))}
+                </g>
+              );
+            })()}
 
             {/* Tiered skirt: gathered seams with a soft overhang shadow, and gathers fanning down each tier */}
             {botGeo === 'tiered' && (() => {
