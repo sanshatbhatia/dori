@@ -313,15 +313,19 @@ export const BACK_CUTS: Record<string, { pts: number[][] }> = {
       [272, 154],
     ],
   },
+  // Cut-out back: the neckline dips gently to a closure at the nape; the big diamond
+  // cut-out below it is drawn separately
   cutOut: {
     pts: [
-      [196, 150],
-      [204, 185],
-      [216, 218],
-      [230, 240],
-      [244, 218],
-      [256, 185],
-      [264, 150],
+      [188, 154],
+      [198, 155.6],
+      [209, 157.4],
+      [220, 159.2],
+      [230, 161],
+      [240, 159.2],
+      [251, 157.4],
+      [262, 155.6],
+      [272, 154],
     ],
   },
 };
@@ -936,3 +940,7 @@ export const KEYHOLE_BACK = { top: 165, bottom: 236, half: 14, widest: 0.48 };
 // Tie back window: open from below the shoulder blades down through the hem, its sides
 // drawn together by two rows of tied cords
 export const TIE_BACK_WINDOW = { top: 198, bottom: 262, topHalf: 36, bottomHalf: 29, r: 9, rows: [231, 250] };
+
+// Cut-out back: a large diamond opening from a button at the nape to a button just above the
+// hem, widest across the mid back
+export const CUT_OUT_BACK = { top: 163, bottom: 251, half: 36, upperY: 200, lowerY: 225 };

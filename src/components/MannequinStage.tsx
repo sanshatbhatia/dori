@@ -35,6 +35,7 @@ import {
   PAINTED_BACK,
   KEYHOLE_BACK,
   TIE_BACK_WINDOW,
+  CUT_OUT_BACK,
   PAINTED_HEM_BACK_L,
   HALTER_STRAP_OUTER_L,
   HALTER_BACK_TOP,
@@ -1014,6 +1015,7 @@ interface BlouseDetailsResult {
   dori?: { y: number; xl: number; xr: number; tailEnd: number } | null;
   keyhole?: boolean;
   tieWindow?: boolean;
+  cutWindow?: boolean;
   potliYs?: number[];
   dartLeft?: string;
   dartRight?: string;
@@ -1161,7 +1163,8 @@ interface BlouseDetailsResult {
       const plainV = painted && backStyle === 'deepBack';
       // The tie back is an open window laced with tied cords (drawn on its own)
       const tieWindow = backStyle === 'tieBack';
-      const hasLowerTie = !plainV && (backStyle === 'deepBack' || backStyle === 'cutOut');
+      const cutWindow = backStyle === 'cutOut';
+      const hasLowerTie = !plainV && backStyle === 'deepBack';
       const keyhole = backStyle === 'keyholeBack';
       const showPotli = !hasLowerTie && (backStyle === 'roundBack' || backStyle === 'squareBack');
       const potliYs = [182, 202, 222, 242, 262].filter((y) => y > neckLowestY + 4 && y < hem - 8);
@@ -1180,7 +1183,7 @@ interface BlouseDetailsResult {
       const openTop = Math.min(...backPts.map((q) => q[1]));
       // tied just below the top of the opening, across the upper back
       const doriY = openTop + 7;
-      const dori = plainV || hasLowerTie || keyhole || tieWindow
+      const dori = plainV || hasLowerTie || keyhole || tieWindow || cutWindow
         ? null
         : { y: doriY, xl: edgeX(doriY), xr: STAGE_W - edgeX(doriY), tailEnd: hem + 7 };
 
@@ -1208,6 +1211,7 @@ interface BlouseDetailsResult {
         dori,
         keyhole,
         tieWindow,
+        cutWindow,
         // Tailored Back Darts
         dartLeft: `M ${STAGE_CX - 34} ${Math.max(170, neckLowestY)} Q ${STAGE_CX - 30} 230 ${STAGE_CX - 26} ${hem}`,
         dartRight: `M ${STAGE_CX + 34} ${Math.max(170, neckLowestY)} Q ${STAGE_CX + 28} 230 ${STAGE_CX + 24} ${hem}`,
@@ -2529,7 +2533,7 @@ interface BlouseDetailsResult {
                 return (
                   <g id="blouse-back-details">
                     {/* Spine seam */}
-                    {!bDet.tieWindow && <path d={bDet.spine!} fill="none" stroke={fabTheme.outlineColor} strokeWidth={painted ? 0.8 : 1.1} opacity={painted ? 0.45 : 0.6} strokeLinecap="round" />}
+                    {!bDet.tieWindow && !bDet.cutWindow && <path d={bDet.spine!} fill="none" stroke={fabTheme.outlineColor} strokeWidth={painted ? 0.8 : 1.1} opacity={painted ? 0.45 : 0.6} strokeLinecap="round" />}
                     {/* Tailored back darts */}
                     {!painted && <path d={bDet.dartLeft!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />}
                     {!painted && <path d={bDet.dartRight!} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.1" opacity="0.6" strokeLinecap="round" />}
@@ -2558,6 +2562,36 @@ interface BlouseDetailsResult {
                         <circle cx={STAGE_CX + 0.5} cy={py - 0.5} r="0.65" fill="#ffffff" opacity="0.7" />
                       </g>
                     ))}
+
+                    {/* Cut-out back: a large diamond opening from a button at the nape to a button just
+                        above the hem, widest across the mid back, piped in gold */}
+                    {bDet.cutWindow && (() => {
+                      const { top, bottom, half, upperY, lowerY } = CUT_OUT_BACK;
+                      const cx = STAGE_CX;
+                      // straight edges with softly rounded side corners, pinched at the top and bottom
+                      const sideL = (y: number) => [cx - half + (y > (upperY + lowerY) / 2 ? 1 : 0), y];
+                      const [ux, uy] = sideL(upperY), [lx, ly] = sideL(lowerY);
+                      const d = `M ${cx} ${top} L ${ux + 3} ${uy - 4} Q ${ux} ${uy} ${ux} ${uy + 4} L ${lx} ${ly - 4} Q ${lx} ${ly} ${lx + 3} ${ly + 3} L ${cx} ${bottom} L ${2 * cx - lx - 3} ${ly + 3} Q ${2 * cx - lx} ${ly} ${2 * cx - lx} ${ly - 4} L ${2 * cx - ux} ${uy + 4} Q ${2 * cx - ux} ${uy} ${2 * cx - ux - 3} ${uy - 4} Z`;
+                      const button = (y: number) => (
+                        <g>
+                          <circle cx={cx} cy={y} r="1.9" fill={fabTheme.baseColor} stroke={fabTheme.outlineColor} strokeWidth="0.55" />
+                          <circle cx={cx - 0.5} cy={y - 0.5} r="0.6" fill="#ffffff" opacity="0.5" />
+                        </g>
+                      );
+                      return (
+                        <g id="cut-out-back">
+                          <clipPath id="cut-out-clip"><path d={d} /></clipPath>
+                          <g clipPath="url(#cut-out-clip)">
+                            {painted ? paintedImage(PV.skin) : <rect x={cx - half - 2} y={top} width={half * 2 + 4} height={bottom - top} fill="#f3d8bc" />}
+                            <path d={d} fill="none" stroke="rgba(90,50,40,0.22)" strokeWidth="5" />
+                          </g>
+                          <path d={d} fill="none" stroke={fabTheme.outlineColor} strokeWidth="0.7" opacity="0.6" />
+                          <path d={d} fill="none" stroke="#c8a24f" strokeWidth="0.9" opacity="0.9" />
+                          {button(top - 1.2)}
+                          {button(bottom + 1.6)}
+                        </g>
+                      );
+                    })()}
 
                     {/* Tie back: an open window from below the shoulder blades through the hem, piped in
                         gold, its sides drawn together by two rows of thin cords tied in bows */}
@@ -2667,7 +2701,7 @@ interface BlouseDetailsResult {
                     })()}
 
                     {/* Legacy upper dori (only when the back has no dori across its opening) */}
-                    {!bDet.dori && !bDet.keyhole && !bDet.tieWindow && (
+                    {!bDet.dori && !bDet.keyhole && !bDet.tieWindow && !bDet.cutWindow && (
                       <>
                     {bDet.tieBow && <path d={bDet.tieBow} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.3" strokeLinecap="round" />}
                     {bDet.doriLeft && <path d={bDet.doriLeft} fill="none" stroke={fabTheme.outlineColor} strokeWidth="1.2" strokeLinecap="round" />}
