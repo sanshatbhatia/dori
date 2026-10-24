@@ -34,6 +34,7 @@ import {
   PAINTED_LATKAN_ANCHOR,
   PAINTED_BACK,
   DRAPES,
+  DRAPES_BACK,
   KEYHOLE_BACK,
   TIE_BACK_WINDOW,
   CUT_OUT_BACK,
@@ -1813,6 +1814,14 @@ interface BlouseDetailsResult {
               <stop offset="0.5" stopColor="#d9b867" />
               <stop offset="1" stopColor="#8c6c2b" />
             </radialGradient>
+            <filter id="drape-fold-blur" x="-10%" y="-10%" width="120%" height="120%">
+              <feGaussianBlur stdDeviation="1.8" />
+            </filter>
+            <linearGradient id="drape-light" x1="0" y1="0" x2="0.3" y2="1">
+              <stop offset="0" stopColor="#ffffff" stopOpacity="0.28" />
+              <stop offset="0.5" stopColor="#ffffff" stopOpacity="0.05" />
+              <stop offset="1" stopColor="#5a4630" stopOpacity="0.1" />
+            </linearGradient>
             <filter id="tier-soften" x="-5%" y="-5%" width="110%" height="110%">
               <feGaussianBlur stdDeviation="4" />
             </filter>
@@ -1883,6 +1892,27 @@ interface BlouseDetailsResult {
                           })()
                         )
                       )
+                    : ''
+                }`}
+              />
+            </clipPath>
+            {/* the styled drapes hang behind both forearms and hands (stretched pose) */}
+            <clipPath id="drape-off-forearms-clip">
+              <path
+                clipRule="evenodd"
+                d={`M 0 0 H ${STAGE_W} V ${STAGE_H} H 0 Z ${
+                  armPose === 'stretched'
+                    ? (() => {
+                        const s0 = ARM_UPPER_LEN - 6, s1 = ARM_UPPER_LEN + ARM_FORE_LEN + 60, n = 24;
+                        const side = (sd: 1 | -1) =>
+                          Array.from({ length: n + 1 }, (_, i) => {
+                            const a = armAt(s0 + ((s1 - s0) * i) / n);
+                            const m = a.w + 0.6;
+                            return [a.p[0] + sd * a.n[0] * m, a.p[1] + sd * a.n[1] * m];
+                          });
+                        const arm = [...side(1), ...side(-1).reverse()];
+                        return `${svgPath(arm)} ${svgPath(mir(arm))}`;
+                      })()
                     : ''
                 }`}
               />
@@ -3456,10 +3486,11 @@ interface BlouseDetailsResult {
               {paintedImage(PV.dupattaOneShoulder)}
             </g>
           )}
-          {/* Drapes styled after the references: sheer cloth with folds, gold zari borders, butis */}
+          {/* Drapes styled after the references: sheer net with soft folds, a gold zari border with
+              woven motifs, scattered butis and small tassels at the hem corners */}
           {painted && DRAPES[drapeId] && (() => {
-            const ps = DRAPES[drapeId].map((p) => (isBack ? { ...p, poly: mir(p.poly), borders: p.borders.map(mir), folds: p.folds.map(mir) } : p));
-            const smooth = (pts: number[][]) => {
+            const ps = (isBack ? DRAPES_BACK : DRAPES)[drapeId] || [];
+            const open = (pts: number[][]) => {
               if (pts.length < 3) return 'M ' + pts.map((q) => q.join(' ')).join(' L ');
               let d = `M ${pts[0][0]} ${pts[0][1]}`;
               for (let i = 1; i < pts.length - 1; i++) {
@@ -3469,42 +3500,73 @@ interface BlouseDetailsResult {
               const l = pts[pts.length - 1];
               return d + ` L ${l[0]} ${l[1]}`;
             };
+            // closed Catmull-Rom curve through the outline points, so the cloth has no hard corners
+            const closed = (pts: number[][]) => {
+              const n = pts.length;
+              const P = (i: number) => pts[(i + n) % n];
+              let d = `M ${pts[0][0]} ${pts[0][1]}`;
+              for (let i = 0; i < n; i++) {
+                const [p0, p1, p2, p3] = [P(i - 1), P(i), P(i + 1), P(i + 2)];
+                const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+                const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+                d += ` C ${c1[0].toFixed(1)} ${c1[1].toFixed(1)} ${c2[0].toFixed(1)} ${c2[1].toFixed(1)} ${p2[0]} ${p2[1]}`;
+              }
+              return d + ' Z';
+            };
             return (
               <g id="drape-styled" opacity={fade}>
+                <g clipPath={isBack ? undefined : 'url(#drape-off-forearms-clip)'}>
                 {ps.map((p, i) => {
+                  const outline = closed(p.poly);
                   const xs = p.poly.map((q) => q[0]), ys = p.poly.map((q) => q[1]);
                   const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
                   const butis: number[][] = [];
-                  if (p.butis) for (let k = 0; k < 40; k++) butis.push([x0 + (((k * 37) % 29) / 29) * (x1 - x0), y0 + 20 + (((k * 53) % 41) / 41) * (y1 - y0 - 40)]);
+                  if (p.butis) for (let k = 0; k < 46; k++) butis.push([x0 + (((k * 37) % 29) / 29) * (x1 - x0), y0 + 24 + (((k * 53) % 41) / 41) * (y1 - y0 - 50)]);
                   return (
                     <g key={i}>
-                      <clipPath id={`drape-styled-clip-${i}`}><path d={svgPath(p.poly)} /></clipPath>
-                      <path d={svgPath(p.poly)} fill={fabTheme.drapeColor} opacity="0.6" />
+                      <clipPath id={`drape-styled-clip-${i}`}><path d={outline} /></clipPath>
+                      <path d={outline} fill={fabTheme.drapeColor} opacity="0.55" />
                       <g clipPath={`url(#drape-styled-clip-${i})`} fill="none" strokeLinecap="round">
+                        <rect x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill="url(#net-mesh)" opacity="0.35" />
+                        <rect x={x0} y={y0} width={x1 - x0} height={y1 - y0} fill="url(#drape-light)" />
+                        {/* folds: a soft shadow in each valley with a sheen on the ridge beside it */}
+                        <g filter="url(#drape-fold-blur)">
+                          {p.folds.map((f, j) => (
+                            <g key={j}>
+                              <path d={open(f)} stroke="rgba(96,74,44,0.2)" strokeWidth="5" />
+                              <path d={open(f.map(([x, y]) => [x + 3.6, y]))} stroke="rgba(255,255,255,0.5)" strokeWidth="3" />
+                            </g>
+                          ))}
+                        </g>
                         {p.folds.map((f, j) => (
-                          <g key={j}>
-                            <path d={smooth(f)} stroke="rgba(120,95,60,0.22)" strokeWidth="2.6" />
-                            <path d={smooth(f.map(([x, y]) => [x + 2.4, y]))} stroke="rgba(255,255,255,0.45)" strokeWidth="1.6" />
-                          </g>
+                          <path key={`l${j}`} d={open(f)} stroke="rgba(110,86,52,0.28)" strokeWidth="0.6" />
                         ))}
                         {butis.map(([bx, by], j) => (
-                          <path key={`b${j}`} d={`M ${bx} ${by - 1.6} L ${bx + 1.2} ${by} L ${bx} ${by + 1.6} L ${bx - 1.2} ${by} Z`} fill="#c8a24f" opacity="0.7" stroke="none" />
+                          <g key={`b${j}`} opacity="0.8">
+                            <path d={`M ${bx} ${by - 2} Q ${bx + 1.6} ${by} ${bx} ${by + 2} Q ${bx - 1.6} ${by} ${bx} ${by - 2} Z`} fill="#d1ad5c" />
+                            <circle cx={bx} cy={by} r="0.5" fill="#fbf0cc" />
+                          </g>
                         ))}
-                        {/* zari border: a band of gold with fine work along its inner side */}
+                        {/* zari border: dark selvedge, a gold band, woven motifs along it and a fine inner kinari */}
                         {p.borders.map((b, j) => (
                           <g key={`z${j}`}>
-                            <path d={smooth(b)} stroke="#b8923f" strokeWidth="10" opacity="0.85" />
-                            <path d={smooth(b)} stroke="#e8cf8a" strokeWidth="5" strokeDasharray="1.2 1.6" />
-                            <path d={smooth(b)} stroke="#8a6a2f" strokeWidth="0.5" opacity="0.6" />
+                            <path d={open(b)} stroke="#7d5f22" strokeWidth="13" opacity="0.55" />
+                            <path d={open(b)} stroke="#c9a24e" strokeWidth="11.6" />
+                            <path d={open(b)} stroke="#e9cf87" strokeWidth="6.4" />
+                            <path d={open(b)} stroke="#a8823a" strokeWidth="4.6" strokeDasharray="0.6 3.4" />
+                            <path d={open(b)} stroke="#fff3cf" strokeWidth="2.4" strokeDasharray="2.2 1.8" />
+                            <path d={open(b)} stroke="#8a6a2f" strokeWidth="0.35" />
                           </g>
                         ))}
                       </g>
-                      <path d={svgPath(p.poly)} fill="none" stroke="rgba(120,95,60,0.45)" strokeWidth="0.7" strokeLinejoin="round" />
+                      <path d={outline} fill="none" stroke="rgba(110,86,52,0.5)" strokeWidth="0.6" />
+                      {(p.corners || []).map(([cx, cy], j) => tassel(cx, cy - 1, 16, `drape-tassel-${i}-${j}`))}
                     </g>
                   );
                 })}
+                </g>
                 {/* the long hair falls over the dupatta */}
-                <AvatarRenderer viewMode={viewMode} layer="frontHair" />
+                {isBack ? paintedImage(PAINTED_BACK.head) : <AvatarRenderer viewMode={viewMode} layer="frontHair" />}
               </g>
             );
           })()}
