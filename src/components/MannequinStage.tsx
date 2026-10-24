@@ -1969,7 +1969,8 @@ interface BlouseDetailsResult {
                     ? svgPath(
                         mir(
                           (() => {
-                            const s0 = 30, s1 = ARM_UPPER_LEN + ARM_FORE_LEN + 60, n = 24;
+                            // the dupatta drapes over the upper arm; the forearm comes out from under it at the elbow
+                            const s0 = ARM_UPPER_LEN + 6, s1 = ARM_UPPER_LEN + ARM_FORE_LEN + 60, n = 24;
                             const side = (sd: 1 | -1) =>
                               Array.from({ length: n + 1 }, (_, i) => {
                                 const a = armAt(s0 + ((s1 - s0) * i) / n);

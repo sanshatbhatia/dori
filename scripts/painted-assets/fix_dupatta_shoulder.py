@@ -1,4 +1,4 @@
-# Repairs the one-shoulder dupatta over the shoulder (run after build.py).
+# Repairs the one-shoulder dupatta over the shoulder and drapes it over the upper arm (run after build.py).
 # In the reference painting the sleeve hid part of the dupatta where it crosses the shoulder, so the
 # extracted dupatta has a hole there; with any other sleeve the hole showed as a white notch. This
 # fills the hole with the dupatta's own cream and drops the stray specks and the white fringe left
@@ -45,7 +45,8 @@ def largest_piece(mask):
 PATH = 'public/assets/painted/dupatta-one-shoulder.png'
 X0, Y0, W, H = 261.0, 145.0, 228.7, 598.0  # placement in stage units (geometry.ts PAINTED.dupattaOneShoulder)
 # region over the shoulder that the cloth should cover, in stage units
-SHOULDER = [(283, 157), (293, 160), (299, 164), (304, 171), (307, 180), (308, 190), (305, 199), (300, 207), (297, 214), (296, 240), (295, 285), (289, 300), (284, 250), (282, 200)]
+# over the shoulder and down the outside of the upper arm to the elbow, then falling into the drape
+SHOULDER = [(283, 157), (293, 160), (299, 164), (305, 172), (309, 182), (319, 211), (332, 238), (345, 268), (347, 284), (342, 302), (334, 305), (300, 250), (283, 200)]
 
 im = Image.open(PATH).convert('RGBA')
 a = np.asarray(im).astype(float)
@@ -91,13 +92,23 @@ CREAM = np.array([214.0, 206.0, 190.0])
 yy, xx = np.mgrid[0:h, 0:w]
 ys = Y0 + yy / sy
 xs = X0 + xx / sx
-# soft folds running down from the shoulder, as in the painted cloth
-fold = np.exp(-(((xs - 0.25 * (ys - 160)) - 296) / 3.2) ** 2) + 0.7 * np.exp(-(((xs - 0.12 * (ys - 160)) - 302) / 2.6) ** 2)
-light = 1.0 + 0.03 * np.clip((200 - ys) / 50, -1, 1) - 0.05 * np.clip((300 - xs) / 18, 0, 1) - 0.06 * fold
+# soft folds running along the arm from the shoulder, as the cloth hangs over it
+ax, ay = 0.42, 0.91  # arm direction
+across = (xs - 294) * ay - (ys - 190) * ax
+fold = np.exp(-((across - 6) / 3.0) ** 2) + 0.8 * np.exp(-((across - 18) / 3.4) ** 2) + 0.6 * np.exp(-((across - 30) / 3.0) ** 2)
+light = 1.0 + 0.03 * np.clip((200 - ys) / 50, -1, 1) - 0.05 * np.clip((300 - xs) / 18, 0, 1) - 0.07 * fold
 fill = CREAM[None, None, :] * light[..., None]
 # soften the new edge so it blends with the painted cloth
 edge = blur(blur(region.astype(float), 2), 2)
 a[..., :3] = np.where(hole[..., None], fill, a[..., :3])
-a[..., 3] = np.where(hole, np.maximum(a[..., 3], 205 * np.clip(edge * 1.4, 0, 1)), a[..., 3])
+a[..., 3] = np.where(hole, np.maximum(a[..., 3], 190 * np.clip(edge * 1.4, 0, 1)), a[..., 3])
+# the painted fall starts with a straight top edge (the sleeve hid what was above it); blend it into
+# the sheer cloth over the arm so the cloth gets gradually denser instead of changing at a line
+band = region & ~hole & (ys > 205) & (ys < 292)
+t = np.clip((ys - 248) / 40, 0, 1)
+mix = 190 + (a[..., 3] - 190) * t
+a[..., 3] = np.where(band, np.minimum(a[..., 3], mix), a[..., 3])
+a[..., :3] = np.where(band[..., None], a[..., :3] * t[..., None] + fill * (1 - t[..., None]), a[..., :3])
+
 Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).save(PATH)
 print('filled', int(hole.sum()), 'px')
