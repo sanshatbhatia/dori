@@ -845,7 +845,7 @@ export const PAINTED = {
   dupattaOneShoulder: { href: '/assets/painted/dupatta-one-shoulder.png', x: 261.0, y: 145.0, w: 228.7, h: 598.0 },
 };
 // Where the painted latkan hangs from the waistband (light size scales around it)
-export const PAINTED_LATKAN_ANCHOR: [number, number] = [178.9, 285.5];
+export const PAINTED_LATKAN_ANCHOR: [number, number] = [197, 288];
 
 // Scalloped pleated hem traced from the reference artwork (left half, outer corner to centre front)
 export const PAINTED_HEM_L: number[][] = [[11.3, 721.1], [18.3, 724.6], [25.3, 729.0], [32.3, 730.7], [35.8, 733.4], [39.3, 740.3], [46.2, 744.7], [53.2, 747.3], [60.2, 750.0], [67.2, 750.0], [74.2, 750.8], [77.7, 752.6], [81.2, 756.9], [88.1, 760.4], [95.1, 763.0], [102.1, 765.7], [109.1, 766.5], [116.1, 768.3], [123.1, 769.2], [130.0, 768.3], [133.5, 769.2], [137.0, 772.6], [144.0, 774.4], [151.0, 776.1], [158.0, 777.9], [168.5, 777.9], [178.9, 777.9], [185.9, 777.0], [192.9, 776.1], [199.9, 776.1], [203.4, 777.9], [206.9, 782.3], [213.9, 784.0], [220.8, 784.0], [226.4, 785.7], [230.0, 785.7]];

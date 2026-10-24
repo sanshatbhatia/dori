@@ -1355,6 +1355,143 @@ interface BlouseDetailsResult {
     );
   };
 
+  // Small gold bead strand from (x0, y0) to (x1, y1), drawn as a fine cord with beads along it
+  const beadStrand = (x0: number, y0: number, x1: number, y1: number, key: string, gap = 2.1) => {
+    const n = Math.max(2, Math.round(Math.hypot(x1 - x0, y1 - y0) / gap));
+    const sag = (x1 - x0) * 0.12;
+    const at = (t: number) => [x0 + (x1 - x0) * t + Math.sin(Math.PI * t) * sag, y0 + (y1 - y0) * t];
+    return (
+      <g key={key}>
+        <path d={`M ${x0} ${y0} Q ${(x0 + x1) / 2 + sag * 2} ${(y0 + y1) / 2} ${x1} ${y1}`} fill="none" stroke="#8c6c2b" strokeWidth="0.35" />
+        {Array.from({ length: n + 1 }, (_, i) => {
+          const [bx, by] = at(i / n);
+          return <circle key={i} cx={bx} cy={by} r={0.82} fill="url(#tassel-bead)" stroke="#6b5222" strokeWidth="0.15" />;
+        })}
+      </g>
+    );
+  };
+
+  // Champagne silk tassel from the heavy latkan: gold cap bead, wrapped neck, flared thread
+  // skirt, and a thread-wrapped ball with a ruffled frill below. (x, y) is where it hangs from.
+  const silkTassel = (x: number, y: number, L: number, key: string) => {
+    const k = L / 30;
+    const nTop = y + 2.2 * k, nBot = y + 4.4 * k;
+    const sTop = nBot, sBot = y + 0.6 * L;
+    const sw = 1.6 * k, bw = 5.2 * k;
+    const bc = sBot + 3.4 * k, br = 4 * k; // ball centre and radius
+    const fTop = bc + br * 0.55, fBot = y + L, fw = 5.8 * k; // frill
+    const threads = Array.from({ length: 11 }, (_, i) => {
+      const f = i / 10 - 0.5;
+      const x1 = x + f * 2 * bw;
+      return <path key={i} d={`M ${x + f * 2 * sw} ${sTop} Q ${x + f * 2 * (sw + bw) / 2} ${(sTop + sBot) / 2} ${x1} ${sBot - Math.abs(f) * 1.4 * k}`} fill="none" stroke={i % 3 === 0 ? '#8a7350' : i % 3 === 1 ? '#f4e8cf' : '#c8b08a'} strokeWidth={0.3 * k} strokeLinecap="round" />;
+    });
+    const scallops = 7;
+    let frill = `M ${x - br * 0.8} ${fTop}`;
+    for (let i = 0; i <= scallops; i++) {
+      const fx = x - fw + (2 * fw * i) / scallops;
+      const px = x - fw + (2 * fw * (i - 0.5)) / scallops;
+      frill += i === 0 ? ` L ${fx} ${fBot - 0.8 * k}` : ` Q ${px} ${fBot + 0.9 * k} ${fx} ${fBot - 0.8 * k}`;
+    }
+    frill += ` L ${x + br * 0.8} ${fTop} Z`;
+    return (
+      <g key={key} className="silk-tassel">
+        <path d={`M ${x - sw} ${sTop} L ${x + sw} ${sTop} Q ${x + bw} ${(sTop + sBot) / 2} ${x + bw} ${sBot} L ${x - bw} ${sBot} Q ${x - bw} ${(sTop + sBot) / 2} ${x - sw} ${sTop} Z`} fill="url(#silk-thread)" />
+        {threads}
+        <path d={frill} fill="url(#silk-thread)" stroke="#8a7350" strokeWidth={0.2 * k} />
+        {Array.from({ length: scallops }, (_, i) => {
+          const fx = x - fw + (2 * fw * (i + 0.5)) / scallops;
+          return <line key={i} x1={x + (fx - x) * 0.45} y1={fTop + 0.6 * k} x2={fx} y2={fBot - 0.2 * k} stroke="#8a7350" strokeWidth={0.18 * k} opacity="0.6" />;
+        })}
+        <circle cx={x} cy={bc} r={br} fill="url(#silk-ball)" stroke="#8a7350" strokeWidth={0.22 * k} />
+        {[-0.55, 0, 0.55].map((f) => (
+          <path key={f} d={`M ${x + f * br} ${bc - br * 0.94} Q ${x + f * br * 1.5} ${bc} ${x + f * br} ${bc + br * 0.94}`} fill="none" stroke="#8a7350" strokeWidth={0.16 * k} opacity="0.55" />
+        ))}
+        <rect x={x - br * 0.9} y={sBot - 0.2 * k} width={br * 1.8} height={1 * k} rx={0.4 * k} fill="#c9a24e" stroke="#6b5222" strokeWidth={0.15 * k} />
+        <rect x={x - sw - 0.3 * k} y={nTop} width={(sw + 0.3 * k) * 2} height={nBot - nTop} rx={0.5 * k} fill="url(#silk-thread)" stroke="#8a7350" strokeWidth={0.18 * k} />
+        <circle cx={x} cy={y + 1 * k} r={1.15 * k} fill="url(#tassel-bead)" stroke="#6b5222" strokeWidth={0.15 * k} />
+      </g>
+    );
+  };
+
+  // Heavy latkan: a beaded cord to a row of three silk tassels, beaded strands down to a
+  // second and third tier (back tiers drawn first so the top row sits in front)
+  const heavyLatkan = (x: number, y: number) => {
+    const y0 = y + 16;
+    const tiers: [number, number, number][][] = [
+      [[x - 7, y0 + 92, 30], [x + 7, y0 + 96, 30], [x, y0 + 102, 32]],
+      [[x - 11, y0 + 50, 31], [x + 11, y0 + 54, 31]],
+      [[x - 8, y0 + 2, 32], [x + 8, y0 + 2, 32], [x, y0, 34]],
+    ];
+    const tb = y0 + 34; // bottom of the top tier
+    return (
+      <g className="latkan-heavy">
+        {beadStrand(x, y, x, y0, 'cord', 2.6)}
+        {[[-10, -11, 50], [-4, -7, 92], [4, 7, 96], [10, 11, 54], [0, 0, 102], [-6, 0, 102]].map(([dx0, dx1, dy], i) =>
+          beadStrand(x + dx0, tb, x + dx1, y0 + dy, `s${i}`),
+        )}
+        {beadStrand(x - 11, y0 + 80, x - 7, y0 + 92, 's6')}
+        {beadStrand(x + 11, y0 + 84, x + 7, y0 + 96, 's7')}
+        {tiers.map((row, t) => row.map(([tx, ty, L], i) => silkTassel(tx, ty, L, `t${t}-${i}`)))}
+        <path d={`M ${x - 9} ${y0 + 0.6} Q ${x} ${y0 - 2.2} ${x + 9} ${y0 + 0.6}`} fill="none" stroke="#c9a24e" strokeWidth="1" strokeLinecap="round" />
+      </g>
+    );
+  };
+
+  // Light latkan: a cluster of gold filigree balls on fine wire with lilac crystal bicones
+  const lightLatkan = (x: number, y: number) => {
+    // [dx, dy, radius, parent index]
+    const nodes: [number, number, number, number][] = [
+      [0, 13, 4.2, -1],
+      [-5.6, 23, 4, 0],
+      [5.6, 23, 4, 0],
+      [0, 33, 4.3, 0],
+      [-6, 43, 4, 3],
+      [6, 43, 4, 3],
+      [0, 54, 4.3, 3],
+      [0, 65, 3.8, 6],
+    ];
+    const pos = (i: number) => (i < 0 ? [x, y] : [x + nodes[i][0], y + nodes[i][1]]);
+    const crystal = (cx: number, cy: number, key: string, s = 1) => (
+      <g key={key}>
+        <path d={`M ${cx} ${cy - 2 * s} L ${cx + 1.3 * s} ${cy} L ${cx} ${cy + 2 * s} L ${cx - 1.3 * s} ${cy} Z`} fill="#d8c6e6" stroke="#8d78a6" strokeWidth="0.2" />
+        <path d={`M ${cx - 0.5 * s} ${cy - 1 * s} L ${cx} ${cy - 1.8 * s}`} stroke="#ffffff" strokeWidth="0.35" opacity="0.9" />
+      </g>
+    );
+    const ball = (cx: number, cy: number, r: number, key: string) => (
+      <g key={key}>
+        <clipPath id={`filigree-${key}`}><circle cx={cx} cy={cy} r={r} /></clipPath>
+        <circle cx={cx} cy={cy} r={r} fill="url(#tassel-bead)" stroke="#6b5222" strokeWidth="0.3" />
+        <g clipPath={`url(#filigree-${key})`} fill="none" stroke="#7d5f22" strokeWidth="0.32" opacity="0.85">
+          {[0.3, 0.62, 0.9].map((f) => <ellipse key={f} cx={cx} cy={cy} rx={r * f} ry={r} />)}
+          {[-0.5, 0, 0.5].map((f) => <line key={f} x1={cx - r} y1={cy + f * r} x2={cx + r} y2={cy + f * r} />)}
+        </g>
+        <circle cx={cx - r * 0.35} cy={cy - r * 0.4} r={r * 0.28} fill="#fff6d8" opacity="0.55" />
+        <circle cx={cx} cy={cy - r} r="0.75" fill="#c9a24e" stroke="#6b5222" strokeWidth="0.15" />
+      </g>
+    );
+    const [lx, ly] = pos(nodes.length - 1);
+    return (
+      <g className="latkan-light">
+        {nodes.map(([, , r, p], i) => {
+          const [px, py] = pos(p);
+          const [cx, cy] = pos(i);
+          const top = cy - r;
+          return (
+            <g key={`w${i}`}>
+              <path d={`M ${px} ${py} L ${cx} ${top}`} stroke="#b8923f" strokeWidth="0.45" />
+              {crystal((px + cx) / 2, (py + top) / 2 + 0.6, `c${i}`, 0.8)}
+            </g>
+          );
+        })}
+        {nodes.map(([, , r], i) => {
+          const [cx, cy] = pos(i);
+          return ball(cx, cy, r, `b${i}`);
+        })}
+        {crystal(lx, ly + nodes[nodes.length - 1][2] + 2.6, 'drop', 1.1)}
+      </g>
+    );
+  };
+
   // Focus & Camera Zoom
   const f = FOCUS[activeCategory.slot] || FOCUS.topStyle;
   const isDetail = viewMode === 'detail';
@@ -1660,6 +1797,17 @@ interface BlouseDetailsResult {
               <stop offset="0.55" stopColor="#f0d998" />
               <stop offset="1" stopColor="#8c6c2b" />
             </linearGradient>
+            <linearGradient id="silk-thread" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor="#a68e68" />
+              <stop offset="0.4" stopColor="#e8d8b8" />
+              <stop offset="0.6" stopColor="#f2e6cc" />
+              <stop offset="1" stopColor="#9a835e" />
+            </linearGradient>
+            <radialGradient id="silk-ball" cx="0.38" cy="0.35" r="0.75">
+              <stop offset="0" stopColor="#f6ecd6" />
+              <stop offset="0.6" stopColor="#d4bf98" />
+              <stop offset="1" stopColor="#9a835e" />
+            </radialGradient>
             <radialGradient id="tassel-bead" cx="0.35" cy="0.35" r="0.7">
               <stop offset="0" stopColor="#fbeec2" />
               <stop offset="0.5" stopColor="#d9b867" />
@@ -2159,35 +2307,21 @@ interface BlouseDetailsResult {
               strokeLinecap="round"
             />
 
-            {/* Lehenga Latkan: painted gold beads and tassel hanging from the waistband */}
+            {/* Lehenga Latkan, hooked onto the waistband: heavy is a three-tier cluster of silk tassels
+                on beaded strands, light a small cascade of gold filigree balls and crystal beads */}
             {currentGarment === 'lehenga' && beltLatkan !== 'none' && !isBack && (() => {
-              const k = beltLatkan === 'light' ? 0.72 : 1;
               const [ax, ay] = PAINTED_LATKAN_ANCHOR;
+              const hook = (
+                <g>
+                  <path d={`M ${ax - 1.6} ${ay - 2.4} Q ${ax} ${ay - 4.6} ${ax + 1.6} ${ay - 2.4}`} fill="none" stroke="#7d5f22" strokeWidth="0.9" strokeLinecap="round" />
+                  <circle cx={ax} cy={ay} r="2.1" fill="none" stroke="#c9a24e" strokeWidth="1.1" />
+                  <circle cx={ax} cy={ay} r="2.1" fill="none" stroke="#6b5222" strokeWidth="0.3" />
+                </g>
+              );
               return (
-                <g
-                  id="waist-latkan"
-                  className="transition-opacity duration-300"
-                  transform={`translate(${ax} ${ay}) scale(${k}) translate(${-ax} ${-ay})`}
-                >
-                  {/* gold cord from the waistband with graduated beads, ending in a full tassel */}
-                  {(() => {
-                    const cordEnd = ay + 116;
-                    const beads = [ay + 22, ay + 46, ay + 68, ay + 88, ay + 104];
-                    return (
-                      <g>
-                        <path d={`M ${ax} ${ay} C ${ax - 1} ${ay + 40} ${ax + 1} ${ay + 80} ${ax} ${cordEnd}`} fill="none" stroke="#6b5222" strokeWidth="2.6" opacity="0.5" strokeLinecap="round" />
-                        <path d={`M ${ax} ${ay} C ${ax - 1} ${ay + 40} ${ax + 1} ${ay + 80} ${ax} ${cordEnd}`} fill="none" stroke="#c9a24e" strokeWidth="2" strokeLinecap="round" />
-                        <path d={`M ${ax} ${ay} C ${ax - 1} ${ay + 40} ${ax + 1} ${ay + 80} ${ax} ${cordEnd}`} fill="none" stroke="#f0d998" strokeWidth="0.9" strokeDasharray="1.4 1.4" strokeLinecap="round" />
-                        {beads.map((by, i) => (
-                          <g key={i}>
-                            <ellipse cx={ax} cy={by} rx={2.6 + i * 0.35} ry={2.9 + i * 0.4} fill="url(#tassel-bead)" stroke="#6b5222" strokeWidth="0.4" />
-                            <circle cx={ax} cy={by - 4.2 - i * 0.4} r="0.9" fill="#d9b867" stroke="#6b5222" strokeWidth="0.25" />
-                          </g>
-                        ))}
-                        {tassel(ax, cordEnd, 52, 'skirt-tassel')}
-                      </g>
-                    );
-                  })()}
+                <g id="waist-latkan" data-size={beltLatkan} className="transition-opacity duration-300">
+                  {beltLatkan === 'heavy' ? heavyLatkan(ax, ay + 2) : lightLatkan(ax, ay + 2)}
+                  {hook}
                 </g>
               );
             })()}
