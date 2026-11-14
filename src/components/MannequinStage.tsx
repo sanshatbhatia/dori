@@ -266,10 +266,51 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   const armOutR = mir(armOutL);
   const bentXY = (x: number, y: number) => bendArm([[x, y]])[0].map((v) => Math.round(v * 10) / 10).join(' ');
 
+  // Flared elbow sleeve on the hanging arm (rest pose): fitted at the cap, opening into a bell that
+  // swings out more on the outer side, with a rounded, softly waved hem. Also returns the fold lines,
+  // the hem and the inside of the bell seen through the hem opening, for the detail layer.
+  const flaredRestL = () => {
+    const { len: L, ease } = FLARED_REST_SLEEVE;
+    const from = FLARED_REST_SLEEVE.flareFrom;
+    const half = (sAt: number, side: 1 | -1) => {
+      const a = armAtP(sAt);
+      const f = Math.max(0, (sAt - from) / (L - from));
+      return a.w + ease + (side === 1 ? 26 : 15) * Math.pow(f, 1.35);
+    };
+    const at = (sAt: number, off: number, drop = 0) => {
+      const a = armAtP(sAt);
+      return [a.p[0] + a.n[0] * off + a.t[0] * drop, a.p[1] + a.n[1] * off + a.t[1] * drop];
+    };
+    const steps = 14;
+    const edge = (side: 1 | -1) =>
+      Array.from({ length: steps + 1 }, (_, i) => {
+        const sAt = 14 + ((L - 14) * i) / steps;
+        return at(sAt, side * half(sAt, side));
+      });
+    // hem from the outer corner round to the inner one: rounded below, with a gentle wave
+    const hemAt = (u: number, lift = 0) => {
+      const off = u >= 0 ? u * half(L, 1) : u * half(L, -1);
+      const drop = 7 * (1 - u * u) + 1.6 * Math.sin(3 * Math.PI * u) * (1 - Math.abs(u)) - lift * (1 - u * u * 0.6);
+      return at(L, off, drop);
+    };
+    const hem = Array.from({ length: 17 }, (_, i) => hemAt(1 - (2 * i) / 16));
+    const top = armAtP(0);
+    const cap = [top.p[0] + top.n[0] * (top.w + ease) - top.t[0] * 6, top.p[1] + top.n[1] * (top.w + ease) - top.t[1] * 6];
+    const poly = [PAINTED_ARM_L.armpit, ...edge(-1), ...hem.slice().reverse().slice(1, -1), ...edge(1).reverse(), cap, PAINTED_ARM_L.tip];
+    // the inside of the bell, seen as a shadowed band just above the front hem
+    const inside = [...hem, ...Array.from({ length: 17 }, (_, i) => hemAt(-1 + (2 * i) / 16, 8))];
+    const folds = [0.62, 0.22, -0.4].map((k) => {
+      const a0 = at(from + 6, k * half(from + 6, k >= 0 ? 1 : -1) * 0.7);
+      const mid = at((from + L) / 2 + 6, k * half((from + L) / 2 + 6, k >= 0 ? 1 : -1) * 0.85);
+      return [a0, mid, hemAt(k)];
+    });
+    return { poly, hem, inside, folds, stitch: Array.from({ length: 17 }, (_, i) => hemAt(1 - (2 * i) / 16, 3.2)) };
+  };
+
   // Stretch pose on the painted lehenga: sleeves are cut along the painted arm skeleton
   // (armpit, down the inner edge, across the hem, up the outer edge to the shoulder tip)
   const paintedSleeveL = (sId: string): number[][] | null => {
-    if (sId === 'flared' && !flaredAtRest) return flaredSleeveL;
+    if (sId === 'flared') return flaredAtRest ? flaredRestL().poly : flaredSleeveL;
     const spec = sleeveSpec(sId);
     if (!spec) return null;
     const { len, ease, flare, puff } = spec;
@@ -3340,6 +3381,36 @@ interface BlouseDetailsResult {
                   <path d={svgPath(cuffPts('r')!)} fill="none" stroke={fabTheme.accentColor} strokeWidth="0.9" opacity="0.8" />
                 </g>
               )}
+
+              {/* Flared sleeve at rest: the inside of the bell at the hem, soft folds and a stitched hem */}
+              {painted && flaredAtRest && sleeveId === 'flared' && (() => {
+                const f = flaredRestL();
+                const bySide = (pts: number[][], side: 'l' | 'r') => (side === 'l' ? pts : mir(pts));
+                const curve = (pts: number[][]) => {
+                  let d = `M ${pts[0][0]} ${pts[0][1]}`;
+                  for (let i = 1; i < pts.length - 1; i++) {
+                    const m = [(pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2];
+                    d += ` Q ${pts[i][0]} ${pts[i][1]} ${m[0]} ${m[1]}`;
+                  }
+                  const l = pts[pts.length - 1];
+                  return d + ` L ${l[0]} ${l[1]}`;
+                };
+                return (['l', 'r'] as const).map((side) => (
+                  <g key={side} id={`flared-rest-${side}`} clipPath={`url(#sleeve-clip-${side})`} fill="none" strokeLinecap="round">
+                    <path d={svgPath(bySide(f.inside, side))} fill="rgba(20,40,30,0.22)" stroke="none" />
+                    <g filter="url(#drape-fold-blur)">
+                      {f.folds.map((pts, i) => (
+                        <g key={i}>
+                          <path d={curve(bySide(pts, side))} stroke="rgba(20,40,30,0.28)" strokeWidth="4" />
+                          <path d={curve(bySide(pts.map(([x, y]) => [x + (side === 'l' ? 3 : -3), y]), side))} stroke="rgba(255,255,255,0.22)" strokeWidth="3" />
+                        </g>
+                      ))}
+                    </g>
+                    <path d={curve(bySide(f.stitch, side))} stroke={fabTheme.outlineColor} strokeWidth="0.6" strokeDasharray="1.6 1.4" opacity="0.6" />
+                    <path d={curve(bySide(f.hem, side))} stroke={fabTheme.outlineColor} strokeWidth="1.3" opacity="0.85" />
+                  </g>
+                ));
+              })()}
 
               {/* Bell Sleeve Subtle Flare Lines */}
               {sleeveId === 'bell' && armPose === 'resting' && (
