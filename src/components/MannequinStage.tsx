@@ -2738,6 +2738,18 @@ interface BlouseDetailsResult {
               <g id="outstretched-arms-linework" filter="url(#arm-shadow)">
                 {painted && (
                   <g id="painted-upper-arms">
+                    {/* solid skin under the painted forearm, so its soft cut-out edge blends into skin
+                        instead of turning pale against the background */}
+                    {(() => {
+                      const side = (sd: 1 | -1) =>
+                        Array.from({ length: 21 }, (_, i) => {
+                          const a = armAtP(ARM_UPPER_LEN + ((ARM_FORE_LEN - 3) * i) / 20);
+                          const m = Math.max(1, a.w - 1.2);
+                          return [a.p[0] + sd * a.n[0] * m, a.p[1] + sd * a.n[1] * m];
+                        });
+                      const fore = [...side(1), ...side(-1).reverse()];
+                      return [fore, mir(fore)].map((pts, i) => <path key={`forearm-under-${i}`} d={svgPath(pts)} fill="#f6dccb" />);
+                    })()}
                     {[paintedUpperArmL(), mir(paintedUpperArmL())].map((pts, i) => (
                       <path key={`upper-arm-${i}`} d={svgPath(pts)} fill="url(#painted-upper-arm-skin)" />
                     ))}
@@ -3737,6 +3749,8 @@ interface BlouseDetailsResult {
                   </filter>
                   <mask id="dupatta-off-hand" maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE_W} height={STAGE_H}>
                     <rect width={STAGE_W} height={STAGE_H} fill="#fff" />
+                    {/* the sleeve on the hanging arm is in front of the dupatta too */}
+                    {sleevePts('r') && <path d={svgPath(sleevePts('r')!)} fill="#000" />}
                     <g transform={`rotate(${((armRestRad * 180) / Math.PI).toFixed(2)} ${STAGE_W - PAINTED_ARM_L.shoulder[0]} ${PAINTED_ARM_L.shoulder[1]})`}>
                       <g clipPath="url(#stage-right-half)" filter="url(#to-black-alpha)">
                         <g mask="url(#painted-forearm-mask)">{paintedImage(PAINTED.armsStretch)}</g>
