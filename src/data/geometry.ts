@@ -912,6 +912,9 @@ export const PAINTED_SLEEVES: Record<string, { len: number; ease: number; flare:
   bell: { len: 176, ease: 3, flare: 26, flareFrom: 100, puff: 0 },
 };
 
+/** Flared elbow sleeve on the hanging (rest pose) arm: fitted at the cap, flaring out to the elbow */
+export const FLARED_REST_SLEEVE = { len: 100, ease: 3, flare: 24, flareFrom: 28, puff: 0 };
+
 // Open-front jacket worn over the choli (left front panel; the right one is its mirror).
 // Neck point, down the front opening to the hem, across to the side, up to the armpit,
 // and along the shoulder seam back to the neck.

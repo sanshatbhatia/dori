@@ -49,6 +49,7 @@ import {
   ARM_DIR_L,
   DUPATTA_OVER_ARM_R,
   PAINTED_SLEEVES,
+  FLARED_REST_SLEEVE,
   ARM_UPPER_LEN,
   ARM_FORE_LEN,
   armAt,
@@ -153,6 +154,10 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     return { p: warpArm(r.p), t, w: r.w, n: [-t[1], t[0]] };
   };
   const flaredSleeveL = PAINTED_FLARED_SLEEVE_L.map(warpArm);
+  // The traced flared sleeve hangs from the outstretched arm; at rest the flare falls straight down
+  // the hanging arm instead, opening out from mid upper arm to a wide elbow-length hem
+  const flaredAtRest = !!armRestRad;
+  const sleeveSpec = (id: string) => (id === 'flared' && flaredAtRest ? FLARED_REST_SLEEVE : PAINTED_SLEEVES[id]);
   // Painted artwork for the side being viewed
   const PV = viewMode === 'back' ? PAINTED_BACK : PAINTED;
 
@@ -264,8 +269,8 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   // Stretch pose on the painted lehenga: sleeves are cut along the painted arm skeleton
   // (armpit, down the inner edge, across the hem, up the outer edge to the shoulder tip)
   const paintedSleeveL = (sId: string): number[][] | null => {
-    if (sId === 'flared') return flaredSleeveL;
-    const spec = PAINTED_SLEEVES[sId];
+    if (sId === 'flared' && !flaredAtRest) return flaredSleeveL;
+    const spec = sleeveSpec(sId);
     if (!spec) return null;
     const { len, ease, flare, puff } = spec;
     const flareFrom = spec.flareFrom ?? len * 0.6;
@@ -293,13 +298,13 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   const capeFrontL = (): DrapePiece => {
     const m = 2.5; // cloth thickness off the garment underneath
     let over: number[][];
-    if (bodiceSleeveId === 'flared') {
+    if (bodiceSleeveId === 'flared' && !flaredAtRest) {
       const pts = flaredSleeveL;
       const i0 = pts.findIndex(([x, y]) => x === 81.2 && y === 261.1);
       over = pts.slice(i0).reverse().map(([x, y]) => [x - m, y - m * 0.4]);
       over.push([82.9 - m, 268.1]);
     } else {
-      const spec = PAINTED_SLEEVES[bodiceSleeveId];
+      const spec = sleeveSpec(bodiceSleeveId);
       const sEnd = ARM_UPPER_LEN + 6;
       over = Array.from({ length: 13 }, (_, i) => {
         const sAt = -4 + ((sEnd + 4) * i) / 12;
@@ -3420,7 +3425,7 @@ interface BlouseDetailsResult {
             const sleeves = [sleevePts('l'), sleevePts('r')].filter(Boolean) as number[][][];
             // cuff band on painted stretch-pose sleeves
             const cuffBand = (() => {
-              const spec = PAINTED_SLEEVES[sleeveId];
+              const spec = sleeveSpec(sleeveId);
               if (!painted || armPose !== 'stretched' || !spec) return null;
               const at = (sv: number, sd: 1 | -1) => {
                 const a = armAtP(sv);
@@ -3432,7 +3437,7 @@ interface BlouseDetailsResult {
             })();
             // gold border along the hem of the painted flared sleeve
             const flaredHem =
-              painted && armPose === 'stretched' && sleeveId === 'flared'
+              painted && armPose === 'stretched' && sleeveId === 'flared' && !flaredAtRest
                 ? (() => {
                     const h = flaredSleeveL.filter(([x, y]) => y >= 274 && x <= 146);
                     return [h, mir(h)];
