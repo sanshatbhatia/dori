@@ -45,6 +45,9 @@ import {
   HALTER_BACK_TOP,
   HALTER_LACING,
   PAINTED_ARM_L,
+  ARM_REST_DEG,
+  ARM_DIR_L,
+  DUPATTA_OVER_ARM_R,
   PAINTED_SLEEVES,
   ARM_UPPER_LEN,
   ARM_FORE_LEN,
@@ -103,7 +106,8 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   railOnLeft = false,
 }) => {
   const [internalArmPose, setInternalArmPose] = useState<ArmPose>('resting');
-  const armPose = propsArmPose ?? internalArmPose;
+  // the pose the customer picked (for the Rest / Stretch buttons)
+  const chosenArmPose = propsArmPose ?? internalArmPose;
   const setArmPose = propsOnSetArmPose ?? setInternalArmPose;
 
   const [internalBeltLatkan, setInternalBeltLatkan] = useState<BeltLatkanMode>(
@@ -120,6 +124,35 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   const g = GARMENTS[currentGarment];
   // Lehenga uses the painted fabric, skin and trims from the reference artwork
   const painted = currentGarment === 'lehenga';
+  // The painted figure always uses the painted arms: Stretch holds them out in an A-pose, and Rest
+  // swings the same arms down to hang at the sides. Everything built on the arm skeleton (skin,
+  // sleeves, dupatta clips) follows through armAtP / warpArm, and the painted forearms rotate with it.
+  const armPose: ArmPose = painted ? 'stretched' : chosenArmPose;
+  const armRestRad = painted && chosenArmPose === 'resting' ? (ARM_REST_DEG * Math.PI) / 180 : 0;
+  /** angle a point of the left arm turns by: nothing at the armpit and shoulder cap, the full swing
+   *  from mid upper arm down, eased in between so the arm bends smoothly at the shoulder */
+  const armTurnAt = (p: number[]) => {
+    if (!armRestRad) return 0;
+    const S = PAINTED_ARM_L.shoulder;
+    const along = (p[0] - S[0]) * ARM_DIR_L[0] + (p[1] - S[1]) * ARM_DIR_L[1];
+    const t = Math.min(1, Math.max(0, (along + 6) / 32));
+    return -armRestRad * t * t * (3 - 2 * t);
+  };
+  const warpArm = (p: number[]): number[] => {
+    const a = armTurnAt(p);
+    if (!a) return p;
+    const S = PAINTED_ARM_L.shoulder;
+    const dx = p[0] - S[0], dy = p[1] - S[1];
+    return [S[0] + dx * Math.cos(a) - dy * Math.sin(a), S[1] + dx * Math.sin(a) + dy * Math.cos(a)];
+  };
+  const armAtP = (sv: number) => {
+    const r = armAt(sv);
+    const a = armTurnAt(r.p);
+    if (!a) return r;
+    const t = [r.t[0] * Math.cos(a) - r.t[1] * Math.sin(a), r.t[0] * Math.sin(a) + r.t[1] * Math.cos(a)];
+    return { p: warpArm(r.p), t, w: r.w, n: [-t[1], t[0]] };
+  };
+  const flaredSleeveL = PAINTED_FLARED_SLEEVE_L.map(warpArm);
   // Painted artwork for the side being viewed
   const PV = viewMode === 'back' ? PAINTED_BACK : PAINTED;
 
@@ -231,7 +264,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
   // Stretch pose on the painted lehenga: sleeves are cut along the painted arm skeleton
   // (armpit, down the inner edge, across the hem, up the outer edge to the shoulder tip)
   const paintedSleeveL = (sId: string): number[][] | null => {
-    if (sId === 'flared') return PAINTED_FLARED_SLEEVE_L;
+    if (sId === 'flared') return flaredSleeveL;
     const spec = PAINTED_SLEEVES[sId];
     if (!spec) return null;
     const { len, ease, flare, puff } = spec;
@@ -241,14 +274,14 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     const edge = (side: 1 | -1) =>
       Array.from({ length: steps + 1 }, (_, i) => {
         const sAt = s0 + ((len - s0) * i) / steps;
-        const a = armAt(sAt);
+        const a = armAtP(sAt);
         const f = Math.max(0, (sAt - flareFrom) / Math.max(1, len - flareFrom));
         const extra = ease + flare * Math.pow(f, 1.3) + puff * Math.sin((Math.PI * sAt) / len);
         return [a.p[0] + side * a.n[0] * (a.w + extra), a.p[1] + side * a.n[1] * (a.w + extra)];
       });
     const inner = edge(-1);
     const outer = edge(1).reverse();
-    const top = armAt(0);
+    const top = armAtP(0);
     const cap = [top.p[0] + top.n[0] * (top.w + ease) - top.t[0] * 6, top.p[1] + top.n[1] * (top.w + ease) - top.t[1] * 6];
     return [PAINTED_ARM_L.armpit, ...inner, ...outer, cap, PAINTED_ARM_L.tip];
   };
@@ -261,7 +294,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     const m = 2.5; // cloth thickness off the garment underneath
     let over: number[][];
     if (bodiceSleeveId === 'flared') {
-      const pts = PAINTED_FLARED_SLEEVE_L;
+      const pts = flaredSleeveL;
       const i0 = pts.findIndex(([x, y]) => x === 81.2 && y === 261.1);
       over = pts.slice(i0).reverse().map(([x, y]) => [x - m, y - m * 0.4]);
       over.push([82.9 - m, 268.1]);
@@ -270,7 +303,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
       const sEnd = ARM_UPPER_LEN + 6;
       over = Array.from({ length: 13 }, (_, i) => {
         const sAt = -4 + ((sEnd + 4) * i) / 12;
-        const a = armAt(sAt);
+        const a = armAtP(sAt);
         let extra = 0;
         if (spec && sAt <= spec.len) {
           const flareFrom = spec.flareFrom ?? spec.len * 0.6;
@@ -327,7 +360,7 @@ export const MannequinStage: React.FC<MannequinStageProps> = ({
     const s1 = ARM_UPPER_LEN + 34;
     const steps = 16;
     return Array.from({ length: steps + 1 }, (_, i) => {
-      const a = armAt(-16 + ((s1 + 16) * i) / steps);
+      const a = armAtP(-16 + ((s1 + 16) * i) / steps);
       return [a.p[0] + sd * a.n[0] * a.w, a.p[1] + sd * a.n[1] * a.w];
     });
   };
@@ -1956,6 +1989,12 @@ interface BlouseDetailsResult {
                 </>
               );
             })()}
+            <clipPath id="stage-left-half">
+              <rect x="0" y="0" width={STAGE_CX} height={STAGE_H} />
+            </clipPath>
+            <clipPath id="stage-right-half">
+              <rect x={STAGE_CX} y="0" width={STAGE_W - STAGE_CX} height={STAGE_H} />
+            </clipPath>
             <clipPath id="below-collar-clip">
               <rect x="0" y="150" width={STAGE_W} height={STAGE_H} />
             </clipPath>
@@ -1970,10 +2009,10 @@ interface BlouseDetailsResult {
                         mir(
                           (() => {
                             // the dupatta drapes over the upper arm; the forearm comes out from under it at the elbow
-                            const s0 = ARM_UPPER_LEN + 6, s1 = ARM_UPPER_LEN + ARM_FORE_LEN + 60, n = 24;
+                            const s0 = armRestRad ? 14 : ARM_UPPER_LEN + 6, s1 = ARM_UPPER_LEN + ARM_FORE_LEN + (armRestRad ? 2 : 60), n = 24;
                             const side = (sd: 1 | -1) =>
                               Array.from({ length: n + 1 }, (_, i) => {
-                                const a = armAt(s0 + ((s1 - s0) * i) / n);
+                                const a = armAtP(s0 + ((s1 - s0) * i) / n);
                                 const m = a.w + 0.6; // just the arm itself: the cloth falls behind it
                                 return [a.p[0] + sd * a.n[0] * m, a.p[1] + sd * a.n[1] * m];
                               });
@@ -1995,7 +2034,7 @@ interface BlouseDetailsResult {
                         const s0 = ARM_UPPER_LEN - 6, s1 = ARM_UPPER_LEN + ARM_FORE_LEN + 60, n = 24;
                         const side = (sd: 1 | -1) =>
                           Array.from({ length: n + 1 }, (_, i) => {
-                            const a = armAt(s0 + ((s1 - s0) * i) / n);
+                            const a = armAtP(s0 + ((s1 - s0) * i) / n);
                             const m = a.w + 0.6;
                             return [a.p[0] + sd * a.n[0] * m, a.p[1] + sd * a.n[1] * m];
                           });
@@ -2708,7 +2747,21 @@ interface BlouseDetailsResult {
 
                 {/* Painted forearms and hands from the reference artwork */}
                 {/* (the front painting's forearms fit the arm skeleton, so the back view uses them too) */}
-                {painted && <g mask="url(#painted-forearm-mask)">{paintedImage(PAINTED.armsStretch)}</g>}
+                {painted &&
+                  ([1, -1] as const).map((sd) => (
+                    <g
+                      key={`forearm-${sd}`}
+                      transform={
+                        armRestRad
+                          ? `rotate(${((-sd * armRestRad * 180) / Math.PI).toFixed(2)} ${sd === 1 ? PAINTED_ARM_L.shoulder[0] : STAGE_W - PAINTED_ARM_L.shoulder[0]} ${PAINTED_ARM_L.shoulder[1]})`
+                          : undefined
+                      }
+                    >
+                      <g clipPath={sd === 1 ? 'url(#stage-left-half)' : 'url(#stage-right-half)'}>
+                        <g mask="url(#painted-forearm-mask)">{paintedImage(PAINTED.armsStretch)}</g>
+                      </g>
+                    </g>
+                  ))}
 
                 {/* Gold Bangles (Churi) for Outstretched Arms */}
                 <g id="wrist-bangles-stretched" opacity="0.92" display={painted ? 'none' : undefined}>
@@ -3370,7 +3423,7 @@ interface BlouseDetailsResult {
               const spec = PAINTED_SLEEVES[sleeveId];
               if (!painted || armPose !== 'stretched' || !spec) return null;
               const at = (sv: number, sd: 1 | -1) => {
-                const a = armAt(sv);
+                const a = armAtP(sv);
                 const e = spec.ease + spec.flare * Math.pow(Math.max(0, (sv - (spec.flareFrom ?? spec.len * 0.6)) / Math.max(1, spec.len - (spec.flareFrom ?? spec.len * 0.6))), 1.3);
                 return [a.p[0] + sd * a.n[0] * (a.w + e), a.p[1] + sd * a.n[1] * (a.w + e)];
               };
@@ -3381,7 +3434,7 @@ interface BlouseDetailsResult {
             const flaredHem =
               painted && armPose === 'stretched' && sleeveId === 'flared'
                 ? (() => {
-                    const h = PAINTED_FLARED_SLEEVE_L.filter(([x, y]) => y >= 274 && x <= 146);
+                    const h = flaredSleeveL.filter(([x, y]) => y >= 274 && x <= 146);
                     return [h, mir(h)];
                   })()
                 : null;
@@ -3590,7 +3643,37 @@ interface BlouseDetailsResult {
           {/* Dupatta / Drape Textures & 2D Game Linework */}
           {painted && drapeId === 'oneShoulder' && (
             <g id="drape-painted" opacity={fade} clipPath="url(#dupatta-off-arm-clip)">
-              {paintedImage(PV.dupattaOneShoulder)}
+              {armRestRad && !isBack ? (
+                // Rest pose: the arm hangs in front, so the cloth that lay over the outstretched upper arm
+                // goes; the dupatta crosses the shoulder and falls behind the arm
+                <>
+                  {/* a soft-edged cut, so the cloth thins out where it leaves the arm instead of stopping at a line */}
+                  <filter id="dupatta-cut-soften" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="4" />
+                  </filter>
+                  <mask id="dupatta-not-over-arm" maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE_W} height={STAGE_H}>
+                    <rect width={STAGE_W} height={STAGE_H} fill="#fff" />
+                    <path d={svgPath(DUPATTA_OVER_ARM_R)} fill="#000" filter="url(#dupatta-cut-soften)" />
+                  </mask>
+                  {/* the hanging hand is in front of the dupatta: cut the cloth to the painted hand's own shape */}
+                  <filter id="to-black-alpha" colorInterpolationFilters="sRGB">
+                    <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" />
+                  </filter>
+                  <mask id="dupatta-off-hand" maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE_W} height={STAGE_H}>
+                    <rect width={STAGE_W} height={STAGE_H} fill="#fff" />
+                    <g transform={`rotate(${((armRestRad * 180) / Math.PI).toFixed(2)} ${STAGE_W - PAINTED_ARM_L.shoulder[0]} ${PAINTED_ARM_L.shoulder[1]})`}>
+                      <g clipPath="url(#stage-right-half)" filter="url(#to-black-alpha)">
+                        <g mask="url(#painted-forearm-mask)">{paintedImage(PAINTED.armsStretch)}</g>
+                      </g>
+                    </g>
+                  </mask>
+                  <g mask="url(#dupatta-off-hand)">
+                    <g mask="url(#dupatta-not-over-arm)">{paintedImage(PV.dupattaOneShoulder)}</g>
+                  </g>
+                </>
+              ) : (
+                paintedImage(PV.dupattaOneShoulder)
+              )}
             </g>
           )}
           {/* the long hair falls over the one-shoulder dupatta */}
@@ -3858,7 +3941,7 @@ interface BlouseDetailsResult {
               onClick={() => setArmPose('resting')}
               title="Resting arms along torso"
               className={`px-2 py-1 text-[9.5px] uppercase tracking-wider font-sans transition-all cursor-pointer flex items-center gap-1 ${
-                armPose === 'resting'
+                chosenArmPose === 'resting'
                   ? 'bg-[#174d33] text-[#f7f4ef] font-semibold'
                   : 'text-[#5a534c] hover:bg-black/5'
               }`}
@@ -3875,7 +3958,7 @@ interface BlouseDetailsResult {
               onClick={() => setArmPose('stretched')}
               title="Stretch arms sideways to view sleeve gravity drop"
               className={`px-2 py-1 text-[9.5px] uppercase tracking-wider font-sans transition-all cursor-pointer flex items-center gap-1 ${
-                armPose === 'stretched'
+                chosenArmPose === 'stretched'
                   ? 'bg-[#174d33] text-[#f7f4ef] font-semibold'
                   : 'text-[#5a534c] hover:bg-black/5'
               }`}
