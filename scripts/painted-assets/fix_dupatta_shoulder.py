@@ -102,7 +102,8 @@ fill = CREAM[None, None, :] * light[..., None]
 edge = blur(blur(region.astype(float), 2), 2)
 a[..., :3] = np.where(hole[..., None], fill, a[..., :3])
 # sheer over the shoulder, gradually denser down the fall so it meets the painted cloth without a step
-sheer = 190 + 65 * np.clip((ys - 236) / 60, 0, 1)
+# (only along the fall itself: over the outstretched arm the cloth stays sheer so the sleeve shows)
+sheer = 190 + 65 * np.clip((ys - 236) / 60, 0, 1) * np.clip((306 - xs) / 8, 0, 1)
 a[..., 3] = np.where(hole, np.maximum(a[..., 3], sheer * np.clip(edge * 1.4, 0, 1)), a[..., 3])
 # the painted fall starts with a straight top edge (the sleeve hid what was above it); blend it into
 # the sheer cloth over the arm so the cloth gets gradually denser instead of changing at a line
@@ -111,6 +112,13 @@ t = np.clip((ys - 248) / 40, 0, 1)
 mix = sheer + (a[..., 3] - sheer) * t
 a[..., 3] = np.where(band, np.minimum(a[..., 3], mix), a[..., 3])
 a[..., :3] = np.where(band[..., None], a[..., :3] * t[..., None] + fill * (1 - t[..., None]), a[..., :3])
+
+# over the outstretched arm the whole strip is one sheer layer with a soft outer edge, so a wide
+# sleeve shows evenly through it instead of being cut by an opaque band with a hard edge
+over = (xs > 300) & (ys > 168) & (ys < 300) & region
+soft_a = blur(blur(a[..., 3], 3), 3)
+a[..., 3] = np.where(over, np.minimum(soft_a, 180), a[..., 3])
+a[..., :3] = np.where(over[..., None], a[..., :3] * 0.4 + CREAM * 0.6, a[..., :3])
 
 # the painting shades the top of the fall where the outstretched arm cast a shadow on it; with the
 # arm moved that reads as a grey band, so lift it to the fall's own cream, fading out below

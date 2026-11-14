@@ -3761,6 +3761,23 @@ interface BlouseDetailsResult {
                     <g mask="url(#dupatta-not-over-arm)">{paintedImage(PV.dupattaOneShoulder)}</g>
                   </g>
                 </>
+              ) : !isBack && sleevePts('r') && ['flared', 'bell'].includes(bodiceSleeveId) ? (
+                // a wide sleeve sits over the dupatta below the shoulder, so the cloth doesn't cut across it
+                <>
+                  <mask id="dupatta-under-wide-sleeve" maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE_W} height={STAGE_H}>
+                    <rect width={STAGE_W} height={STAGE_H} fill="#fff" />
+                    <clipPath id="below-shoulder-cap">
+                      <rect x="0" y="180" width={STAGE_W} height={STAGE_H} />
+                    </clipPath>
+                    <filter id="wide-sleeve-soft" x="-10%" y="-10%" width="120%" height="120%">
+                      <feGaussianBlur stdDeviation="2.5" />
+                    </filter>
+                    <g filter="url(#wide-sleeve-soft)">
+                      <path d={svgPath(sleevePts('r')!)} fill="#000" clipPath="url(#below-shoulder-cap)" />
+                    </g>
+                  </mask>
+                  <g mask="url(#dupatta-under-wide-sleeve)">{paintedImage(PV.dupattaOneShoulder)}</g>
+                </>
               ) : (
                 paintedImage(PV.dupattaOneShoulder)
               )}
