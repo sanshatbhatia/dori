@@ -88,7 +88,7 @@ known = (a[..., 3] > 230) & (lum > 150) & ~((lum > 226) & (chroma < 20))
 hole = region & ~known
 # the cream the dupatta shows near the shoulder (sampled from the painted cloth), lit from above and shaded toward the hair,
 # a little sheer like the painted cloth
-CREAM = np.array([214.0, 206.0, 190.0])
+CREAM = np.array([238.0, 229.0, 215.0])
 yy, xx = np.mgrid[0:h, 0:w]
 ys = Y0 + yy / sy
 xs = X0 + xx / sx
@@ -96,19 +96,29 @@ xs = X0 + xx / sx
 ax, ay = 0.42, 0.91  # arm direction
 across = (xs - 294) * ay - (ys - 190) * ax
 fold = np.exp(-((across - 6) / 3.0) ** 2) + 0.8 * np.exp(-((across - 18) / 3.4) ** 2) + 0.6 * np.exp(-((across - 30) / 3.0) ** 2)
-light = 1.0 + 0.03 * np.clip((200 - ys) / 50, -1, 1) - 0.05 * np.clip((300 - xs) / 18, 0, 1) - 0.07 * fold
+light = 1.0 + 0.03 * np.clip((200 - ys) / 50, -1, 1) - 0.05 * np.clip((300 - xs) / 18, 0, 1) - 0.045 * fold
 fill = CREAM[None, None, :] * light[..., None]
 # soften the new edge so it blends with the painted cloth
 edge = blur(blur(region.astype(float), 2), 2)
 a[..., :3] = np.where(hole[..., None], fill, a[..., :3])
-a[..., 3] = np.where(hole, np.maximum(a[..., 3], 190 * np.clip(edge * 1.4, 0, 1)), a[..., 3])
+# sheer over the shoulder, gradually denser down the fall so it meets the painted cloth without a step
+sheer = 190 + 65 * np.clip((ys - 236) / 60, 0, 1)
+a[..., 3] = np.where(hole, np.maximum(a[..., 3], sheer * np.clip(edge * 1.4, 0, 1)), a[..., 3])
 # the painted fall starts with a straight top edge (the sleeve hid what was above it); blend it into
 # the sheer cloth over the arm so the cloth gets gradually denser instead of changing at a line
 band = region & ~hole & (ys > 205) & (ys < 292)
 t = np.clip((ys - 248) / 40, 0, 1)
-mix = 190 + (a[..., 3] - 190) * t
+mix = sheer + (a[..., 3] - sheer) * t
 a[..., 3] = np.where(band, np.minimum(a[..., 3], mix), a[..., 3])
 a[..., :3] = np.where(band[..., None], a[..., :3] * t[..., None] + fill * (1 - t[..., None]), a[..., :3])
+
+# the painting shades the top of the fall where the outstretched arm cast a shadow on it; with the
+# arm moved that reads as a grey band, so lift it to the fall's own cream, fading out below
+LIGHT = np.array([240.0, 230.0, 217.0])
+lift = np.clip((334 - ys) / 14, 0, 1) * np.clip((xs - 297) / 4, 0, 1) * (ys > 196)
+cur = a[..., :3].mean(-1)
+lift = lift * np.clip((LIGHT.mean() - cur) / 25, 0, 1)
+a[..., :3] = a[..., :3] * (1 - lift[..., None]) + LIGHT * lift[..., None]
 
 Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).save(PATH)
 print('filled', int(hole.sum()), 'px')

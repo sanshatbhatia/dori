@@ -874,9 +874,10 @@ export const ARM_FORE_LEN = len(sub(PAINTED_ARM_L.wrist, PAINTED_ARM_L.elbow));
 
 /** Rest pose: how far the painted arms swing down from the stretch A-pose to hang at the sides */
 export const ARM_REST_DEG = 24;
-/** The part of the one-shoulder dupatta that lies over the outstretched right upper arm (left out
- *  in the rest pose, where the arm hangs in front of the dupatta) */
-export const DUPATTA_OVER_ARM_R: number[][] = [[304, 178], [316, 180], [328, 206], [342, 234], [356, 264], [360, 288], [352, 314], [334, 318], [314, 276], [304, 240], [302, 206]];
+/** The part of the one-shoulder dupatta that hung from the outstretched right arm. In the rest pose it
+ *  is left out: the dupatta crosses the shoulder and its fall starts behind the hanging arm, with its
+ *  outer edge running from the shoulder down to where the painted fall's own edge begins */
+export const DUPATTA_OVER_ARM_R: number[][] = [[305, 150], [470, 150], [470, 352], [348, 352], [344, 336], [334, 300], [322, 258], [312, 220], [306, 188]];
 
 /** Direction of the left upper arm (shoulder to elbow) */
 export const ARM_DIR_L = unit(sub(PAINTED_ARM_L.elbow, PAINTED_ARM_L.shoulder));

@@ -3737,7 +3737,7 @@ interface BlouseDetailsResult {
                 <>
                   {/* a soft-edged cut, so the cloth thins out where it leaves the arm instead of stopping at a line */}
                   <filter id="dupatta-cut-soften" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="4" />
+                    <feGaussianBlur stdDeviation="1.4" />
                   </filter>
                   <mask id="dupatta-not-over-arm" maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE_W} height={STAGE_H}>
                     <rect width={STAGE_W} height={STAGE_H} fill="#fff" />
